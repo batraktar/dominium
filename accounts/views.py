@@ -1,125 +1,171 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.hashers import make_password, check_password
-from django.contrib.auth import logout, authenticate, login
-from .models import CustomUser, TelegramVerification
 from uuid import uuid4
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from django.db.models import Q
-from django.shortcuts import render, redirect
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.contrib.sites.shortcuts import get_current_site
-from django.template.loader import render_to_string
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.views.decorators.http import require_GET, require_POST
+
+from .models import CustomUser, TelegramVerification
 
 User = get_user_model()
 
+
 @require_GET
 def check_telegram_username(request):
-    username = request.GET.get('username', '').lstrip('@')
+    username = request.GET.get("username", "").lstrip("@")
     exists = User.objects.filter(telegram_username=username).exists()
-    return JsonResponse({'available': not exists})
+    return JsonResponse({"available": not exists})
+
+
+def _open_modal(request, modal, query, prefill=None):
+    data = {"open": True}
+    if prefill:
+        data.update(prefill)
+    if modal == "login":
+        next_value = request.session.get("login_next")
+        if next_value and "next" not in data:
+            data["next"] = next_value
+    request.session[f"{modal}_prefill"] = data
+    return redirect(f"{reverse('start_page')}?{query}")
+
 
 def register_email(request):
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        confirm = request.POST.get('confirm')
+    if not getattr(settings, "ALLOW_MANUAL_AUTH", False):
+        messages.error(request, "Локальна реєстрація тимчасово недоступна.")
+        return redirect("/")
+    if request.method != "POST":
+        return _open_modal(request, "register", "register=email")
 
-        if password != confirm:
-            return render(request, 'partials/auth/email.html', {
-                'error': 'Паролі не збігаються'
-            })
+    email = (request.POST.get("email") or "").strip()
+    username = (request.POST.get("username") or "").strip()
+    raw_full_name = (request.POST.get("full_name") or "").strip()
+    password = request.POST.get("password") or ""
+    confirm = request.POST.get("confirm") or ""
 
-        if User.objects.filter(email=email).exists():
-            return render(request, 'partials/auth/email.html', {
-                'error': 'Цей email вже використовується'
-            })
+    prefill = {
+        "email": email,
+        "username": username,
+        "full_name": raw_full_name,
+    }
 
-        if User.objects.filter(username=username).exists():
-            return render(request, 'partials/auth/email.html', {
-                'error': 'Цей username вже зайнятий'
-            })
+    def error(msg):
+        messages.error(request, msg, extra_tags="register")
+        return _open_modal(request, "register", "register=email", prefill)
 
-        user = CustomUser.objects.create(
-            email=email,
-            username=username,
-            telegram_username=username,  # 👈 тут автоматично копіюється
-            password=make_password(password),
-            is_active=False
-        )
+    if password != confirm:
+        return error("Паролі не збігаються")
 
-        # Надсилання листа
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        domain = get_current_site(request).domain
-        link = f"http://{domain}/activate/{uid}/{token}/"
+    if User.objects.filter(email=email).exists():
+        return error("Цей email вже використовується")
 
-        message = render_to_string('partials/auth/verify_email.html', {
-            'user': user,
-            'link': link
-        })
+    if User.objects.filter(username=username).exists():
+        return error("Цей username вже зайнятий")
 
-        # Надсилання листа
-        result = send_mail(
-            subject='Підтвердження пошти',
-            message=message,
-            from_email='Dominium <dominium.realty.agency@gmail.com>',
-            recipient_list=[email]
-        )
+    try:
+        validate_password(password, user=CustomUser(username=username, email=email))
+    except ValidationError as exc:
+        return error(" ".join(exc))
 
+    user = CustomUser.objects.create(
+        email=email,
+        username=username,
+        full_name=raw_full_name or username,
+        telegram_username=username,
+        password=make_password(password),
+        is_active=False,
+    )
 
-        print(f'Email send result: {result}')
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    domain = get_current_site(request).domain
+    link = f"http://{domain}/activate/{uid}/{token}/"
 
-        return render(request, 'partials/auth/after-register-email.html', {
-            'email': email
-        })
+    message = render_to_string(
+        "partials/auth/verify_email.html", {"user": user, "link": link}
+    )
 
-    return render(request, 'partials/auth/email.html')
+    send_mail(
+        subject="Підтвердження пошти",
+        message=message,
+        from_email="Dominium <dominium.realty.agency@gmail.com>",
+        recipient_list=[email],
+    )
 
+    request.session.pop("register_prefill", None)
+
+    return render(request, "partials/auth/after-register-email.html", {"email": email})
 
 
 def register_via_telegram(request):
-    if request.method == 'POST':
-        telegram_username = request.POST.get('telegram_username', '').lstrip('@')
-        password = request.POST.get('password')
-        confirm = request.POST.get('confirm')
+    if not getattr(settings, "ALLOW_MANUAL_AUTH", False):
+        messages.error(request, "Telegram-реєстрація вимкнена.")
+        return redirect("/")
+    if request.method != "POST":
+        return _open_modal(request, "telegram", "register=telegram")
 
-        if password != confirm:
-            return render(request, 'partials/auth/telegram.html', {
-                'error': 'Паролі не збігаються',
-                'telegram_username': telegram_username,
-            })
+    telegram_username = (request.POST.get("telegram_username") or "").lstrip("@")
+    raw_full_name = (request.POST.get("full_name") or "").strip()
+    password = request.POST.get("password") or ""
+    confirm = request.POST.get("confirm") or ""
 
-        unique_username = telegram_username or f"user_{uuid4().hex[:8]}"
+    prefill = {"username": telegram_username, "full_name": raw_full_name}
 
-        user, created = User.objects.get_or_create(
-            username=unique_username,
-            defaults={
-                'telegram_username': telegram_username,
-                'password': make_password(password),
-                'is_active': True,
-            }
+    def error(msg):
+        messages.error(request, msg, extra_tags="telegram")
+        return _open_modal(request, "telegram", "register=telegram", prefill)
+
+    if password != confirm:
+        return error("Паролі не збігаються")
+
+    unique_username = telegram_username or f"user_{uuid4().hex[:8]}"
+
+    if telegram_username:
+        if User.objects.filter(username=unique_username).exists():
+            return error("Користувач з таким username вже існує")
+    else:
+        while User.objects.filter(username=unique_username).exists():
+            unique_username = f"user_{uuid4().hex[:8]}"
+
+    try:
+        validate_password(
+            password,
+            user=CustomUser(
+                username=unique_username, telegram_username=telegram_username
+            ),
         )
+    except ValidationError as exc:
+        return error(" ".join(exc))
 
-        if not created:
-            return render(request, 'partials/auth/telegram.html', {
-                'error': 'Користувач з таким username вже існує',
-            })
+    user = CustomUser.objects.create(
+        username=unique_username,
+        telegram_username=telegram_username,
+        full_name=raw_full_name or telegram_username or unique_username,
+        password=make_password(password),
+        is_active=False,
+        is_telegram_verified=False,
+    )
 
-        TelegramVerification.objects.create(user=user)
+    TelegramVerification.objects.create(user=user)
+    request.session.pop("telegram_prefill", None)
 
-        return render(request, 'partials/auth/after-register-telegram.html', {
-            'bot_link': 'https://t.me/dominium_realty_agency_bot'
-        })
-
-
+    return render(
+        request,
+        "partials/auth/after-register-telegram.html",
+        {"bot_link": "https://t.me/dominium_realty_agency_bot"},
+    )
 
 
 def verify_telegram_code(request, code):
@@ -129,34 +175,60 @@ def verify_telegram_code(request, code):
 
     user = verification.user
     user.is_telegram_verified = True
-    user.save()
+    user.is_active = True
+    user.save(update_fields=["is_telegram_verified", "is_active"])
 
     login(request, user)  # автоматичний вхід
-    return redirect('/')  # редірект на головну
+    return redirect("/")  # редірект на головну
 
 
 def login_view(request):
-    if request.method == 'POST':
-        identifier = request.POST.get('email', '').strip()
-        password = request.POST.get('password')
+    if request.method == "POST":
+        identifier = request.POST.get("email", "").strip()
+        password = request.POST.get("password")
+        next_url = (
+            request.POST.get("next")
+            or request.session.pop("login_next", None)
+            or request.GET.get("next")
+            or "/"
+        )
 
         user = CustomUser.objects.filter(
-            Q(email__iexact=identifier) | Q(telegram_username__iexact=identifier)
+            Q(email__iexact=identifier)
+            | Q(telegram_username__iexact=identifier)
+            | Q(username__iexact=identifier)
         ).first()
 
         if user and check_password(password, user.password):
+            if not user.is_active:
+                request.session["login_next"] = next_url
+                messages.error(
+                    request,
+                    "Потрібно підтвердити аккаунт. Перевірте email / Telegram.",
+                    extra_tags="login",
+                )
+                return _open_modal(request, "login", "login=1", {"email": identifier})
+            user.backend = "django.contrib.auth.backends.ModelBackend"
             login(request, user)
-            return redirect('/')
-        else:
-            return render(request, 'partials/auth/login.html', {
-                'error': 'Невірний email / username або пароль',
-                'email': identifier,
-            })
+            request.session.pop("login_prefill", None)
+            return redirect(next_url or "/")
 
-    # GET-запит — просто рендеримо форму без передачі змінних
-    return render(request, 'partials/auth/login.html')
+        request.session["login_next"] = next_url
+        messages.error(
+            request,
+            "Невірний email / username / Telegram або пароль",
+            extra_tags="login",
+        )
+        return _open_modal(request, "login", "login=1", {"email": identifier})
+
+    next_param = request.GET.get("next")
+    if next_param:
+        request.session["login_next"] = next_param
+    return _open_modal(request, "login", "login=1")
+
 
 from django.contrib.auth import login
+
 
 def activate(request, uidb64, token):
     try:
@@ -169,14 +241,15 @@ def activate(request, uidb64, token):
         user.is_active = True
         user.is_email_verified = True
         user.save()
-        
+
         login(request, user)  # <== автоматичний вхід
-        return redirect('/')  # <== редірект на головну
+        return redirect("/")  # <== редірект на головну
     else:
-        return render(request, 'partials/auth/email_invalid.html')
+        return render(request, "partials/auth/email_invalid.html")
 
 
-
+@require_POST
 def logout_view(request):
     logout(request)
-    return redirect('/')
+    request.session.flush()
+    return redirect("/")

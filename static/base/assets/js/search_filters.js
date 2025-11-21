@@ -77,42 +77,48 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
-    // View toggle
-    const gridButton = document.querySelector(".ri-layout-grid-line").parentElement;
-    const listButton = document.querySelector(".ri-list-check-2").parentElement;
-    const resultsGrid = document.querySelector(
-        ".grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3",
-    );
-    gridButton.addEventListener("click", function () {
-        gridButton.classList.remove("bg-white", "text-gray-500");
-        gridButton.classList.add("bg-blue-50", "text-primary");
-        listButton.classList.remove("bg-blue-50", "text-primary");
-        listButton.classList.add("bg-white", "text-gray-500");
-        // Переключаємо на відображення сіткою
-        resultsGrid.classList.remove("md:grid-cols-1", "lg:grid-cols-1");
-        resultsGrid.classList.add("md:grid-cols-2", "lg:grid-cols-3");
-        // Змінюємо стиль карток
-        document.querySelectorAll(".grid-cols-1 > div").forEach((card) => {
-            card.classList.remove("flex", "flex-row");
-            card.querySelector(".relative").classList.remove("w-1/3");
-            card.querySelector(".p-4").classList.remove("w-2/3");
-        });
-    });
-    listButton.addEventListener("click", function () {
-        listButton.classList.remove("bg-white", "text-gray-500");
-        listButton.classList.add("bg-blue-50", "text-primary");
-        gridButton.classList.remove("bg-blue-50", "text-primary");
-        gridButton.classList.add("bg-white", "text-gray-500");
-        // Переключаємо на відображення списком
-        resultsGrid.classList.remove("md:grid-cols-2", "lg:grid-cols-3");
-        resultsGrid.classList.add("md:grid-cols-1", "lg:grid-cols-1");
-        // Змінюємо стиль карток
-        document.querySelectorAll(".grid-cols-1 > div").forEach((card) => {
-            card.classList.add("flex", "flex-row");
-            card.querySelector(".relative").classList.add("w-1/3");
-            card.querySelector(".p-4").classList.add("w-2/3");
-        });
-    });
+    // View toggle (legacy) – залишено для сумісності зі старими макетами
+    const gridIcon = document.querySelector(".ri-layout-grid-line");
+    const listIcon = document.querySelector(".ri-list-check-2");
+    if (gridIcon && listIcon) {
+        const gridButton = gridIcon.parentElement;
+        const listButton = listIcon.parentElement;
+        const resultsGrid = document.querySelector(
+            ".grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3",
+        );
+        if (gridButton && listButton && resultsGrid) {
+            gridButton.addEventListener("click", function () {
+                gridButton.classList.remove("bg-white", "text-gray-500");
+                gridButton.classList.add("bg-blue-50", "text-primary");
+                listButton.classList.remove("bg-blue-50", "text-primary");
+                listButton.classList.add("bg-white", "text-gray-500");
+                resultsGrid.classList.remove("md:grid-cols-1", "lg:grid-cols-1");
+                resultsGrid.classList.add("md:grid-cols-2", "lg:grid-cols-3");
+                document.querySelectorAll(".grid-cols-1 > div").forEach((card) => {
+                    card.classList.remove("flex", "flex-row");
+                    const imageWrapper = card.querySelector(".relative");
+                    const contentWrapper = card.querySelector(".p-4");
+                    if (imageWrapper) imageWrapper.classList.remove("w-1/3");
+                    if (contentWrapper) contentWrapper.classList.remove("w-2/3");
+                });
+            });
+            listButton.addEventListener("click", function () {
+                listButton.classList.remove("bg-white", "text-gray-500");
+                listButton.classList.add("bg-blue-50", "text-primary");
+                gridButton.classList.remove("bg-blue-50", "text-primary");
+                gridButton.classList.add("bg-white", "text-gray-500");
+                resultsGrid.classList.remove("md:grid-cols-2", "lg:grid-cols-3");
+                resultsGrid.classList.add("md:grid-cols-1", "lg:grid-cols-1");
+                document.querySelectorAll(".grid-cols-1 > div").forEach((card) => {
+                    card.classList.add("flex", "flex-row");
+                    const imageWrapper = card.querySelector(".relative");
+                    const contentWrapper = card.querySelector(".p-4");
+                    if (imageWrapper) imageWrapper.classList.add("w-1/3");
+                    if (contentWrapper) contentWrapper.classList.add("w-2/3");
+                });
+            });
+        }
+    }
     // Property type dropdown
     const propertyTypeBtn = document.getElementById("property-type-btn");
     const propertyTypeOptions = document.getElementById("property-type-options");

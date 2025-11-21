@@ -32,8 +32,27 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div class="lg:col-span-2">
+            {% if user_is_staff %}
+              <div class="flex flex-wrap items-center gap-3 mb-6">
+                <button
+                  id="open-admin-modal"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-coolSage text-white rounded-[9px] font-fixel hover:bg-coolSage/90 transition"
+                >
+                  <i class="ri-edit-2-line"></i>
+                  Редагувати об’єкт
+                </button>
+                <a
+                  href="{% url 'property_api_admin' %}"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+                >
+                  <i class="ri-external-link-line"></i>
+                  Відкрити повну панель
+                </a>
+              </div>
+            {% endif %}
             {% include 'partials/property_main.html' %}
             {% include 'partials/map.html' %}
+            {% include 'partials/nearby_places.html' %}
           </div>
           <div class="lg:col-span-1">
             {% include 'partials/contact_agent.html' %}
@@ -53,6 +72,139 @@
       </div>
     </div>
   </div>
+
+  {% if user_is_staff %}
+    <div
+      id="admin-edit-modal"
+      class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+    >
+      <div class="bg-white text-deepOcean rounded-[12px] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-semibold">Редагування об’єкта</h2>
+          <button id="close-admin-modal" class="text-gray-500 hover:text-gray-800">
+            <i class="ri-close-line text-2xl"></i>
+          </button>
+        </div>
+
+        <div id="admin-status" class="hidden mx-6 mt-4 px-4 py-2 rounded-[9px] text-sm font-fixel"></div>
+
+        <form id="admin-edit-form" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Назва</span>
+            <input
+              type="text"
+              id="admin-title"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            />
+          </label>
+
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Адреса</span>
+            <input
+              type="text"
+              id="admin-address"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            />
+          </label>
+
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Ціна, $</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              id="admin-price"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            />
+          </label>
+
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Площа, м²</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              id="admin-area"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            />
+          </label>
+
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Кількість кімнат</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              id="admin-rooms"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            />
+          </label>
+
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Тип нерухомості</span>
+            <select
+              id="admin-property-type"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            >
+              <option value="">Завантаження...</option>
+            </select>
+          </label>
+
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Тип угоди</span>
+            <select
+              id="admin-deal-type"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+              required
+            >
+              <option value="">Завантаження...</option>
+            </select>
+          </label>
+
+          <label class="flex flex-col gap-2 md:col-span-2">
+            <span class="text-sm font-semibold">Опис</span>
+            <textarea
+              id="admin-description"
+              rows="4"
+              class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            ></textarea>
+          </label>
+
+          <fieldset class="md:col-span-2">
+            <legend class="text-sm font-semibold mb-2">Характеристики</legend>
+            <div id="admin-features" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <p class="text-sm text-gray-500">Завантаження...</p>
+            </div>
+          </fieldset>
+
+          <div class="md:col-span-2 flex flex-wrap gap-3 pt-2">
+            <button
+              type="submit"
+              id="admin-save"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+            >
+              <i class="ri-save-line"></i>
+              Зберегти зміни
+            </button>
+            <button
+              type="button"
+              id="admin-cancel"
+              class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+            >
+              <i class="ri-close-circle-line"></i>
+              Скасувати
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -60,4 +212,188 @@
   {% comment %} <script src="{% static 'base/assets/js/filters.js' %}"></script> {% endcomment %}
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js" defer></script>>
+  {% if user_is_staff %}
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById("admin-edit-modal");
+        const openBtn = document.getElementById("open-admin-modal");
+        const closeBtn = document.getElementById("close-admin-modal");
+        const cancelBtn = document.getElementById("admin-cancel");
+        const form = document.getElementById("admin-edit-form");
+        const statusNode = document.getElementById("admin-status");
+        const featuresContainer = document.getElementById("admin-features");
+        const PROPERTY_ID = {{ property.id }};
+        const API_BASE = "{% url 'house_api:property_list' %}";
+        const PROPERTY_TYPES_URL = "{% url 'house_api:property_type_list' %}";
+        const DEAL_TYPES_URL = "{% url 'house_api:deal_type_list' %}";
+        const FEATURES_URL = "{% url 'house_api:feature_list' %}";
+
+        const field = (id) => document.getElementById(`admin-${id}`);
+
+        const toggleModal = (show) => {
+          if (!modal) return;
+          modal.classList.toggle("hidden", !show);
+          document.body.classList.toggle("overflow-hidden", show);
+        };
+
+        const setStatus = (message, type = "info") => {
+          if (!statusNode) return;
+          statusNode.textContent = message;
+          statusNode.className = "mx-6 mt-4 px-4 py-2 rounded-[9px] text-sm font-fixel";
+          const map = {
+            success: ["bg-green-100", "text-green-800"],
+            error: ["bg-red-100", "text-red-800"],
+            info: ["bg-yellow-100", "text-yellow-800"],
+          };
+          (map[type] || map.info).forEach((cls) => statusNode.classList.add(cls));
+        };
+
+        const clearStatus = () => {
+          if (!statusNode) return;
+          statusNode.textContent = "";
+          statusNode.classList.add("hidden");
+        };
+
+        const fillSelect = (select, items, placeholder) => {
+          select.innerHTML = `<option value="">${placeholder}</option>`;
+          items.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.name;
+            select.appendChild(option);
+          });
+        };
+
+        const fetchJSON = async (url, options = {}) => {
+          const response = await fetch(url, {
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            ...options,
+          });
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Помилка ${response.status}: ${text}`);
+          }
+          if (response.status === 204) {
+            return null;
+          }
+          return response.json();
+        };
+
+        const loadDictionaries = async () => {
+          const [propertyTypes, dealTypes, features] = await Promise.all([
+            fetchJSON(PROPERTY_TYPES_URL),
+            fetchJSON(DEAL_TYPES_URL),
+            fetchJSON(FEATURES_URL),
+          ]);
+
+          fillSelect(field("property-type"), propertyTypes.results || [], "Оберіть тип");
+          fillSelect(field("deal-type"), dealTypes.results || [], "Оберіть угоду");
+
+          featuresContainer.innerHTML = "";
+          const featureItems = features.results || [];
+          if (featureItems.length === 0) {
+            featuresContainer.innerHTML = '<p class="text-sm text-gray-500">Характеристики не знайдено.</p>';
+            return featureItems;
+          }
+
+          featureItems.forEach((feature) => {
+            const label = document.createElement("label");
+            label.className = "flex items-center gap-2 rounded-[9px] border border-gray-200 px-3 py-2 text-sm";
+            label.innerHTML = `
+              <input type="checkbox" value="${feature.id}" class="feature-checkbox accent-deepOcean" />
+              <span>${feature.name}</span>
+            `;
+            featuresContainer.appendChild(label);
+          });
+          return featureItems;
+        };
+
+        const populateForm = (data) => {
+          field("title").value = data.title || "";
+          field("address").value = data.address || "";
+          field("description").value = data.description || "";
+          field("price").value = data.price ?? "";
+          field("area").value = data.area ?? "";
+          field("rooms").value = data.rooms ?? "";
+          field("property-type").value = data.property_type?.id ?? "";
+          field("deal-type").value = data.deal_type?.id ?? "";
+
+          const selectedFeatureIds = new Set((data.features || []).map((feature) => feature.id));
+          document.querySelectorAll("#admin-features .feature-checkbox").forEach((checkbox) => {
+            checkbox.checked = selectedFeatureIds.has(Number(checkbox.value));
+          });
+        };
+
+        const loadProperty = async () => {
+          const data = await fetchJSON(`${API_BASE}${PROPERTY_ID}/`);
+          populateForm(data);
+        };
+
+        const collectPayload = () => ({
+          title: field("title").value.trim(),
+          address: field("address").value.trim(),
+          description: field("description").value.trim(),
+          price: field("price").value,
+          area: field("area").value,
+          rooms: field("rooms").value,
+          property_type_id: Number(field("property-type").value) || null,
+          deal_type_id: Number(field("deal-type").value) || null,
+          feature_ids: Array.from(document.querySelectorAll("#admin-features .feature-checkbox:checked")).map((checkbox) =>
+            Number(checkbox.value)
+          ),
+        });
+
+        const init = async () => {
+          try {
+            await loadDictionaries();
+            await loadProperty();
+          } catch (error) {
+            setStatus(error.message, "error");
+          }
+        };
+
+        if (openBtn) {
+          openBtn.addEventListener("click", async () => {
+            clearStatus();
+            toggleModal(true);
+            try {
+              await init();
+            } catch (error) {
+              setStatus(error.message, "error");
+            }
+          });
+        }
+
+        [closeBtn, cancelBtn].forEach((btn) => {
+          btn?.addEventListener("click", () => {
+            toggleModal(false);
+            clearStatus();
+          });
+        });
+
+        modal?.addEventListener("click", (event) => {
+          if (event.target === modal) {
+            toggleModal(false);
+            clearStatus();
+          }
+        });
+
+        form?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          clearStatus();
+          try {
+            const payload = collectPayload();
+            await fetchJSON(`${API_BASE}${PROPERTY_ID}/`, {
+              method: "PATCH",
+              body: JSON.stringify(payload),
+            });
+            setStatus("Об’єкт успішно оновлено.", "success");
+          } catch (error) {
+            setStatus(error.message, "error");
+          }
+        });
+      });
+    </script>
+  {% endif %}
 {% endblock %}

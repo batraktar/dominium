@@ -4,13 +4,18 @@
       <i class="ri-information-line"></i>
     </div>
 
-    <!-- Для десктопу -->
-    <p class="text-sm text-deepOcean leading-snug hidden lg:block">Наведіть курсор на ціну, щоб побачити вартість у гривнях та гривнях (курс на {{ today_date }}: 1$ = {{ usd_rate|floatformat:2 }} грн, 1€ = {{ eur_rate|floatformat:2 }} грн)</p>
+    <p class="text-sm text-deepOcean leading-snug hidden lg:block">
+      Зараз ціни показані у {{ currency_symbol }} ({{ selected_currency }}). Наведіть на ціну, щоб побачити
+      альтернативні валюти. Курси на {{ today_date }}: 1 USD = {{ usd_rate|floatformat:2 }} грн, 1 EUR = {{ eur_rate|floatformat:2 }} грн.
+    </p>
 
-    <!-- Для планшетів -->
-    <p class="text-sm text-deepOcean leading-snug hidden md:block lg:hidden">Натисніть на ціну, щоб побачити вартість у євро та гривнях (курс на {{ today_date }}: 1$ = {{ usd_rate|floatformat:2 }} грн, 1€ = {{ eur_rate|floatformat:2 }} грн)</p>
+    <p class="text-sm text-deepOcean leading-snug hidden md:block lg:hidden">
+      Натисніть на ціну, щоб переглянути інші валюти. Поточна валюта: {{ currency_symbol }} ({{ selected_currency }}).
+      Курси на {{ today_date }}: 1 USD = {{ usd_rate|floatformat:2 }} грн, 1 EUR = {{ eur_rate|floatformat:2 }} грн.
+    </p>
 
-    <!-- Для мобілок -->
-    <p class="text-sm text-deepOcean leading-snug block md:hidden">Тапніть по ціні, щоб побачити вартість у євро та гривнях (курс на {{ today_date }}: 1$ = {{ usd_rate|floatformat:2 }} грн, 1€ = {{ eur_rate|floatformat:2 }} грн)</p>
+    <p class="text-sm text-deepOcean leading-snug block md:hidden">
+      Тапніть по ціні для перегляду інших валют. Курси на {{ today_date }}: 1 USD = {{ usd_rate|floatformat:2 }} грн, 1 EUR = {{ eur_rate|floatformat:2 }} грн.
+    </p>
   </div>
 </div>

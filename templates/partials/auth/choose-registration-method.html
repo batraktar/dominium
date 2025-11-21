@@ -1,3 +1,4 @@
+{% load socialaccount %}
 <!-- Bootstrap Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
 <!-- Font Awesome -->
@@ -8,9 +9,17 @@
   <h2 class="text-2xl font-bold text-gray-800">Оберіть метод підтвердження реєстрації</h2>
 
   <div class="space-y-4">
-    <button onclick="showEmailForm()" class="w-full py-3 flex items-center justify-center gap-2 text-white font-semibold rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 transition">
+    <a
+      href="{% provider_login_url 'google' process='login' %}"
+      class="w-full py-3 flex items-center justify-center gap-2 text-white font-semibold rounded-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 transition"
+    >
       <span class="flex items-center justify-center w-6 h-6 text-white bg-white/20 rounded-full"><i class="bi bi-google text-sm"></i></span>
-      Реєстрація через Google
+      Продовжити з Google
+    </a>
+
+    <button onclick="showEmailForm()" class="w-full py-3 flex items-center justify-center gap-2 text-white font-semibold rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 transition">
+      <span class="flex items-center justify-center w-6 h-6 text-white bg-white/20 rounded-full"><i class="bi bi-envelope-at text-sm"></i></span>
+      Реєстрація через Email
     </button>
 
     <button onclick="showTelegramForm()" class="w-full py-3 flex items-center justify-center gap-2 text-white font-semibold rounded-full bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-500 hover:to-blue-600 transition">
@@ -19,21 +28,3 @@
     </button>
   </div>
 </div>
-
-<script>
-  function hideAllForms() {
-    document.getElementById('method-select')?.classList.add('hidden')
-    document.getElementById('email-signup')?.classList.add('hidden')
-    document.getElementById('telegram-signup')?.classList.add('hidden')
-  }
-  
-  function showEmailForm() {
-    hideAllForms()
-    document.getElementById('email-signup').classList.remove('hidden')
-  }
-  
-  function showTelegramForm() {
-    hideAllForms()
-    document.getElementById('telegram-signup').classList.remove('hidden')
-  }
-</script>

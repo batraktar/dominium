@@ -3,15 +3,41 @@
   <div class="flex justify-center space-x-4 mb-4 sm:mb-6">
     <img src="{% static 'base/assets/img/Logoblack.png' %}" class="w-[200px] object-cover" alt="Agent Photo" />
   </div>
-  <form class="space-y-4" id="contactForm">
+  <form
+    class="space-y-4"
+    id="contactForm"
+    data-user-name="{% if request.user.is_authenticated %}{{ request.user.display_name }}{% endif %}"
+    data-user-email="{% if request.user.is_authenticated %}{{ request.user.email|default:'' }}{% endif %}"
+    data-user-phone="{% if request.user.is_authenticated and request.user.phone_number %}{{ request.user.phone_number }}{% endif %}"
+  >
     <div>
-      <input type="text" name="name" placeholder="Імʼя" class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel" required />
+      <input
+        type="text"
+        name="name"
+        placeholder="Імʼя"
+        value="{% if request.user.is_authenticated %}{{ request.user.display_name }}{% endif %}"
+        class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel"
+        required
+      />
     </div>
     <div>
-      <input type="tel" name="phone" placeholder="Номер телефону" class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel" required />
+      <input
+        type="tel"
+        name="phone"
+        placeholder="Номер телефону"
+        value="{% if request.user.is_authenticated and request.user.phone_number %}{{ request.user.phone_number }}{% endif %}"
+        class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel"
+        required
+      />
     </div>
     <div>
-      <input type="email" name="email" placeholder="Пошта/email" class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel" />
+      <input
+        type="email"
+        name="email"
+        placeholder="Пошта/email"
+        value="{% if request.user.is_authenticated %}{{ request.user.email|default:'' }}{% endif %}"
+        class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel"
+      />
     </div>
     <div>
       <textarea name="message" placeholder="Повідомлення" rows="4" class="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel" required></textarea>
@@ -27,4 +53,6 @@
     
   </div>
 </div>
-<script src="{% static 'base/assets/js/contact.js' %}"></script>
+<script defer src="{% static 'base/assets/js/contact/api.js' %}"></script>
+<script defer src="{% static 'base/assets/js/contact/ui.js' %}"></script>
+<script defer src="{% static 'base/assets/js/contact/index.js' %}"></script>

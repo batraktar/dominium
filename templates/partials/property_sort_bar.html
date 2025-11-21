@@ -6,37 +6,121 @@
         <span class="font-ermilov text-lg md:text-xl text-creamBeige">Знайдено {{ found_count }} об'єктів</span>
       </div>
 
-      <div class="flex items-center">
-        <span class="text-sm text-creamBeige font-ermilov text-lg md:text-xl mr-5">Сортувати:</span>
-        <div class="relative">
-          <button id="sort-btn" class="pr-8 py-4 sm:px-4 md:px-2 xl:px-4 pl-2 bg-coolSage rounded-[9px] font-fixel focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-left flex items-center">
-            <span class="text-white rounded-[9px] font-fixel" id="sort-selected">
-              {% if sort_option == 'price_asc' %}
-                За ціною (від дешевих)
-              {% elif sort_option == 'price_desc' %}
-                За ціною (від дорогих)
-              {% elif sort_option == 'date' %}
-                За датою додавання
-              {% elif sort_option == 'area_asc' %}
-                За площею (від менших)
-              {% elif sort_option == 'area_desc' %}
-                За площею (від більших)
-              {% else %}
-                За замовчуванням
-              {% endif %}
-            </span>
-            <div class="w-4 h-4 flex items-center justify-center text-gray-500 ml-2">
+      <div class="flex flex-col md:flex-row items-center gap-3 md:gap-5">
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-creamBeige font-ermilov text-lg md:text-xl">Сортування</span>
+          <div class="relative" data-dropdown>
+            <button
+              id="sort-btn"
+              type="button"
+              class="dropdown-trigger sort-trigger w-[200px]"
+            >
+              <span class="font-fixel" id="sort-selected">
+                {% if sort_option == 'date' %}
+                  За датою додавання
+                {% elif sort_option == 'price_asc' %}
+                  За ціною (від дешевих)
+                {% elif sort_option == 'price_desc' %}
+                  За ціною (від дорогих)
+                {% elif sort_option == 'area_asc' %}
+                  За площею (від менших)
+                {% elif sort_option == 'area_desc' %}
+                  За площею (від більших)
+                {% else %}
+                  За замовчуванням
+                {% endif %}
+              </span>
               <i class="ri-arrow-down-s-line"></i>
-            </div>
-          </button>
+            </button>
 
-          <div id="sort-options" class="absolute z-20 mt-1 w-64 right-0 bg-white border border-gray-300 rounded-[9px] shadow-lg hidden">
-            <div class="py-1">
-              <a href="?{% query_transform request sort='price_asc' %}" class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'price_asc' %}font-semibold{% endif %}">За ціною (від дешевих)</a>
-              <a href="?{% query_transform request sort='price_desc' %}" class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'price_desc' %}font-semibold{% endif %}">За ціною (від дорогих)</a>
-              <a href="?{% query_transform request sort='date' %}" class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'date' %}font-semibold{% endif %}">За датою додавання</a>
-              <a href="?{% query_transform request sort='area_asc' %}" class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'area_asc' %}font-semibold{% endif %}">За площею (від менших)</a>
-              <a href="?{% query_transform request sort='area_desc' %}" class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'area_desc' %}font-semibold{% endif %}">За площею (від більших)</a>
+            <div
+              id="sort-options"
+              class="dropdown-menu hidden"
+              data-dropdown-menu
+            >
+              <div class="py-1">
+                <a
+                  href="?{% query_transform request sort='date' %}"
+                  class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'date' %}font-semibold{% endif %}"
+                  data-search-link="1"
+                >
+                  За датою додавання
+                </a>
+                <a
+                  href="?{% query_transform request sort='price_asc' %}"
+                  class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'price_asc' %}font-semibold{% endif %}"
+                  data-search-link="1"
+                >
+                  За ціною (від дешевих)
+                </a>
+                <a
+                  href="?{% query_transform request sort='price_desc' %}"
+                  class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'price_desc' %}font-semibold{% endif %}"
+                  data-search-link="1"
+                >
+                  За ціною (від дорогих)
+                </a>
+                <a
+                  href="?{% query_transform request sort='area_asc' %}"
+                  class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'area_asc' %}font-semibold{% endif %}"
+                  data-search-link="1"
+                >
+                  За площею (від менших)
+                </a>
+                <a
+                  href="?{% query_transform request sort='area_desc' %}"
+                  class="sort-option block px-4 py-2 text-sm hover:bg-gray-50 {% if sort_option == 'area_desc' %}font-semibold{% endif %}"
+                  data-search-link="1"
+                >
+                  За площею (від більших)
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <span class="text-sm text-creamBeige font-ermilov">На сторінці:</span>
+          <div class="relative" data-dropdown>
+            <button type="button" class="dropdown-trigger">
+              <span data-per-page-display>{{ per_page_selected }}</span>
+              <i class="ri-arrow-down-s-line"></i>
+            </button>
+            <div class="dropdown-menu hidden" data-dropdown-menu>
+              {% for size in per_page_options %}
+                <a
+                  href="?{{ querystring }}{% if querystring %}&{% endif %}per_page={{ size }}{% if selected_currency %}&currency={{ selected_currency }}{% endif %}"
+                  class="dropdown-item {% if per_page_selected == size %}active{% endif %}"
+                  data-search-link="1"
+                >
+                  {{ size }}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+
+          <span class="text-sm text-creamBeige font-ermilov">Валюта:</span>
+          <div class="relative" data-dropdown>
+            <button type="button" class="dropdown-trigger">
+              <span>
+                {% for currency in currency_options %}
+                  {% if currency.code == selected_currency %}
+                    {{ currency.label }}
+                  {% endif %}
+                {% endfor %}
+              </span>
+              <i class="ri-arrow-down-s-line"></i>
+            </button>
+            <div class="dropdown-menu hidden" data-dropdown-menu>
+              {% for currency in currency_options %}
+                <a
+                  href="?{{ querystring }}{% if querystring %}&{% endif %}currency={{ currency.code }}{% if per_page_selected %}&per_page={{ per_page_selected }}{% endif %}"
+                  class="dropdown-item {% if currency.code == selected_currency %}active{% endif %}"
+                  data-search-link="1"
+                >
+                  {{ currency.label }}
+                </a>
+              {% endfor %}
             </div>
           </div>
         </div>

@@ -5,11 +5,19 @@
 # Python
 __pycache__/
 *.pyc
+.env
+.env.docker
+*.env
+venv/
+.venv/
+.python-version
 .idea/
 .vscode/
 db.sqlite3
 media/
 static/base/
+staticfiles/
+logs/
 static/base/assets/img/1.jpg
 static/base/assets/img/2.jpg
 static/base/assets/img/3.jpg
@@ -19,4 +27,3 @@ static/base/assets/img/6.jpg
 static/base/assets/img/7.jpg
 static/base/assets/img/8.jpg
 static/base/assets/video/
-

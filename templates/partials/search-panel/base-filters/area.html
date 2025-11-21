@@ -1,12 +1,32 @@
-<!-- Площа -->
-<div>
-  <label class="{{ label_class|default:'block text-fixel text-sm font-fixel text-creamBeige mb-1' }}">Площа, м²</label>
-  <div class="flex items-center gap-2">
-    <div class="w-full">
-      <input name="area_min" type="number" value="{{ request.GET.area_min|default:'' }}" class="w-full py-4 px-4 md:px-2 xl:px-4 bg-coolSage rounded-[9px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm placeholder:text-white" placeholder="Від" />
+<div
+  class="filter-range bg-coolSage/90 rounded-[12px] px-5 py-4 text-white shadow-sm min-h-[118px]"
+  data-filter-key="area"
+  data-label="Площа"
+  data-suffix="м²"
+  data-min="0"
+  data-max="500"
+  data-step="5"
+  data-current-min="{{ request.GET.area_min|default:'' }}"
+  data-current-max="{{ request.GET.area_max|default:'' }}"
+>
+  <input type="hidden" name="area_min" data-field="min" value="{{ request.GET.area_min|default:'' }}" />
+  <input type="hidden" name="area_max" data-field="max" value="{{ request.GET.area_max|default:'' }}" />
+
+  <div class="flex items-center justify-between text-xs uppercase tracking-wide text-creamBeige/80 font-semibold mb-3">
+    <span>Площа, м²</span>
+    <button type="button" class="filter-reset text-creamBeige/70 hover:text-white transition" data-reset>
+      Очистити
+    </button>
+  </div>
+
+  <div class="flex flex-col gap-3 h-full justify-between">
+    <div class="flex items-center justify-between text-sm font-fixel">
+      <span data-value-label="min">Від 0 м²</span>
+      <span data-value-label="max">До 500 м²</span>
     </div>
-    <div class="w-full">
-      <input name="area_max" type="number" value="{{ request.GET.area_max|default:'' }}" class="w-full py-4 px-4 md:px-2 xl:px-4 bg-coolSage rounded-[9px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm placeholder:text-white" placeholder="До" />
+    <div class="relative h-10">
+      <input type="range" class="range-slider range-min" min="0" max="500" step="5" />
+      <input type="range" class="range-slider range-max" min="0" max="500" step="5" />
     </div>
   </div>
 </div>

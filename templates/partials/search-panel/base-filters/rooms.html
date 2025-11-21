@@ -1,126 +1,33 @@
-<div class="relative">
-  <input type="hidden" name="rooms" id="rooms-input" value="{{ request.GET.rooms|default:'' }}" />
+<div
+  class="filter-range bg-coolSage/90 rounded-[12px] px-5 py-4 text-white shadow-sm min-h-[118px]"
+  data-filter-key="rooms"
+  data-label="Кімнати"
+  data-min="0"
+  data-max="6"
+  data-step="1"
+  data-current-min="{{ rooms_slider_min|default:'' }}"
+  data-current-max="{{ rooms_slider_max|default:'' }}"
+  data-mapping-max-plus="true"
+>
+  <input type="hidden" name="rooms_min" data-field="min" value="{{ request.GET.rooms_min|default:'' }}" />
+  <input type="hidden" name="rooms_max" data-field="max" value="{{ request.GET.rooms_max|default:'' }}" />
+  <input type="hidden" name="rooms" value="" />
 
-  <label class="{{ label_class|default:'block text-sm font-fixel text-creamBeige mb-1' }}">Кількість кімнат</label>
+  <div class="flex items-center justify-between text-xs uppercase tracking-wide text-creamBeige/80 font-semibold mb-3">
+    <span>Кількість кімнат</span>
+    <button type="button" class="filter-reset text-creamBeige/70 hover:text-white transition" data-reset>
+      Очистити
+    </button>
+  </div>
 
-  <div class="relative">
-    <div class="w-full">
-      <div id="rooms-dropdown" class="relative">
-        <button id="rooms-btn" type="button" class="w-full pr-8 py-4 bg-coolSage rounded-[9px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-left flex justify-between items-center">
-          <span id="rooms-selected" class="px-4 md:px-2 xl:px-4 text-white">{{ request.GET.rooms|default:'Будь-яка' }}</span>
-          <div class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-500">
-            <i class="ri-arrow-down-s-line"></i>
-          </div>
-        </button>
-        <div id="rooms-options" class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-[9px] shadow-lg hidden">
-          <div class="p-2">
-            <div class="flex flex-wrap gap-2">
-              {% for val in room_options %}
-                <button type="button" class="room-option text-deepOcean px-4 py-1 text-sm font-fixel border border-coolSage rounded-full hover:bg-gray-50 focus:outline-none {% if request.GET.rooms == val %}bg-gray-200{% endif %}" data-value="{{ val }}">{{ val|default:'Будь-яка' }}</button>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="flex flex-col gap-3 h-full justify-between">
+    <div class="flex items-center justify-between text-sm font-fixel">
+      <span data-value-label="min">Від будь-якої</span>
+      <span data-value-label="max">До 6+</span>
+    </div>
+    <div class="relative h-10">
+      <input type="range" class="range-slider range-min" min="0" max="6" step="1" />
+      <input type="range" class="range-slider range-max" min="0" max="6" step="1" />
     </div>
   </div>
 </div>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const roomButtons = document.querySelectorAll('.room-option')
-    const input = document.getElementById('rooms-input')
-    const selectedSpan = document.getElementById('rooms-selected')
-    const form = document.querySelector('form')
-    const dropdown = document.getElementById('rooms-options')
-    const toggleBtn = document.getElementById('rooms-btn')
-  
-    let selectedValues = input.value ? input.value.split(',') : []
-  
-    function updateUI() {
-      roomButtons.forEach((btn) => {
-        const val = btn.dataset.value
-        if (selectedValues.includes(val)) {
-          btn.classList.add('bg-gray-200')
-        } else {
-          btn.classList.remove('bg-gray-200')
-        }
-      })
-      selectedSpan.textContent = selectedValues.length ? selectedValues.join(', ') : 'Будь-яка'
-      input.value = selectedValues.join(',')
-    }
-  
-    roomButtons.forEach((button) => {
-      button.addEventListener('click', function (e) {
-        e.stopPropagation()
-        const val = this.dataset.value
-  
-        if (val === '') {
-          selectedValues = ['']
-        } else {
-          selectedValues = selectedValues.filter((v) => v !== '')
-          if (selectedValues.includes(val)) {
-            selectedValues = selectedValues.filter((v) => v !== val)
-          } else {
-            selectedValues.push(val)
-          }
-        }
-  
-        updateUI()
-      })
-    })
-  
-    // Показ / приховування дропдауна
-    toggleBtn.addEventListener('click', function (e) {
-      e.stopPropagation()
-      const isOpen = !dropdown.classList.contains('hidden')
-      dropdown.classList.toggle('hidden')
-      {% comment %} // Якщо був відкритий — закриваємо і сабмітимо
-      if (isOpen) {
-        form.submit()
-      } {% endcomment %}
-    })
-  
-    // Закриваємо дропдаун і сабмітимо, якщо клік поза ним
-    document.addEventListener('click', function (e) {
-      if (!dropdown.classList.contains('hidden')) {
-        dropdown.classList.add('hidden')
-        {% comment %} form.submit() {% endcomment %}
-      }
-    })
-  
-    // Не закриваємо при кліку всередині
-    dropdown.addEventListener('click', function (e) {
-      e.stopPropagation()
-    })
-  
-    updateUI()
-  })
-</script>
-<style>
-  .room-option {
-    transition: background-color 0.3s ease;
-  }
-  .room-option:hover {
-    background-color: #f3f4f6; /* Tailwind's gray-100 */
-  }
-  .room-option:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* Tailwind's ring-2 */
-  }
-  .room-option:active {
-    background-color: #e5e7eb; /* Tailwind's gray-200 */
-  }
-  .room-option.selected {
-    background-color: #e5e7eb; /* Tailwind's gray-200 */
-  }
-  .room-option.selected:hover {
-    background-color: #d1d5db; /* Tailwind's gray-300 */
-  }
-  .room-option.selected:focus {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* Tailwind's ring-2 */
-  }
-  .room-option.selected:active {
-    background-color: #d1d5db; /* Tailwind's gray-300 */
-  }
-</style>

@@ -1,43 +1,43 @@
 <!-- Тип нерухомості -->
-<div class="relative">
-    <label class="{{ label_class|default:'block text-sm font-fixel text-creamBeige mb-1' }}">Тип нерухомості</label>
-    <div class="relative">
-        <div id="property-type-dropdown" class="relative">
-            <button
-                    id="property-type-btn"
-                    type="button"
-                    class="w-full pr-8 py-4 bg-coolSage rounded-[9px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-left flex justify-between items-center"
-            >
-                <span class="px-4 md:px-2 xl:px-4 font-fixel text-white" id="property-type-selected">Обрати типи нерухомості</span>
-                    <div class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-500 ml-auto">
-                        <i class="ri-arrow-down-s-line"></i>
-                    </div>
-            </button>
-            <div
-                    id="property-type-options"
-                    class="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-[9px] shadow-lg hidden"
-            >
-                <div class="p-2">
-                    {% for pt in property_types %}
-                    <div class="mb-2">
-                        <label class="flex font-fixel text-deepOcean items-center cursor-pointer p-3 hover:bg-gray-50 rounded">
-                            <div class="custom-checkbox">
-                                <input
-                                    type="checkbox"
-                                    name="property_type"
-                                    value="{{ pt.slug }}"
-                                    class="property-type-option"
-                                    {% if pt.slug in selected_property_types %}checked{% endif %}
-                                />
-                                <span class="px-1 checkmark"></span>
-                            </div>
-                            <span>{{ pt.name }}</span>
-                        </label>
-                    </div>
-                    {% endfor %}   
-
-                </div>
+<div class="bg-coolSage/90 rounded-[12px] px-5 py-4 text-white shadow-sm min-h-[118px] flex flex-col justify-between">
+  <div class="flex items-center justify-between text-xs uppercase tracking-wide text-creamBeige/80 font-semibold mb-3">
+    <span>Тип нерухомості</span>
+    <button type="button" class="text-creamBeige/70 hover:text-white transition text-[11px]" data-property-type-reset data-auto-submit>
+      Очистити
+    </button>
+  </div>
+  <div class="relative" data-dropdown data-dropdown-multi="property-type">
+    <button
+      id="property-type-btn"
+      type="button"
+      class="dropdown-trigger w-full justify-between"
+    >
+      <span data-property-type-summary>Обрати типи нерухомості</span>
+      <i class="ri-arrow-down-s-line"></i>
+    </button>
+    <div
+      id="property-type-options"
+      class="dropdown-menu hidden full-width"
+      data-dropdown-menu
+    >
+      <div class="p-2">
+        {% for pt in property_types %}
+          <label class="flex font-fixel text-deepOcean items-center cursor-pointer p-3 hover:bg-gray-50 rounded">
+            <div class="custom-checkbox">
+              <input
+                type="checkbox"
+                name="property_type"
+                value="{{ pt.slug }}"
+                class="property-type-option"
+                data-auto-submit="change"
+                {% if pt.slug in selected_property_types %}checked{% endif %}
+              />
+              <span class="px-1 checkmark"></span>
             </div>
-        </div>
+            <span>{{ pt.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
     </div>
+  </div>
 </div>

@@ -1,17 +1,24 @@
 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm mb-4 sm:mb-10">
   <h3 class="text-xl text-deepOcean font-ermilov mb-4">Location</h3>
 
-  <div class="h-[300px] rounded-lg overflow-hidden relative">
-    <div id="map" class="w-full h-full z-0"></div>
-    <div id="map-controls" class="absolute top-2 right-2 z-10 bg-white rounded shadow px-2 py-1 text-sm font-fixel">
-      <label class="mr-2"><input type="radio" name="basemap" value="map" checked />Map</label>
-      <label><input type="radio" name="basemap" value="satellite" />Satellite</label>
+  {% if property.latitude and property.longitude %}
+    <div class="h-[320px] rounded-lg overflow-hidden relative bg-white/10">
+      <div id="map" class="w-full h-full z-0"></div>
+      <div id="map-controls" class="absolute top-2 right-2 z-10 bg-white rounded shadow px-2 py-1 text-sm font-fixel">
+        <label class="mr-2"><input type="radio" name="basemap" value="map" checked />Map</label>
+        <label><input type="radio" name="basemap" value="satellite" />Satellite</label>
+      </div>
     </div>
-  </div>
 
-  <div class="text-xs text-gray-400 font-fixel text-right mt-2">
-    Дані карти: <a href="https://www.openstreetmap.org/copyright" target="_blank" class="underline">© OpenStreetMap contributors</a>, Tiles: © Esri
-  </div>
+    <div class="text-xs text-gray-400 font-fixel text-right mt-2">
+      Дані карти: <a href="https://www.openstreetmap.org/copyright" target="_blank" class="underline">© OpenStreetMap contributors</a>, Tiles: © Esri
+    </div>
+  {% else %}
+    <div class="h-[320px] rounded-lg border border-white/30 bg-white/5 flex flex-col items-center justify-center text-sm font-fixel text-deepOcean/80 px-6 text-center">
+      <i class="ri-map-pin-off-line text-2xl mb-2"></i>
+      Координати цього об'єкта ще не додані. Зв’яжіться з менеджером, щоб отримати точну адресну точку.
+    </div>
+  {% endif %}
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -19,10 +26,12 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const lat = parseFloat('{{ property.latitude|default:0|stringformat:"f" }}'.replace(',', '.'))
-      const lon = parseFloat('{{ property.longitude|default:0|stringformat:"f" }}'.replace(',', '.'))
-    
-      if (lat && lon) {
+      const latRaw = '{{ property.latitude|default:"" }}'
+      const lonRaw = '{{ property.longitude|default:"" }}'
+      const lat = parseFloat(String(latRaw).replace(',', '.'))
+      const lon = parseFloat(String(lonRaw).replace(',', '.'))
+
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
         const map = L.map('map', {
           attributionControl: false
         }).setView([lat, lon], 15)

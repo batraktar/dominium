@@ -18,16 +18,52 @@
       </button>
 
       <!-- Поділитись -->
-      <button onclick="navigator.clipboard.writeText('{{ property.get_absolute_url }}'); alert('Посилання скопійовано!')" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition"><i class="ri-share-forward-line text-gray-700"></i></button>
+      <div class="relative" data-share-container>
+        <button
+          type="button"
+          class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition"
+          data-share-toggle
+          data-share-url="{{ property.absolute_url|default:property.get_absolute_url }}"
+          data-share-title="{{ property.title }}"
+        >
+          <i class="ri-share-forward-line text-gray-700"></i>
+        </button>
+        <div
+          class="share-menu absolute right-0 mt-2 w-40 rounded-lg bg-white shadow-lg py-2 hidden z-20"
+          data-share-menu
+        >
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="copy"
+          >
+            <i class="ri-file-copy-line text-base"></i> Скопіювати
+          </button>
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="telegram"
+          >
+            <i class="ri-send-plane-line text-base"></i> Telegram
+          </button>
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="viber"
+          >
+            <i class="ri-message-2-line text-base"></i> Viber
+          </button>
+        </div>
+      </div>
     </div>
     <div class="grid grid-cols-3 gap-2">
       <div class="col-span-2 relative rounded-lg overflow-hidden aspect-[4/3]">
-        <img src="{{ main_image.image.url }}" loading="lazy" class="w-full h-full object-cover cursor-pointer" onclick="openGallery(0)" alt="Main Image" />
+        <img src="{{ main_image.image.url }}" loading="lazy" decoding="async" class="w-full h-full object-cover cursor-pointer" onclick="openGallery(0)" alt="Main Image" />
       </div>
       <div class="flex flex-col gap-2">
         {% for image in property.images.all|slice:'1:3' %}
           <div class="relative rounded-lg overflow-hidden flex-1 aspect-[4/3]">
-            <img src="{{ image.image.url }}" class="w-full h-full object-cover cursor-pointer" onclick="openGallery({{ forloop.counter }})" alt="Gallery Image" />
+            <img src="{{ image.image.url }}" loading="lazy" decoding="async" class="w-full h-full object-cover cursor-pointer" onclick="openGallery({{ forloop.counter }})" alt="Gallery Image" />
           </div>
         {% endfor %}
       </div>
@@ -39,7 +75,7 @@
 <div class="md:hidden relative h-[400px] mb-8 rounded-lg overflow-hidden group mobile-gallery">
   {% if property.images.exists %}
     <div class="relative w-full h-full" id="gallery">
-      <img src="{{ main_image.image.url }}" class="w-full h-full object-cover cursor-pointer" onclick="openGallery()" alt="Main Image" />
+      <img src="{{ main_image.image.url }}" loading="lazy" decoding="async" class="w-full h-full object-cover cursor-pointer" onclick="openGallery()" alt="Main Image" />
       <button onclick="prevImage()" class="btn-prev absolute left-3 top-1/2 -translate-y-1/2 gallery-button"><i class="ri-arrow-left-s-line text-gray-700 text-xl"></i></button>
       <button onclick="nextImage()" class="btn-next absolute right-3 top-1/2 -translate-y-1/2 gallery-button"><i class="ri-arrow-right-s-line text-gray-700 text-xl"></i></button>
       <div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
@@ -95,7 +131,43 @@
       </button>
 
       <!-- Поділитись -->
-      <button onclick="navigator.clipboard.writeText('{{ property.get_absolute_url }}'); alert('Посилання скопійовано!')" class="gallery-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full"><i class="ri-share-line text-gray-700"></i></button>
+      <div class="relative" data-share-container>
+        <button
+          type="button"
+          class="gallery-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition"
+          data-share-toggle
+          data-share-url="{{ property.absolute_url|default:property.get_absolute_url }}"
+          data-share-title="{{ property.title }}"
+        >
+          <i class="ri-share-line text-gray-700"></i>
+        </button>
+        <div
+          class="share-menu absolute right-0 mt-2 w-40 rounded-lg bg-white shadow-lg py-2 hidden z-20"
+          data-share-menu
+        >
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="copy"
+          >
+            <i class="ri-file-copy-line text-base"></i> Скопіювати
+          </button>
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="telegram"
+          >
+            <i class="ri-send-plane-line text-base"></i> Telegram
+          </button>
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="viber"
+          >
+            <i class="ri-message-2-line text-base"></i> Viber
+          </button>
+        </div>
+      </div>
     </div>
   {% endif %}
 </div>
@@ -112,7 +184,7 @@
     <div class="flex space-x-4 overflow-x-auto p-2">
       <div class="flex space-x-2">
         {% for image in property.images.all %}
-          <img src="{{ image.image.url }}" class="thumbnail-img" onclick="showModalImage({{ forloop.counter0 }})" alt="Thumbnail {{ forloop.counter }}" />
+          <img data-src="{{ image.image.url }}" loading="lazy" decoding="async" class="thumbnail-img lazy-image" onclick="showModalImage({{ forloop.counter0 }})" alt="Thumbnail {{ forloop.counter }}" />
         {% endfor %}
       </div>
     </div>
@@ -122,5 +194,29 @@
 {# JS Images array for detail.js #}
 <script>
     window.propertyImages = {{ property_images_json|safe }};
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const lazyImages = document.querySelectorAll(".lazy-image[data-src]");
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.removeAttribute("data-src");
+            obs.unobserve(img);
+          }
+        });
+      }, { rootMargin: "200px 0px" });
+
+      lazyImages.forEach((img) => observer.observe(img));
+    } else {
+      lazyImages.forEach((img) => {
+        img.src = img.dataset.src;
+        img.removeAttribute("data-src");
+      });
+    }
+  });
 </script>
 <script src="{% static 'base/assets/js/gallery.js' %}"></script>

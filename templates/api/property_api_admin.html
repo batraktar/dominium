@@ -1,0 +1,773 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+  API Admin — DOMINIUM
+{% endblock %}
+
+{% block main_padding %}pt-[80px]{% endblock %}
+
+{% block head %}
+  {{ block.super }}
+  <style>
+    :root {
+      --admin-card-bg: #fff;
+      --admin-card-border: rgba(229, 231, 235, 0.9);
+      --admin-card-radius: 1rem;
+      --admin-card-gap: 0.85rem;
+    }
+
+    .table-thumb {
+      width: 72px;
+      height: 52px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, 0.15);
+      display: block;
+    }
+    .admin-filter-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .admin-toolbar-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .admin-toolbar-count {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .admin-toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    #properties-table {
+      border: 0;
+      background: transparent;
+    }
+    #properties-table th,
+    #properties-table td {
+      white-space: normal;
+    }
+    .cell-label {
+      display: none;
+    }
+
+    @media (max-width: 1100px) {
+      .admin-toolbar-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .admin-toolbar-group button {
+        flex: 1 1 180px;
+        min-width: 140px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      #properties-table thead {
+        display: none;
+      }
+      #properties-table tbody {
+        display: grid;
+        gap: 0.75rem;
+        padding: 0;
+      }
+      #properties-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        padding: 0.85rem 0.75rem;
+        border: 1px solid var(--admin-card-border);
+        border-radius: var(--admin-card-radius);
+        background: var(--admin-card-bg);
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      }
+      #properties-table tbody td {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0;
+      }
+      .cell-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.03em;
+      }
+      #properties-table tbody td:last-child {
+        grid-column: span 2;
+        align-self: flex-end;
+      }
+      #properties-table tbody td input[type="checkbox"] {
+        margin: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .admin-filter-row {
+        grid-template-columns: 1fr;
+      }
+      .admin-toolbar-group {
+        flex-direction: column;
+      }
+      .admin-toolbar-group button {
+        width: 100%;
+      }
+      #properties-table tbody tr {
+        grid-template-columns: 1fr;
+      }
+      #properties-table tbody td:last-child {
+        justify-content: flex-end;
+      }
+    }
+
+    .image-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      gap: 0.5rem;
+      min-height: 120px;
+      padding: 0.75rem;
+      border: 1px dashed rgba(15, 23, 42, 0.2);
+      border-radius: 0.75rem;
+      background: #f8fafc;
+    }
+    .image-thumb {
+      border-radius: 0.75rem;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+    .image-thumb img {
+      width: 100%;
+      height: 90px;
+      object-fit: cover;
+    }
+    .image-thumb .thumb-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.25rem;
+      padding: 0.35rem;
+    }
+    .image-thumb button {
+      flex: 1;
+      font-size: 11px;
+      padding: 0.25rem;
+      border-radius: 6px;
+    }
+    .image-thumb .main-label {
+      position: absolute;
+      top: 0.45rem;
+      right: 0.45rem;
+      background: rgba(37, 99, 235, 0.9);
+      color: #fff;
+      font-size: 10px;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+    }
+  </style>
+{% endblock %}
+
+
+
+{% block content %}
+  <section class="container mx-auto px-4 py-10 text-white space-y-8">
+    <header>
+      <h1 class="text-3xl font-ermilov mb-2">Керування об’єктами через API</h1>
+      <p class="text-coolSage font-fixel max-w-3xl">
+        Сторінка використовує REST-ендпоїнти (<code class="bg-black/20 px-1 rounded">/api/properties/</code> тощо)
+        для створення, редагування та видалення об’єктів. Усі запити відправляються без перезавантаження.
+      </p>
+    </header>
+
+    <div class="bg-white text-deepOcean rounded-[9px] shadow-lg p-6 space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h2 class="text-xl font-semibold">Список об’єктів</h2>
+        <div class="flex gap-3">
+          <button
+            id="refresh-properties"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+          >
+            <i class="ri-refresh-line"></i>
+            Оновити
+          </button>
+          <button
+            id="open-import"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-creamBeige text-deepOcean rounded-[9px] font-fixel hover:bg-creamBeige/90 transition"
+          >
+            <i class="ri-upload-cloud-2-line"></i>
+            Імпорт з HTML
+          </button>
+          <button
+            id="start-create"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-coolSage text-white rounded-[9px] font-fixel hover:bg-coolSage/90 transition"
+          >
+            <i class="ri-add-line"></i>
+            Новий об’єкт
+          </button>
+          {% if request.user.is_staff %}
+            <button
+              type="button"
+              id="open-highlight"
+              class="inline-flex items-center gap-2 px-4 py-2 border border-deepOcean text-deepOcean rounded-[9px] font-fixel hover:bg-deepOcean hover:text-white transition"
+            >
+              <i class="ri-star-smile-line"></i>
+              Налаштування «Топ 3»
+            </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-7 gap-4 admin-filter-row">
+        <label class="flex flex-col gap-2 md:col-span-2">
+          <span class="text-sm font-semibold">Пошук</span>
+          <input
+            type="search"
+            id="filter-search"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="Назва або адреса"
+          />
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Тип нерухомості</span>
+          <select
+            id="filter-property-type"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          >
+            <option value="">Усі типи</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Тип угоди</span>
+          <select
+            id="filter-deal-type"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          >
+            <option value="">Усі угоди</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Статус «Топ 3»</span>
+          <select
+            id="filter-featured"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          >
+            <option value="">Усі</option>
+            <option value="true">Лише «Топ 3»</option>
+            <option value="false">Без «Топ 3»</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Статус об’єкта</span>
+          <select
+            id="filter-status"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          >
+            <option value="active" selected>Активні</option>
+            <option value="archived">Архів</option>
+            <option value="all">Усі</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">На сторінку</span>
+          <select
+            id="page-size"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          >
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+        <div class="flex items-end">
+          <button
+            type="button"
+            id="reset-filters"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+          >
+            <i class="ri-arrow-go-back-line"></i>
+            Скинути
+          </button>
+        </div>
+      </div>
+
+      <div
+        id="table-status"
+        class="hidden px-4 py-2 rounded-[9px] border text-sm font-fixel bg-gray-50 border-gray-200 text-gray-700"
+      ></div>
+
+      <div id="bulk-toolbar" class="hidden px-4 py-3 rounded-[9px] border border-creamBeige bg-creamBeige/40">
+        <div class="admin-toolbar-wrapper">
+          <p class="admin-toolbar-count text-deepOcean">
+            Вибрано <span id="bulk-count">0</span> об’єкт(ів)
+          </p>
+          <div class="admin-toolbar-group">
+            <button
+              type="button"
+              id="bulk-archive"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-[9px] bg-deepOcean text-white hover:bg-deepOcean/90 transition"
+            >
+              <i class="ri-archive-stack-line"></i>
+              В архів
+            </button>
+            <button
+              type="button"
+              id="bulk-restore"
+              class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-[9px] bg-coolSage text-white hover:bg-coolSage/90 transition"
+            >
+              <i class="ri-history-line"></i>
+              Повернути
+            </button>
+            <button
+              type="button"
+              id="bulk-delete"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-[9px] border border-red-200 text-red-700 hover:bg-red-50 transition"
+            >
+              <i class="ri-delete-bin-7-line"></i>
+              Видалити
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm font-fixel" id="properties-table">
+          <thead class="bg-gray-50 text-left text-gray-600 uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3 w-12">
+                <span class="sr-only">Вибір</span>
+                <input type="checkbox" id="select-all" class="accent-deepOcean" />
+              </th>
+              <th class="px-4 py-3 w-24">Фото</th>
+              <th class="px-4 py-3">Назва</th>
+              <th class="px-4 py-3">Адреса</th>
+              <th class="px-4 py-3">Ціна, $</th>
+              <th class="px-4 py-3">Тип</th>
+              <th class="px-4 py-3">Угода</th>
+              <th class="px-4 py-3 text-center">Топ</th>
+              <th class="px-4 py-3 text-right">Дії</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200" id="properties-body">
+            <tr>
+              <td colspan="8" class="px-4 py-6 text-center text-gray-500">Завантаження...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <p class="text-sm text-gray-600 font-fixel" id="pagination-info">—</p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            id="prev-page"
+            class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-[9px] text-gray-700 hover:bg-gray-100 transition"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Назад
+          </button>
+          <button
+            type="button"
+            id="next-page"
+            class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-[9px] text-gray-700 hover:bg-gray-100 transition"
+          >
+            Вперед
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <div
+    id="property-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+  >
+    <div class="bg-white text-deepOcean rounded-[12px] shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-semibold" id="form-title">Створення об’єкта</h2>
+        <button id="close-modal" class="text-gray-500 hover:text-gray-800">
+          <i class="ri-close-line text-2xl"></i>
+        </button>
+      </div>
+
+      <div
+        id="form-status"
+        class="hidden mx-6 mt-4 px-4 py-2 rounded-[9px] text-sm font-fixel"
+      ></div>
+
+      <form id="property-form" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input type="hidden" id="property-id" />
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Назва</span>
+          <input
+            type="text"
+            id="property-title"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="Простора квартира у центрі"
+            required
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Адреса</span>
+          <input
+            type="text"
+            id="property-address"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="м. Київ, вул. Шевченка, 10"
+            required
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Ціна, $</span>
+          <input
+            type="number"
+            id="property-price"
+            min="0"
+            step="1"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            required
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Площа, м²</span>
+          <input
+            type="number"
+            id="property-area"
+            min="0"
+            step="1"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            required
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Кількість кімнат</span>
+          <input
+            type="number"
+            id="property-rooms"
+            min="1"
+            step="1"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            required
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Тип нерухомості</span>
+          <select
+            id="property-type"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            required
+          >
+            <option value="">Завантаження...</option>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Тип угоди</span>
+          <select
+            id="deal-type"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            required
+          >
+            <option value="">Завантаження...</option>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-2 md:col-span-2">
+          <span class="text-sm font-semibold">Опис</span>
+          <textarea
+            id="property-description"
+            rows="4"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="Короткий опис об’єкта..."
+          ></textarea>
+        </label>
+
+        <fieldset class="md:col-span-2">
+          <legend class="text-sm font-semibold mb-2">Характеристики</legend>
+          <div id="features-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <p id="features-loading" class="text-sm text-gray-500">Завантаження...</p>
+          </div>
+        </fieldset>
+
+        <div class="md:col-span-2 space-y-3">
+          <label class="text-sm font-semibold">Фотографії</label>
+          <div
+            id="image-gallery"
+            class="image-gallery min-h-[120px]"
+          >
+            <p class="text-sm text-gray-500" id="image-gallery-empty">Фото не додано.</p>
+          </div>
+          <div class="space-y-1">
+            <label class="text-sm font-semibold">Додати фото</label>
+            <input
+              type="file"
+              id="image-upload"
+              multiple
+              accept="image/*"
+              class="w-full px-3 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            />
+            <p class="text-xs text-gray-500" id="image-upload-status">Підтримуються PNG/JPG, до 12 МБ.</p>
+          </div>
+        </div>
+
+        <label class="flex items-center gap-3 md:col-span-2">
+          <input type="checkbox" id="property-featured" class="w-5 h-5 border border-gray-300 rounded accent-deepOcean" />
+          <span class="text-sm font-semibold">Показувати в блоці «Топ 3»</span>
+        </label>
+
+        <div class="md:col-span-2 flex flex-wrap gap-3 pt-2">
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+            id="submit-button"
+          >
+            <i class="ri-save-line"></i>
+            Зберегти
+          </button>
+          <button
+            type="button"
+            id="delete-property"
+            class="hidden inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-[9px] font-fixel hover:bg-red-500/80 transition"
+          >
+            <i class="ri-delete-bin-line"></i>
+            Видалити
+          </button>
+          <button
+            type="button"
+            id="cancel-modal"
+            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+          >
+            <i class="ri-close-circle-line"></i>
+            Скасувати
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div
+    id="import-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+  >
+    <div class="bg-white text-deepOcean rounded-[12px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-semibold">Імпорт об’єктів з HTML</h2>
+        <button id="close-import-modal" class="text-gray-500 hover:text-gray-800">
+          <i class="ri-close-line text-2xl"></i>
+        </button>
+      </div>
+      <div
+        id="import-status"
+        class="hidden mx-6 mt-4 px-4 py-2 rounded-[9px] text-sm font-fixel"
+      ></div>
+      <form id="import-form" class="px-6 py-6 space-y-5">
+        <div class="space-y-2">
+          <label class="text-sm font-semibold">Посилання на презентації</label>
+          <textarea
+            id="import-urls"
+            class="w-full px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean min-h-[120px]"
+            placeholder="https://example.com/object-1\nhttps://example.com/object-2"
+          ></textarea>
+          <p class="text-sm text-gray-500">
+            Вставте посилання на HTML-сторінки (по одному в рядок). Кожна адреса буде завантажена, розібрана та додана як новий об’єкт.
+          </p>
+        </div>
+        <div class="space-y-2">
+          <label class="text-sm font-semibold">HTML-файли</label>
+          <input
+            type="file"
+            id="import-files"
+            name="files"
+            accept=".html,.htm"
+            multiple
+            class="w-full px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          />
+          <p class="text-sm text-gray-500">
+            Або оберіть HTML-файли, якщо маєте експорт із CRM. Можна комбінувати з посиланнями.
+          </p>
+        </div>
+        <label class="flex items-center gap-3 text-sm text-gray-700">
+          <input type="checkbox" id="import-geocode" class="accent-deepOcean" />
+          <span>Спробувати визначити координати через геокодування (повільніше)</span>
+        </label>
+        <div id="import-progress" class="hidden text-sm text-gray-600 font-fixel"></div>
+        <div class="flex flex-wrap gap-3 pt-4">
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+          >
+            <i class="ri-upload-2-line"></i>
+            Імпортувати
+          </button>
+          <button
+            type="button"
+            id="cancel-import-modal"
+            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+          >
+            <i class="ri-close-circle-line"></i>
+            Скасувати
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div
+    id="highlight-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+  >
+    <div class="bg-white text-deepOcean rounded-[12px] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-semibold">Налаштування блоку «Топ 3»</h2>
+        <div class="flex items-center gap-3">
+          {% if user.is_staff %}
+            <a
+              href="{% url 'admin:house_homepagehighlightsettings_changelist' %}"
+              target="_blank"
+              rel="noopener"
+              class="inline-flex items-center gap-1 text-sm text-deepOcean hover:text-coolSage transition"
+            >
+              <i class="ri-external-link-line"></i>
+              Django-адмінка
+            </a>
+          {% endif %}
+          <button id="close-highlight-modal" class="text-gray-500 hover:text-gray-800">
+            <i class="ri-close-line text-2xl"></i>
+          </button>
+        </div>
+      </div>
+
+      <div
+        id="highlight-status"
+        class="hidden mx-6 mt-4 px-4 py-2 rounded-[9px] text-sm font-fixel"
+      ></div>
+
+      <form id="highlight-settings-form" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Кількість об’єктів</span>
+          <input
+            type="number"
+            id="highlight-limit"
+            min="1"
+            step="1"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            value="3"
+          />
+          <span class="text-xs text-gray-500">Використовується, якщо обрано менше ручних об’єктів.</span>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Регіон / ключове слово</span>
+          <input
+            type="text"
+            id="highlight-region"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="Напр. Київ, Поділ"
+          />
+          <span class="text-xs text-gray-500">Фільтрує об’єкти за адресою.</span>
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Мінімальна ціна, $</span>
+          <input
+            type="number"
+            id="highlight-price-min"
+            min="0"
+            step="1"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="Без обмежень"
+          />
+        </label>
+
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Максимальна ціна, $</span>
+          <input
+            type="number"
+            id="highlight-price-max"
+            min="0"
+            step="1"
+            class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+            placeholder="Без обмежень"
+          />
+        </label>
+
+        <fieldset class="md:col-span-2">
+          <legend class="text-sm font-semibold mb-2">Обмежити типи нерухомості</legend>
+          <div id="highlight-property-types" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <p class="text-sm text-gray-500">Завантаження...</p>
+          </div>
+        </fieldset>
+
+        <div class="md:col-span-2 flex flex-wrap gap-3 pt-2">
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+          >
+            <i class="ri-save-line"></i>
+            Зберегти
+          </button>
+          <button
+            type="button"
+            id="highlight-reset"
+            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+          >
+            <i class="ri-refresh-line"></i>
+            Скинути поля
+          </button>
+          <button
+            type="button"
+            id="cancel-highlight-modal"
+            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+          >
+            <i class="ri-close-circle-line"></i>
+            Закрити
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ block.super }}
+  <script id="admin-api-config" type="application/json">
+    {
+      "API_URL": "{% url 'house_api:property_list' %}",
+      "BULK_ACTION_URL": "{% url 'house_api:property_bulk_action' %}",
+      "PROPERTY_TYPES_URL": "{% url 'house_api:property_type_list' %}",
+      "DEAL_TYPES_URL": "{% url 'house_api:deal_type_list' %}",
+      "FEATURES_URL": "{% url 'house_api:feature_list' %}",
+      "HIGHLIGHT_SETTINGS_URL": "{% url 'house_api:highlight_settings' %}",
+      "IMPORT_HTML_URL": "{% url 'house_api:property_import_html' %}",
+      "IMPORT_LINK_URL": "{% url 'house_api:property_import_link' %}",
+      "PROPERTY_IMAGES_URL_TEMPLATE": "{% url 'house_api:property_images' 0 %}",
+      "PROPERTY_IMAGE_DETAIL_URL_TEMPLATE": "{% url 'house_api:property_image_detail' 0 %}"
+    }
+  </script>
+  <script>
+    window.DOMINIUM_ADMIN_CONFIG = JSON.parse(
+      document.getElementById('admin-api-config').textContent || '{}'
+    );
+  </script>
+  <script defer src="{% static 'base/assets/js/property_api_admin.js' %}"></script>
+{% endblock %}
+

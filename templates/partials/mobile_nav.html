@@ -1,3 +1,4 @@
+{% load socialaccount %}
 <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white z-50">
   <div class="flex justify-around py-2">
     <a href="/" class="flex flex-col items-center text-deepOcean hover:text-coolSage">
@@ -12,6 +13,31 @@
       <i class="ri-heart-line ri-lg text-deepOcean"></i>
       <span class="text-xs mt-1">Обране</span>
     </a>
+    {% if request.user.is_staff %}
+      <a href="{% url 'property_api_admin' %}" class="flex flex-col items-center text-deepOcean hover:text-coolSage">
+        <i class="ri-dashboard-line ri-lg text-deepOcean"></i>
+        <span class="text-xs mt-1">API</span>
+      </a>
+    {% endif %}
+    {% if request.user.is_authenticated %}
+      <button
+        type="button"
+        data-logout-url="{% url 'logout' %}"
+        class="flex flex-col items-center text-deepOcean hover:text-coolSage"
+      >
+        <i class="ri-logout-box-r-line ri-lg text-deepOcean"></i>
+        <span class="text-xs mt-1">Вийти</span>
+      </button>
+    {% else %}
+      <button type="button" data-google-auth data-auth-url="{% provider_login_url 'google' process='login' %}" class="flex flex-col items-center text-deepOcean hover:text-coolSage">
+        <i class="ri-user-add-line ri-lg text-deepOcean"></i>
+        <span class="text-xs mt-1">Реєстрація</span>
+      </button>
+      <button type="button" class="flex flex-col items-center text-deepOcean hover:text-coolSage" data-open-modal="login">
+        <i class="ri-login-circle-line ri-lg text-deepOcean"></i>
+        <span class="text-xs mt-1">Вхід</span>
+      </button>
+    {% endif %}
     {% comment %} <a href="/about/" class="flex flex-col items-center text-deepOcean hover:text-coolSage">
       <i class="ri-user-line ri-lg"></i>
       <span class="text-xs mt-1">Про нас</span>

@@ -1,0 +1,127 @@
+{% load static %}
+{% load socialaccount %}
+<div
+  id="register-modal"
+  data-modal="register"
+  class="fixed inset-0 z-50 hidden items-center justify-center px-4 py-6 backdrop-blur-sm transition"
+>
+  <div data-modal-overlay class="absolute inset-0 bg-black/60"></div>
+  <div
+    data-modal-panel
+    class="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden transform transition duration-300 scale-95 opacity-0"
+  >
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-primary/90 to-primary text-white">
+      <h2 class="text-lg font-semibold">Реєстрація на DOMINIUM</h2>
+      <button type="button" data-close-modal class="text-white hover:text-creamBeige transition">
+        <i class="ri-close-line text-2xl"></i>
+      </button>
+    </div>
+
+    <div class="px-6 py-6 space-y-5">
+      {% if allow_manual_auth %}
+        <p class="text-sm text-gray-600">
+          Основний спосіб входу — через Google. Але на випадок, якщо Google недоступний, ви можете створити локальний акаунт за допомогою цієї форми.
+        </p>
+        <form id="register-form" method="POST" action="{% url 'register_email' %}" class="space-y-4">
+          {% csrf_token %}
+          <div class="space-y-2">
+            <label for="register-full-name" class="text-sm font-medium text-gray-700">Ваше імʼя</label>
+            <input
+              type="text"
+              name="full_name"
+              id="register-full-name"
+              value="{{ rm.full_name|default:'' }}"
+              class="w-full px-4 py-2 rounded-[12px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Наприклад: Олена"
+            />
+          </div>
+          <div class="space-y-2">
+            <label for="register-username" class="text-sm font-medium text-gray-700">Імʼя користувача</label>
+            <input
+              type="text"
+              name="username"
+              id="register-username"
+              value="{{ rm.username|default:'' }}"
+              class="w-full px-4 py-2 rounded-[12px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Наприклад: dominium_user"
+            />
+          </div>
+          <div class="space-y-2">
+            <label for="register-email" class="text-sm font-medium text-gray-700">Електронна пошта</label>
+            <input
+              type="email"
+              name="email"
+              id="register-email"
+              value="{{ rm.email|default:'' }}"
+              class="w-full px-4 py-2 rounded-[12px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="name@example.com"
+            />
+          </div>
+          <div class="space-y-2">
+            <label for="register-password" class="text-sm font-medium text-gray-700">Пароль</label>
+            <input
+              type="password"
+              name="password"
+              id="register-password"
+              class="w-full px-4 py-2 rounded-[12px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Мінімум 8 символів"
+            />
+          </div>
+          <div class="space-y-2">
+            <label for="register-confirm" class="text-sm font-medium text-gray-700">Підтвердьте пароль</label>
+            <input
+              type="password"
+              name="confirm"
+              id="register-confirm"
+              class="w-full px-4 py-2 rounded-[12px] border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full py-3 rounded-full bg-gradient-to-r from-primary to-coolSage text-white font-semibold hover:from-primary/90 hover:to-coolSage/90 transition"
+          >
+            Зареєструватися
+          </button>
+        </form>
+        <div class="border-t border-gray-100 pt-4 space-y-3">
+          <p class="text-xs uppercase tracking-wide text-gray-400 text-center">Також доступно</p>
+          <button
+            type="button"
+            data-google-auth
+            data-auth-url="{% provider_login_url 'google' process='login' %}"
+            class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-full border border-gray-300 bg-white hover:border-primary hover:shadow transition"
+          >
+            <span class="inline-flex items-center justify-center w-8 h-8 bg-white">
+              <img src="{% static 'base/assets/img/google-logo.svg' %}" alt="Google" class="w-5 h-5" />
+            </span>
+            <span class="text-sm font-medium text-gray-700">Продовжити з Google</span>
+          </button>
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-600">
+          На цей момент реєстрація доступна лише через Google. Після авторизації ви зможете керувати збереженими об'єктами та швидше залишати заявки.
+        </p>
+
+        <div class="flex flex-col gap-3">
+          <button
+            type="button"
+            data-google-auth
+            data-auth-url="{% provider_login_url 'google' process='login' %}"
+            class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-full border border-gray-300 bg-white hover:border-primary hover:shadow transition"
+          >
+            <span class="inline-flex items-center justify-center w-8 h-8 bg-white">
+              <img src="{% static 'base/assets/img/google-logo.svg' %}" alt="Google" class="w-5 h-5" />
+            </span>
+            <span class="text-sm font-medium text-gray-700">Продовжити з Google</span>
+          </button>
+          <p class="text-center text-sm text-gray-600">
+            Вже маєте акаунт?
+            <button type="button" class="text-primary hover:underline font-medium" data-switch-modal="login">
+              Увійти
+            </button>
+          </p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

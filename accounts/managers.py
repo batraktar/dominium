@@ -1,18 +1,32 @@
 from django.contrib.auth.base_user import BaseUserManager
 
+
 class CustomUserManager(BaseUserManager):
-    def create_user(self, telegram_username=None, email=None, password=None, **extra_fields):
-        if not telegram_username and not email:
-            raise ValueError("User must have either a telegram_username or an email")
-        
-        user = self.model(telegram_username=telegram_username, email=email, **extra_fields)
-        user.set_password(password)
-        user.save()
+    def _create_user(self, username, email=None, password=None, **extra_fields):
+        if not username:
+            raise ValueError("Username is required")
+
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
+        user.save(using=self._db)
         return user
 
-    def create_superuser(self, telegram_username, password, **extra_fields):
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", False)
+        extra_fields.setdefault("is_superuser", False)
+        return self._create_user(username, email, password, **extra_fields)
+
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        return self.create_user(telegram_username, password=password, **extra_fields)
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
+        return self._create_user(username, email, password, **extra_fields)

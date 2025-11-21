@@ -1,4 +1,5 @@
 {% load static %}
+{% load socialaccount %}
 <header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
   <div class="container mx-auto px-4 py-4">
     <div class="flex items-center justify-between">
@@ -10,6 +11,12 @@
         <a href="/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Головна</a>
         <a href="/search/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Пошук</a>
         <a href="/likes/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Обране</a>
+        {% if request.user.is_staff %}
+          <a href="{% url 'property_api_admin' %}" class="text-deepOcean font-fixel font-normal hover:text-coolSage flex items-center gap-1">
+            <i class="ri-dashboard-line text-base"></i>
+            API адмінка
+          </a>
+        {% endif %}
         {% comment %} <a href="/about/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Про нас</a> {% endcomment %}
       </nav>
       <div class="hidden md:flex items-center space-x-4">
@@ -19,11 +26,31 @@
 
         {% if request.user.is_authenticated %}
           <div class="flex items-center space-x-2 ml-4">
-            <span class="text-sm text-deepOcean">Привіт, {{ request.user.telegram_username }}</span>
-            <a href="{% url 'logout' %}" class="text-sm text-red-600 hover:underline">Вийти</a>
+            <span class="text-sm text-deepOcean">Привіт, {{ request.user.display_name }}</span>
+            <button
+              type="button"
+              data-logout-url="{% url 'logout' %}"
+              class="text-sm text-red-600 hover:underline"
+            >
+              Вийти
+            </button>
           </div>
         {% else %}
-          <a href="{% url 'login' %}" class="ml-4 text-sm text-white bg-primary hover:bg-primary/90 px-4 py-1.5 rounded-button">Увійти</a>
+          <button
+            type="button"
+            data-google-auth
+            data-auth-url="{% provider_login_url 'google' process='login' %}"
+            class="ml-2 text-sm text-primary border border-primary px-4 py-1.5 rounded-button hover:bg-primary hover:text-white transition"
+          >
+            Зареєструватися
+          </button>
+          <button
+            type="button"
+            class="ml-2 text-sm text-white bg-primary hover:bg-primary/90 px-4 py-1.5 rounded-button transition"
+            data-open-modal="login"
+          >
+            Увійти
+          </button>
         {% endif %}
       </div>
     </div>

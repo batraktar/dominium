@@ -1,155 +1,151 @@
 <div class="bg-white rounded-[8px] shadow-lg overflow-hidden flex flex-col h-full">
-  <!-- Зображення + іконки -->
   <div class="relative h-56">
     {% if property.main_image and property.main_image.image %}
-      <a href="{% url 'property_detail' property.slug %}"><img src="{{ property.main_image.image.url }}" class="w-full h-56 object-cover" alt="{{ property.title }}" /></a>
+      <a href="{% url 'property_detail' property.slug %}">
+        <img
+          src="{{ property.main_image.image.url }}"
+          loading="lazy"
+          decoding="async"
+          class="w-full h-56 object-cover"
+          alt="{{ property.title }}"
+        />
+      </a>
     {% else %}
-      <a href="{% url 'property_detail' property.slug %}"><img src="https://via.placeholder.com/400x300" class="w-full h-48 object-cover" alt="Зображення відсутнє" /></a>
+      <a href="{% url 'property_detail' property.slug %}">
+        <img
+          src="https://via.placeholder.com/400x300"
+          loading="lazy"
+          decoding="async"
+          class="w-full h-48 object-cover"
+          alt="Зображення відсутнє"
+        />
+      </a>
     {% endif %}
 
-    <!-- Like / Share -->
     <div class="absolute top-3 right-3 flex gap-2 z-10">
       <input type="hidden" id="csrf-token" value="{{ csrf_token }}" />
-      <button class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full transition" data-property-id="{{ property.id }}">
-        <i class="{% if property.id in liked_ids %}
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            ri-heart-fill text-red-500
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      {% with like_ids=liked_ids %}
+        <button
+          class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full transition"
+          data-property-id="{{ property.id }}"
+        >
+          {% if like_ids and property.id in like_ids %}
+            <i class="ri-heart-fill text-red-500"></i>
           {% else %}
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            ri-heart-line text-coolSage
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          {% endif %}">
-
-        </i>
-      </button>
-      <button onclick="navigator.clipboard.writeText('{{ property.get_absolute_url }}'); alert('Посилання скопійовано!')" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition"><i class="ri-share-forward-line text-coolSage"></i></button>
+            <i class="ri-heart-line text-coolSage"></i>
+          {% endif %}
+        </button>
+      {% endwith %}
+      {% if request.user.is_staff %}
+        <button
+          type="button"
+          class="featured-toggle w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition"
+          data-featured-toggle
+          data-property-id="{{ property.id }}"
+          data-featured="{{ property.featured_homepage|yesno:'true,false' }}"
+          title="Керування блоком Топ-3"
+        >
+          <i class="{% if property.featured_homepage %}ri-star-fill text-yellow-500{% else %}ri-star-line text-coolSage{% endif %}"></i>
+        </button>
+      {% endif %}
+      <div class="relative" data-share-container>
+        <button
+          type="button"
+          class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition"
+          data-share-toggle
+          data-share-url="{{ property.absolute_url|default:property.get_absolute_url }}"
+          data-share-title="{{ property.title }}"
+        >
+          <i class="ri-share-forward-line text-coolSage"></i>
+        </button>
+        <div
+          class="share-menu absolute right-0 mt-2 w-40 rounded-lg bg-white shadow-lg py-2 hidden z-20"
+          data-share-menu
+        >
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="copy"
+          >
+            <i class="ri-file-copy-line text-base"></i> Скопіювати
+          </button>
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="telegram"
+          >
+            <i class="ri-send-plane-line text-base"></i> Telegram
+          </button>
+          <button
+            type="button"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            data-share-action="viber"
+          >
+            <i class="ri-message-2-line text-base"></i> Viber
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Контент -->
   <div class="p-6 flex flex-col flex-grow group relative">
-    <!-- Основна ціна -->
-    <h3 class="text-xl font-ermilov text-primary transition duration-200">
-      {% if property.deal_type.name|lower|cut:' ' == 'оренда' %}
-        {{ property.price|floatformat:0 }} ₴/міс
-      {% else %}
-        {{ property.price|floatformat:0 }} $
-      {% endif %}
-    </h3>
+    {% with display_price=property.display_price|default:property.price display_symbol=property.display_currency_symbol|default:"$" %}
+      <h3 class="text-xl font-ermilov text-primary transition duration-200">
+        {% if property.deal_type.name|lower|cut:' ' == 'оренда' %}
+          {{ display_symbol }} {{ display_price|floatformat:0 }} /міс
+        {% else %}
+          {{ display_symbol }} {{ display_price|floatformat:0 }}
+        {% endif %}
+      </h3>
+    {% endwith %}
 
-    <!-- Tooltip з конвертованою ціною -->
     {% with deal=property.deal_type.name|lower|cut:' ' %}
-      {% if deal != 'оренда' %}
+      {% if deal != 'оренда' and property.other_currency_values %}
         <div class="currency-tooltip opacity-0 invisible group-hover:opacity-100 group-hover:visible absolute -top-11 left-7 bg-white shadow-xl rounded-[8px] px-4 py-2 transition-all duration-200 z-10 text-sm text-coolSage font-fixel">
           <div class="flex flex-col text-left">
-            <span class="whitespace-nowrap">€ {{ property.price_eur }} EUR</span>
-            <span class="whitespace-nowrap">₴ {{ property.price_uah }} UAH</span>
+            {% for item in property.other_currency_values %}
+              <span class="whitespace-nowrap">{{ item.symbol }} {{ item.value|floatformat:0 }} {{ item.code }}</span>
+            {% endfor %}
           </div>
           <div class="absolute -bottom-2 left-5 w-4 h-4 bg-white transform rotate-45 shadow-md"></div>
         </div>
       {% endif %}
+
+      <p class="text-coolSage font-fixel">{{ property.address }}</p>
+
+      <div class="flex items-center space-x-4 mt-3 text-gray-600">
+        <span class="flex text-coolSage font-fixel items-center">
+          <i class="ri-ruler-line mr-1"></i> {{ property.property_type.name }}
+        </span>
+        <span class="flex text-coolSage font-fixel items-center">
+          <i class="ri-ruler-line mr-1"></i> {{ property.area }} м²
+        </span>
+        {% if property.rooms %}
+          <span class="flex text-coolSage font-fixel items-center">
+            <i class="ri-home-line mr-1"></i> {{ property.rooms }} кімнати
+          </span>
+        {% endif %}
+      </div>
     {% endwith %}
 
-    <p class="text-coolSage font-fixel">{{ property.address }}</p>
-
-    <div class="flex items-center space-x-4 mt-3 text-gray-600">
-      <span class="flex text-coolSage font-fixel items-center"><i class="ri-ruler-line mr-1"></i> {{ property.property_type.name }}</span>
-      <span class="flex text-coolSage font-fixel items-center"><i class="ri-ruler-line mr-1"></i> {{ property.area }} м²</span>
-      {% if property.rooms %}
-        <span class="flex text-coolSage font-fixel items-center"><i class="ri-home-line mr-1"></i> {{ property.rooms }} кімнати</span>
-      {% endif %}
-    </div>
-
-    <!-- Кнопка + тип угоди -->
     <div class="mt-auto pt-4 flex items-center gap-x-3">
       {% if property.slug %}
-        <a href="{% url 'property_detail' property.slug %}" class="bg-white text-deepOcean font-fixel text-sm px-4 py-2 rounded-full h-10 shadow-[inset_0_0_0_1px] shadow-deepOcean flex items-center justify-center">Докладніше</a>
+        <a
+          href="{% url 'property_detail' property.slug %}"
+          class="bg-white text-deepOcean font-fixel text-sm px-4 py-2 rounded-full h-10 shadow-[inset_0_0_0_1px] shadow-deepOcean flex items-center justify-center"
+        >
+          Докладніше
+        </a>
       {% endif %}
 
-      <span class="text-white px-8 py-2 rounded-full text-sm h-10
-  {% with deal=property.deal_type.name|lower|cut:' ' %}
-          {% if deal == 'оренда' %}
-            
-            
-            
-      bg-creamBeige font-fixel
-
-
-
-          {% elif deal == 'продаж' %}
-            
-            
-            
-      bg-coolSage font-fixel
-
-
-
-          {% else %}
-            
-            
-            
-      bg-red-200 font-fixel
-
-
-
-          {% endif %}
-        {% endwith %}
-">
-        {{ property.deal_type.name }}
-      </span>
+      {% with deal=property.deal_type.name|lower|cut:' ' %}
+        <span
+          class="text-white px-8 py-2 rounded-full text-sm h-10 font-fixel
+                 {% if deal == 'оренда' %}bg-creamBeige{% elif deal == 'продаж' %}bg-coolSage{% else %}bg-red-200{% endif %}"
+        >
+          {{ property.deal_type.name }}
+        </span>
+      {% endwith %}
     </div>
   </div>
 </div>

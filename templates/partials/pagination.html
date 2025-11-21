@@ -1,9 +1,9 @@
-{% with params=request.GET.urlencode %}
+{% with params=querystring %}
   {% if page_obj.has_other_pages %}
     <div class="flex justify-center mt-8">
       <nav class="inline-flex rounded-md shadow" aria-label="Пагінація">
         {% if page_obj.has_previous %}
-          <a href="?{{ params|safe }}&page={{ page_obj.previous_page_number }}" class="py-2 px-3 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 rounded-l-md"><i class="ri-arrow-left-s-line"></i></a>
+          <a href="?{{ params|safe }}{% if params %}&{% endif %}page={{ page_obj.previous_page_number }}" class="py-2 px-3 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 rounded-l-md" data-search-link="1"><i class="ri-arrow-left-s-line"></i></a>
         {% else %}
           <span class="py-2 px-3 border border-gray-200 bg-gray-100 text-gray-400 rounded-l-md"><i class="ri-arrow-left-s-line"></i></span>
         {% endif %}
@@ -12,12 +12,12 @@
           {% if page_obj.number == num %}
             <span class="py-2 px-4 border-t border-b border-gray-300 bg-primary text-white">{{ num }}</span>
           {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-            <a href="?{{ params|safe }}&page={{ num }}" class="py-2 px-4 border-t border-b border-gray-300 bg-white text-gray-700 hover:bg-gray-50">{{ num }}</a>
+            <a href="?{{ params|safe }}{% if params %}&{% endif %}page={{ num }}" class="py-2 px-4 border-t border-b border-gray-300 bg-white text-gray-700 hover:bg-gray-50" data-search-link="1">{{ num }}</a>
           {% endif %}
         {% endfor %}
 
         {% if page_obj.has_next %}
-          <a href="?{{ params|safe }}&page={{ page_obj.next_page_number }}" class="py-2 px-3 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 rounded-r-md"><i class="ri-arrow-right-s-line"></i></a>
+          <a href="?{{ params|safe }}{% if params %}&{% endif %}page={{ page_obj.next_page_number }}" class="py-2 px-3 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 rounded-r-md" data-search-link="1"><i class="ri-arrow-right-s-line"></i></a>
         {% else %}
           <span class="py-2 px-3 border border-gray-200 bg-gray-100 text-gray-400 rounded-r-md"><i class="ri-arrow-right-s-line"></i></span>
         {% endif %}

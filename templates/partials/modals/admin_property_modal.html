@@ -1,0 +1,139 @@
+{% comment %}
+  Staff-only модалка для редагування обʼєкта з API-адмінкою.
+  Очікує у контексті: property, user_is_staff (перевіряється у батьківському шаблоні).
+{% endcomment %}
+<div
+  id="admin-edit-modal"
+  class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+  data-property-id="{{ property.id }}"
+  data-api-base="{% url 'house_api:property_list' %}"
+  data-property-types-url="{% url 'house_api:property_type_list' %}"
+  data-deal-types-url="{% url 'house_api:deal_type_list' %}"
+  data-features-url="{% url 'house_api:feature_list' %}"
+>
+  <div class="bg-white text-deepOcean rounded-[12px] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-xl font-semibold">Редагування об’єкта</h2>
+      <button id="close-admin-modal" class="text-gray-500 hover:text-gray-800">
+        <i class="ri-close-line text-2xl"></i>
+      </button>
+    </div>
+
+    <div id="admin-status" class="hidden mx-6 mt-4 px-4 py-2 rounded-[9px] text-sm font-fixel"></div>
+
+    <form id="admin-edit-form" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Назва</span>
+        <input
+          type="text"
+          id="admin-title"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        />
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Адреса</span>
+        <input
+          type="text"
+          id="admin-address"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        />
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Ціна, $</span>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          id="admin-price"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        />
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Площа, м²</span>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          id="admin-area"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        />
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Кількість кімнат</span>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          id="admin-rooms"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        />
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Тип нерухомості</span>
+        <select
+          id="admin-property-type"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        >
+          <option value="">Завантаження...</option>
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Тип угоди</span>
+        <select
+          id="admin-deal-type"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+          required
+        >
+          <option value="">Завантаження...</option>
+        </select>
+      </label>
+
+      <label class="flex flex-col gap-2 md:col-span-2">
+        <span class="text-sm font-semibold">Опис</span>
+        <textarea
+          id="admin-description"
+          rows="4"
+          class="px-4 py-2 border border-gray-300 rounded-[9px] focus:outline-none focus:ring-2 focus:ring-deepOcean"
+        ></textarea>
+      </label>
+
+      <fieldset class="md:col-span-2">
+        <legend class="text-sm font-semibold mb-2">Характеристики</legend>
+        <div id="admin-features" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <p class="text-sm text-gray-500">Завантаження...</p>
+        </div>
+      </fieldset>
+
+      <div class="md:col-span-2 flex flex-wrap gap-3 pt-2">
+        <button
+          type="submit"
+          id="admin-save"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-deepOcean text-white rounded-[9px] font-fixel hover:bg-deepOcean/90 transition"
+        >
+          <i class="ri-save-line"></i>
+          Зберегти зміни
+        </button>
+        <button
+          type="button"
+          id="admin-cancel"
+          class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-[9px] font-fixel hover:bg-gray-100 transition"
+        >
+          <i class="ri-close-circle-line"></i>
+          Скасувати
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

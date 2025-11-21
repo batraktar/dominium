@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DOMINIUM – Підтвердження Google-реєстрації</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="{% static 'base/assets/img/favicon-32x32.png' %}" />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #133e44 0%, #0a1c1f 65%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0b1f24;
+      }
+      .card {
+        width: min(420px, 92vw);
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 32px 28px;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+        animation: fade 0.35s ease;
+      }
+      .card header {
+        text-align: center;
+        margin-bottom: 18px;
+      }
+      .card header img {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+      }
+      .subtitle {
+        font-size: 14px;
+        color: #4f5b5f;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f2c33;
+        display: block;
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      input[type="email"] {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(19, 62, 68, 0.18);
+        padding: 12px;
+        font-size: 15px;
+        transition: border 0.15s ease, box-shadow 0.15s ease;
+      }
+      input:focus {
+        outline: none;
+        border-color: #377dff;
+        box-shadow: 0 0 0 3px rgba(55, 125, 255, 0.15);
+      }
+      .errors {
+        color: #c02828;
+        font-size: 13px;
+        margin: 6px 0 0;
+      }
+      button[type="submit"] {
+        margin-top: 6px;
+        border: none;
+        border-radius: 999px;
+        padding: 12px 20px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #ffffff;
+        background: linear-gradient(120deg, #133e44, #6f8c8a);
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      button[type="submit"]:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(19, 62, 68, 0.25);
+      }
+      .footnote {
+        margin-top: 16px;
+        font-size: 12px;
+        text-align: center;
+        color: #5b676b;
+      }
+      .footnote button {
+        border: none;
+        background: transparent;
+        color: #377dff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <header>
+        <img src="{% static 'base/assets/img/Logoblack.png' %}" alt="DOMINIUM" />
+        <h1 style="margin: 14px 0 4px; font-size: 22px;">Завершіть реєстрацію</h1>
+      </header>
+      <p class="subtitle">
+        Ми отримали дані від Google. Перевірте інформацію нижче й натисніть кнопку, щоб підтвердити створення акаунта DOMINIUM.
+      </p>
+
+      <form method="post" action="">
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}
+          {{ hidden }}
+        {% endfor %}
+
+        {% for field in form.visible_fields %}
+          <div>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <div class="errors">{{ field.errors|join:', ' }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        {% if form.non_field_errors %}
+          <div class="errors">{{ form.non_field_errors|join:', ' }}</div>
+        {% endif %}
+
+        <button type="submit">Підтвердити акаунт</button>
+      </form>
+
+    <div class="footnote">
+      Якщо вікно з’явилося випадково, просто
+      <button type="button" onclick="window.close()">закрийте його</button> — основна сторінка залишиться відкритою.
+    </div>
+  </div>
+  <script>
+    window.addEventListener("load", () => {
+      if (window.opener && window !== window.opener) {
+        try {
+          window.opener.postMessage("dominium-auth-success", window.location.origin);
+        } catch (err) {
+          console.warn("Не вдалося повідомити основне вікно:", err);
+        }
+        setTimeout(() => window.close(), 250);
+      }
+    });
+  </script>
+</body>
+</html>
