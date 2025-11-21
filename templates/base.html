@@ -1,14 +1,54 @@
 <!DOCTYPE html>
 {% load static %}
+{% load socialaccount %}
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% static 'base/assets/img/ПОВНИЙ ЗНАК _О-16.svg' as dominium_logo_svg %}
+    {% with default_title='DOMINIUM – Агенція нерухомості' %}
     <title>
       {% block title %}
-        DOMINIUM - Агенція нерухомості
+        {{ default_title }}
       {% endblock %}
     </title>
+    {% with page_title=meta_title|default:default_title %}
+    {% with description=meta_description|default:'DOMINIUM — агенція нерухомості, що допомагає купити або орендувати преміальне житло в Україні. Професійний супровід, перевірені об’єкти та індивідуальний підбір.' %}
+    {% with canonical=canonical_url|default:request.build_absolute_uri %}
+    {% with og_type_value=og_type|default:'website' %}
+    {% with og_title_value=og_title|default:page_title %}
+    {% with og_description_value=og_description|default:description %}
+    {% with request.scheme|add:'://'|add:request.get_host|add:dominium_logo_svg as default_og_image %}
+    {% with og_image_value=og_image|default:default_og_image %}
+    <meta name="description" content="{{ description }}" />
+    <meta name="robots" content="{{ meta_robots|default:'index, follow' }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta property="og:type" content="{{ og_type_value }}" />
+    <meta property="og:title" content="{{ og_title_value }}" />
+    <meta property="og:description" content="{{ og_description_value }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ og_image_value }}" />
+    <meta property="og:locale" content="uk_UA" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ og_title_value }}" />
+    <meta name="twitter:description" content="{{ og_description_value }}" />
+    <meta name="twitter:image" content="{{ og_image_value }}" />
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    {% endwith %}
+    <meta name="theme-color" content="#133E44" />
+    <link rel="icon" type="image/svg+xml" href="{{ dominium_logo_svg }}" />
+    <link rel="alternate icon" type="image/png" sizes="32x32" href="{% static 'base/assets/img/favicon-32x32.png' %}" />
+    <link rel="alternate icon" type="image/png" sizes="16x16" href="{% static 'base/assets/img/favicon-16x16.png' %}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'base/assets/img/apple-touch-icon.png' %}" />
+    <link rel="manifest" href="{% static 'base/assets/manifest.webmanifest' %}" />
+    {% block extra_meta %}{% endblock %}
+    {% endwith %}
+    {% endwith %}
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
@@ -39,16 +79,40 @@
     </script>
     <script>
       window.userIsAuthenticated = {{ user_is_authenticated|yesno:"true,false" }};
+      window.userIsStaff = {{ request.user.is_staff|yesno:"true,false" }};
     </script>
     
     
     <link rel="stylesheet" href="{% static 'base/assets/css/style-base.css' %}" />
-    {% block head %}
-
-    {% endblock %}
+    {% block head %}{% endblock %}
+    {% if structured_data %}
+      <script type="application/ld+json">
+        {{ structured_data|safe }}
+      </script>
+    {% else %}
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "RealEstateAgent",
+          "name": "DOMINIUM Realty",
+          "url": "{{ request.scheme }}://{{ request.get_host }}/",
+          "logo": "{{ request.scheme }}://{{ request.get_host }}{{ dominium_logo_svg }}",
+          "telephone": "+380730032121",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Київ",
+            "addressCountry": "UA"
+          }
+        }
+      </script>
+    {% endif %}
   </head>
 
-  <body class="bg-primary overflow-hidden" {% if request.GET %}data-no-preloader="1"{% endif %}>
+  {% with register_query=request.GET.register login_query=request.GET.login %}
+  {% with rm=auth_modals.register lm=auth_modals.login %}
+  <body class="bg-primary overflow-x-hidden" {% if request.GET %}data-no-preloader="1"{% endif %} data-register-open="{% if register_query or rm.open %}true{% else %}false{% endif %}" data-login-open="{% if login_query or lm.open %}true{% else %}false{% endif %}" data-user-is-staff="{% if request.user.is_staff %}1{% else %}0{% endif %}">
+  {% endwith %}
+  {% endwith %}
     <input type="hidden" id="csrf-token" value="{{ csrf_token }}" />
 
     {% include 'partials/preloader.html' %}
@@ -70,12 +134,18 @@
       </div>
     </div>
 
+    {% include 'partials/auth/register_modal.html' %}
+    {% include 'partials/auth/login_modal.html' %}
+    
+
     {% include 'partials/mobile_nav.html' %}
 
     {% block scripts %}
       <script src="{% static 'base/assets/js/scrollBtn.js' %}"></script>
-      <script src="{% static 'base/assets/js/like-button.js' %}"></script>
+      <script src="{% static 'base/assets/js/likes/index.js' %}"></script>
+      <script src="{% static 'base/assets/js/share.js' %}"></script>
       <script src="{% static 'base/assets/js/scroll-to-reshresh.js' %}"></script>
+      <script src="{% static 'base/assets/js/base_modals.js' %}"></script>
     {% endblock %}
   </body>
 </html>

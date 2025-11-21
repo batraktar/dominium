@@ -5,18 +5,12 @@ from django.contrib.sitemaps.views import sitemap
 from django.shortcuts import render
 from django.urls import include, path
 from django.views.generic import TemplateView
-from landing_doominium_real_state.views import (
-    SearchFiltersView,
-    consultation_view,
-    toggle_like,
-    toggle_featured_homepage,
-    liked_properties_view,
-    property_api_demo,
-    property_api_admin,
-)
 
-from landing_doominium_real_state import views
 from landing_doominium_real_state.sitemaps import PropertySitemap, StaticViewSitemap
+from landing_doominium_real_state.views import admin as admin_views
+from landing_doominium_real_state.views import auth as auth_views
+from landing_doominium_real_state.views import public as public_views
+from landing_doominium_real_state.views import search as search_views
 
 sitemaps = {
     "static": StaticViewSitemap(),
@@ -26,24 +20,26 @@ sitemaps = {
 urlpatterns = [
     path("", include("accounts.urls")),
     path("admin/", admin.site.urls),
-    path("", views.base, name="start_page"),
-    path("search/", SearchFiltersView.as_view(), name="property_search"),
-    path("search/save/", views.save_search, name="save_search"),
-    path("signup/", views.signup, name="landing"),
-    path("admin-panel/", include("house.urls_admin_panel")),
-    path("api/demo/", property_api_demo, name="property_api_demo"),
+    path("", public_views.base, name="start_page"),
+    path("search/", search_views.SearchFiltersView.as_view(), name="property_search"),
+    path("signup/", auth_views.signup, name="landing"),
+    path("api/demo/", public_views.property_api_demo, name="property_api_demo"),
+    path("api/admin/", admin_views.property_api_admin, name="property_api_admin"),
     path("api/", include("house.api.urls")),
-    path("api/admin/", property_api_admin, name="property_api_admin"),
     path("accounts/", include("allauth.urls")),
-    path("property/<slug:slug>/", views.property_detail, name="property_detail"),
+    path(
+        "property/<slug:slug>/",
+        public_views.property_detail,
+        name="property_detail",
+    ),
     path(
         "properties/<int:property_id>/toggle-featured/",
-        toggle_featured_homepage,
+        admin_views.toggle_featured_homepage,
         name="toggle_featured_homepage",
     ),
-    path("consultation/", consultation_view, name="consultation"),
-    path("like/<int:property_id>/", toggle_like, name="toggle_like"),
-    path("likes/", liked_properties_view, name="liked_properties"),
+    path("consultation/", public_views.consultation_view, name="consultation"),
+    path("like/<int:property_id>/", auth_views.toggle_like, name="toggle_like"),
+    path("likes/", auth_views.liked_properties_view, name="liked_properties"),
     path(
         "robots.txt",
         TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
