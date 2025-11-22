@@ -1,0 +1,25 @@
+{
+  "name": "DOMINIUM Realty",
+  "short_name": "DOMINIUM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#133E44",
+  "theme_color": "#133E44",
+  "icons": [
+    {
+      "src": "/static/base/assets/img/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/base/assets/img/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/base/assets/img/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ]
+}
