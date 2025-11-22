@@ -3,8 +3,11 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from house.services.importer import (InvalidImportURL, PropertyImportError,
-                                     import_property_from_url)
+from house.services.importer import (
+    InvalidImportURL,
+    PropertyImportError,
+    import_property_from_url,
+)
 
 
 @csrf_exempt

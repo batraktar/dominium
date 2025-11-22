@@ -6,8 +6,7 @@ from django.shortcuts import render
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from landing_doominium_real_state.sitemaps import (PropertySitemap,
-                                                   StaticViewSitemap)
+from landing_doominium_real_state.sitemaps import PropertySitemap, StaticViewSitemap
 from landing_doominium_real_state.views import admin as admin_views
 from landing_doominium_real_state.views import auth as auth_views
 from landing_doominium_real_state.views import public as public_views

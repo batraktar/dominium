@@ -1,8 +1,14 @@
 from django.urls import path
 
-from .views import (activate, check_telegram_username, login_view, logout_view,
-                    register_email, register_via_telegram,
-                    verify_telegram_code)
+from .views import (
+    activate,
+    check_telegram_username,
+    login_view,
+    logout_view,
+    register_email,
+    register_via_telegram,
+    verify_telegram_code,
+)
 
 urlpatterns = [
     path("register/telegram/", register_via_telegram, name="register_via_telegram"),
