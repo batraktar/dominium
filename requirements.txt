@@ -9,6 +9,7 @@ whitenoise
 bs4
 requests
 mysqlclient>=2.2
+cryptography>=42.0
 python-telegram-bot
 python-telegram-bot[webhook]
 django-allauth==64.0.0
