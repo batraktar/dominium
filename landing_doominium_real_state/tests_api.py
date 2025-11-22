@@ -86,7 +86,9 @@ class PropertyActionsTest(TestCase):
         self.assertTrue(body.get("featured"))
 
     def test_toggle_featured_rejects_non_staff(self):
-        user = CustomUser.objects.create_user(username="u2", password="pass12345", is_staff=False)
+        user = CustomUser.objects.create_user(
+            username="u2", password="pass12345", is_staff=False
+        )
         self.client.force_login(user)
 
         resp = self.client.post(
@@ -164,7 +166,9 @@ class ApiAdminAccessTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
 
-        staff = CustomUser.objects.create_user(username="staff", password="pass12345", is_staff=True)
+        staff = CustomUser.objects.create_user(
+            username="staff", password="pass12345", is_staff=True
+        )
         self.client.force_login(staff)
         resp_staff = self.client.get(url)
         self.assertEqual(resp_staff.status_code, 200)
