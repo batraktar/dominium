@@ -19,14 +19,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from house.api.serializers import serialize_image, serialize_property
-from house.models import (
-    DealType,
-    Feature,
-    HomepageHighlightSettings,
-    Property,
-    PropertyImage,
-    PropertyType,
-)
+from house.models import (DealType, Feature, HomepageHighlightSettings,
+                          Property, PropertyImage, PropertyType)
 from house.utils.currency import get_exchange_rates
 from house.utils.html_parser import parse_property_html
 from landing_doominium_real_state.views.common import get_client_ip
