@@ -1,8 +1,7 @@
 import logging
 
-from django.http import HttpResponseNotFound
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404, render
 
 from house.models import Property

@@ -6,15 +6,10 @@ from django.shortcuts import render
 from django.urls import path
 from django.utils.html import format_html
 
-from .models import (
-    DealType,
-    Feature,
-    HomepageHighlightSettings,
-    Property,
-    PropertyImage,
-    PropertyType,
-)
-from .utils.html_parser import parse_property_from_html  # 💡 не забудь __init__.py
+from .models import (DealType, Feature, HomepageHighlightSettings, Property,
+                     PropertyImage, PropertyType)
+from .utils.html_parser import \
+    parse_property_from_html  # 💡 не забудь __init__.py
 
 
 # === Додаткові моделі ===
