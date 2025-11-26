@@ -30,8 +30,8 @@ landing_doominium_real_state/
   `TELEGRAM_BOT_TOKEN`, `GOOGLE_CLIENT_ID/SECRET`, `EXCHANGE_RATES_URL`,
   `REQUESTS_TIMEOUT`, `CONSULTATION_RATE_LIMIT/WINDOW`, `IMPORT_RATE_LIMIT/WINDOW` тощо.
 - `DJANGO_ENV` визначає, яку надбудову підключити:
-  - `dev` (за умовчанням) — DEBUG, консольний email, localhost.
-  - `prod` — вимагає секрети/hosts, вмикає HTTPS/hsts/secure cookies.
+  - `dev` (за умовчанням) - DEBUG, консольний email, localhost.
+  - `prod` - вимагає секрети/hosts, вмикає HTTPS/hsts/secure cookies.
 - Для додаткових середовищ створюй файл на зразок `settings/staging.py` та встановлюй `DJANGO_ENV=staging`.
 - Шаблон конфігів у `.env.example` покриває всі змінні, потрібні для дев/прод середовищ.
 - Не зберігай реальні ключі в git: копіюй `.env.example` або `.env.docker.example` і підставляй власні значення.
@@ -40,9 +40,9 @@ landing_doominium_real_state/
 
 - REST-шари винесені до `house/api/`.
 - Імпорт оголошень:
-  - `/api/properties/import/` — JSON масив.
-  - `/api/properties/import-html/` — завантажені HTML-файли.
-  - `/api/properties/import-link/` — URL на презентацію.
+  - `/api/properties/import/` - JSON масив.
+  - `/api/properties/import-html/` - завантажені HTML-файли.
+  - `/api/properties/import-link/` - URL на презентацію.
 - Парсер (`house/utils/html_parser.py`) нормалізує адресу (прибирає префікс «… район»,
   додає «Україна») та пробує кілька варіантів перед викликом Nominatim.
 - Фото/галерея, що зчитані з презентацій, автоматично завантажуються в `PropertyImage`.
@@ -77,9 +77,9 @@ python manage.py migrate
 
 ## Корисні скрипти
 
-- `black …` — форматування кодової бази.
-- `python manage.py shell` + `parse_property_from_html(path, geocode_missing=True)` — тест імпорту.
-- `python manage.py createsuperuser` — адмін-доступ безпосередньо в Django admin.
+- `black …` - форматування кодової бази.
+- `python manage.py shell` + `parse_property_from_html(path, geocode_missing=True)` - тест імпорту.
+- `python manage.py createsuperuser` - адмін-доступ безпосередньо в Django admin.
 
 ## How to run
 
