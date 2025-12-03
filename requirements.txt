@@ -1,5 +1,5 @@
 asgiref==3.8.1
-Django==5.2
+Django==5.2.8
 geographiclib==2.0
 geopy==2.4.1
 sqlparse==0.5.3
