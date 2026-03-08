@@ -1,9 +1,9 @@
 {% load static %}
-{% if property.images.exists %}
+{% if property_images %}
   <div id="desktopGallery" class="hidden overflow-hidden md:block mx-auto mb-8">
     <div class="absolute top-3 right-3 flex gap-2 z-10">
       <!-- Лайк -->
-      <button class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full" data-property-id="{{ property.id }}">
+      <button type="button" class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full" data-property-id="{{ property.id }}" aria-label="Додати до обраного">
         <i class="{% if user.is_authenticated and property in user.favorites.all %}
                
                     ri-heart-fill text-red-500
@@ -25,6 +25,7 @@
           data-share-toggle
           data-share-url="{{ property.absolute_url|default:property.get_absolute_url }}"
           data-share-title="{{ property.title }}"
+          aria-label="Поділитися об'єктом"
         >
           <i class="ri-share-forward-line text-gray-700"></i>
         </button>
@@ -58,12 +59,35 @@
     </div>
     <div class="grid grid-cols-3 gap-2">
       <div class="col-span-2 relative rounded-lg overflow-hidden aspect-[4/3]">
-        <img src="{{ main_image.image.url }}" loading="lazy" decoding="async" class="w-full h-full object-cover cursor-pointer" onclick="openGallery(0)" alt="Main Image" />
+        <img
+          src="{{ main_image.image.url }}"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+          width="1200"
+          height="900"
+          sizes="(max-width: 1023px) 100vw, 66vw"
+          data-gallery-src="{{ main_image.image.url }}"
+          data-gallery-open="0"
+          class="w-full h-full object-cover cursor-pointer"
+          alt="{{ property.title }} — головне фото ({{ property.address }})"
+        />
       </div>
       <div class="flex flex-col gap-2">
-        {% for image in property.images.all|slice:'1:3' %}
+        {% for image in property_images|slice:'1:3' %}
           <div class="relative rounded-lg overflow-hidden flex-1 aspect-[4/3]">
-            <img src="{{ image.image.url }}" loading="lazy" decoding="async" class="w-full h-full object-cover cursor-pointer" onclick="openGallery({{ forloop.counter }})" alt="Gallery Image" />
+            <img
+              src="{{ image.image.url }}"
+              loading="lazy"
+              decoding="async"
+              width="1200"
+              height="900"
+              sizes="(max-width: 1023px) 100vw, 33vw"
+              data-gallery-src="{{ image.image.url }}"
+              data-gallery-open="{{ forloop.counter }}"
+              class="w-full h-full object-cover cursor-pointer"
+              alt="{{ property.title }} — фото {{ forloop.counter|add:1 }} ({{ property.address }})"
+            />
           </div>
         {% endfor %}
       </div>
@@ -73,13 +97,25 @@
 
 {# Mobile Gallery #}
 <div class="md:hidden relative h-[400px] mb-8 rounded-lg overflow-hidden group mobile-gallery">
-  {% if property.images.exists %}
+  {% if property_images %}
     <div class="relative w-full h-full" id="gallery">
-      <img src="{{ main_image.image.url }}" loading="lazy" decoding="async" class="w-full h-full object-cover cursor-pointer" onclick="openGallery()" alt="Main Image" />
-      <button onclick="prevImage()" class="btn-prev absolute left-3 top-1/2 -translate-y-1/2 gallery-button"><i class="ri-arrow-left-s-line text-gray-700 text-xl"></i></button>
-      <button onclick="nextImage()" class="btn-next absolute right-3 top-1/2 -translate-y-1/2 gallery-button"><i class="ri-arrow-right-s-line text-gray-700 text-xl"></i></button>
+      <img
+        src="{{ main_image.image.url }}"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+        width="1200"
+        height="900"
+        sizes="100vw"
+        data-gallery-src="{{ main_image.image.url }}"
+        data-gallery-open-current="1"
+        class="w-full h-full object-cover cursor-pointer"
+        alt="{{ property.title }} — головне фото ({{ property.address }})"
+      />
+      <button type="button" data-gallery-action="prev" class="btn-prev absolute left-3 top-1/2 -translate-y-1/2 gallery-button" aria-label="Попереднє фото"><i class="ri-arrow-left-s-line text-gray-700 text-xl"></i></button>
+      <button type="button" data-gallery-action="next" class="btn-next absolute right-3 top-1/2 -translate-y-1/2 gallery-button" aria-label="Наступне фото"><i class="ri-arrow-right-s-line text-gray-700 text-xl"></i></button>
       <div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
-        {% for i in property.images.all %}
+        {% for i in property_images %}
           <div class="w-2 h-2 rounded-full {% if forloop.first %}
               
               
@@ -108,7 +144,7 @@
 
     <div class="absolute top-3 right-3 flex space-x-2 z-10">
       <!-- Лайк -->
-      <button class="gallery-button like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full" data-property-id="{{ property.id }}">
+      <button type="button" class="gallery-button like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full" data-property-id="{{ property.id }}" aria-label="Додати до обраного">
         <i class="{% if user.is_authenticated and property in user.favorites.all %}
             
             
@@ -138,6 +174,7 @@
           data-share-toggle
           data-share-url="{{ property.absolute_url|default:property.get_absolute_url }}"
           data-share-title="{{ property.title }}"
+          aria-label="Поділитися об'єктом"
         >
           <i class="ri-share-line text-gray-700"></i>
         </button>
@@ -175,48 +212,20 @@
 {# Gallery Modal #}
 <div id="galleryModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col items-center justify-center p-0 overflow-auto">
   <div class="modal-content w-full h-full m-0 p-0 flex items-center justify-center">
-    <img id="modalImage" src="" class="w-full h-auto object-contain" alt="Gallery Image" />
-    <button onclick="prevModalImage()" class="btn-prev absolute left-4 top-1/2 -translate-y-1/2 gallery-button"><i class="ri-arrow-left-s-line text-gray-700"></i></button>
-    <button onclick="nextModalImage()" class="btn-next absolute right-4 top-1/2 -translate-y-1/2 gallery-button"><i class="ri-arrow-right-s-line text-gray-700"></i></button>
-    <button onclick="closeGallery()" class="absolute top-4 right-4 gallery-button"><i class="ri-close-line text-gray-700"></i></button>
+    <img id="modalImage" src="" class="w-full h-auto object-contain" alt="{{ property.title }} — фото галереї" />
+    <button type="button" data-gallery-action="prev" class="btn-prev absolute left-4 top-1/2 -translate-y-1/2 gallery-button" aria-label="Попереднє фото"><i class="ri-arrow-left-s-line text-gray-700"></i></button>
+    <button type="button" data-gallery-action="next" class="btn-next absolute right-4 top-1/2 -translate-y-1/2 gallery-button" aria-label="Наступне фото"><i class="ri-arrow-right-s-line text-gray-700"></i></button>
+    <button type="button" data-gallery-action="close" class="absolute top-4 right-4 gallery-button" aria-label="Закрити галерею"><i class="ri-close-line text-gray-700"></i></button>
   </div>
   <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
     <div class="flex space-x-4 overflow-x-auto p-2">
       <div class="flex space-x-2">
-        {% for image in property.images.all %}
-          <img data-src="{{ image.image.url }}" loading="lazy" decoding="async" class="thumbnail-img lazy-image" onclick="showModalImage({{ forloop.counter0 }})" alt="Thumbnail {{ forloop.counter }}" />
+        {% for image in property_images %}
+          <img data-src="{{ image.image.url }}" data-gallery-thumb-index="{{ forloop.counter0 }}" loading="lazy" decoding="async" class="thumbnail-img lazy-image" alt="{{ property.title }} — мініатюра {{ forloop.counter }}" />
         {% endfor %}
       </div>
     </div>
   </div>
 </div>
 
-{# JS Images array for detail.js #}
-<script>
-    window.propertyImages = {{ property_images_json|safe }};
-</script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const lazyImages = document.querySelectorAll(".lazy-image[data-src]");
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver((entries, obs) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const img = entry.target;
-            img.src = img.dataset.src;
-            img.removeAttribute("data-src");
-            obs.unobserve(img);
-          }
-        });
-      }, { rootMargin: "200px 0px" });
-
-      lazyImages.forEach((img) => observer.observe(img));
-    } else {
-      lazyImages.forEach((img) => {
-        img.src = img.dataset.src;
-        img.removeAttribute("data-src");
-      });
-    }
-  });
-</script>
-<script src="{% static 'base/assets/js/gallery.js' %}"></script>
+<script defer src="{% static 'base/assets/js/gallery.js' %}"></script>

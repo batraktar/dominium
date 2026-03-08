@@ -15,7 +15,6 @@ venv/
 .vscode/
 db.sqlite3
 media/
-static/base/
 staticfiles/
 logs/
 static/base/assets/img/1.jpg

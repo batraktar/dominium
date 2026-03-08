@@ -156,17 +156,5 @@
       <button type="button" onclick="window.close()">закрийте його</button> — основна сторінка залишиться відкритою.
     </div>
   </div>
-  <script>
-    window.addEventListener("load", () => {
-      if (window.opener && window !== window.opener) {
-        try {
-          window.opener.postMessage("dominium-auth-success", window.location.origin);
-        } catch (err) {
-          console.warn("Не вдалося повідомити основне вікно:", err);
-        }
-        setTimeout(() => window.close(), 250);
-      }
-    });
-  </script>
 </body>
 </html>

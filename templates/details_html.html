@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#2563eb">
+    <meta name="theme-color" content="#133E44">
     <title>Modern Luxury Villa | Real Estate</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script nonce="{{ request.csp_nonce }}" src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/e charts/5.5.0/echarts.min.js"></script>
+    <script nonce="{{ request.csp_nonce }}" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script nonce="{{ request.csp_nonce }}" src="https://cdnjs.cloudflare.com/ajax/libs/e charts/5.5.0/echarts.min.js"></script>
     <style>
         :where([class^="ri-"])::before {
             content: "\f3c2";
@@ -89,13 +89,13 @@
             height: 240px !important;
         }
     </style>
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: '#2563eb',
-                        secondary: '#64748b'
+                        primary: '#133E44',
+                        secondary: '#758F8E'
                     },
                     borderRadius: {
                         'none': '0px',
@@ -239,7 +239,7 @@
                 </div>
             </div>
         </div>
-        <script>
+        <script nonce="{{ request.csp_nonce }}">
             const images = [
                 "https://cdn.riastatic.com/photosnew/dom/photo/prodaja-kvartira-lutsk-tsentr-obed-popek__295067042xl.jpg",
                 "https://cdn.riastatic.com/photosnew/dom/photo/dolgosrochnaya-arenda-komnata-kiev-shulyavka-beresteyskiy-pobedy-prospekt__314072519xl.jpg",
@@ -505,7 +505,7 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     document.getElementById('contactForm').addEventListener('submit', function (e) {
         e.preventDefault();
         document.getElementById('successModal').classList.remove('hidden');
@@ -526,7 +526,7 @@
         }
     });
 </script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     const lat = 34.090009;
     const lon = -118.406853;
 

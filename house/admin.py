@@ -1,5 +1,3 @@
-import os
-
 from django import forms
 from django.contrib import admin, messages
 from django.shortcuts import render
@@ -14,7 +12,9 @@ from .models import (
     PropertyImage,
     PropertyType,
 )
-from .utils.html_parser import parse_property_from_html  # 💡 не забудь __init__.py
+from .services.importer import import_images_from_parsed
+from .utils.html_parser import parse_property_html
+from .utils.sanitization import sanitize_rich_text
 
 
 # === Додаткові моделі ===
@@ -76,23 +76,59 @@ class PropertyAdmin(admin.ModelAdmin):
             form = ImportHTMLForm(request.POST, request.FILES)
             if form.is_valid():
                 html_file = form.cleaned_data["html_file"]
-                temp_path = f"/tmp/{html_file.name}"
-                with open(temp_path, "wb+") as f:
-                    for chunk in html_file.chunks():
-                        f.write(chunk)
+                raw_html = html_file.read()
+                if len(raw_html) > 2 * 1024 * 1024:
+                    messages.error(request, "HTML-файл занадто великий (максимум 2 МБ).")
+                    return render(
+                        request, "admin/import_html.html", {"form": ImportHTMLForm()}
+                    )
 
-                data = parse_property_from_html(temp_path)
-                os.remove(temp_path)
+                try:
+                    html = raw_html.decode("utf-8")
+                except UnicodeDecodeError:
+                    html = raw_html.decode("cp1251", errors="replace")
+
+                parsed = parse_property_html(
+                    html,
+                    source=getattr(html_file, "name", "import.html"),
+                ).as_dict()
+
+                property_type_name = (parsed.get("property_type") or "").strip()
+                deal_type_name = (parsed.get("deal_type") or "").strip()
+
+                property_type = None
+                if property_type_name:
+                    property_type = PropertyType.objects.filter(
+                        name__iexact=property_type_name
+                    ).first() or PropertyType.objects.create(name=property_type_name)
+
+                deal_type = None
+                if deal_type_name:
+                    deal_type = DealType.objects.filter(name__iexact=deal_type_name).first()
+                    if deal_type is None:
+                        deal_type = DealType.objects.create(name=deal_type_name)
 
                 property = Property.objects.create(
-                    title=data["title"],
-                    address=data["address"],
-                    price=data["price"],
-                    description=data["description"],
-                    image=data["main_image"],  # якщо в тебе це ImageField або URLField
+                    title=(parsed.get("title") or "Об'єкт DOMINIUM").strip(),
+                    address=(parsed.get("address") or "").strip(),
+                    price=parsed.get("price") or 0,
+                    area=max(1, int(round(parsed.get("area") or 0))),
+                    rooms=max(1, int(parsed.get("rooms") or 1)),
+                    description=sanitize_rich_text(parsed.get("description_html") or ""),
+                    property_type=property_type,
+                    deal_type=deal_type,
+                    latitude=parsed.get("latitude"),
+                    longitude=parsed.get("longitude"),
                 )
+                warnings = import_images_from_parsed(property, parsed)
 
-                messages.success(request, f"Успішно створено об'єкт: {property.title}")
+                if warnings:
+                    messages.warning(
+                        request,
+                        f"Об'єкт створено з попередженнями: {'; '.join(warnings[:3])}",
+                    )
+                else:
+                    messages.success(request, f"Успішно створено об'єкт: {property.title}")
                 return render(
                     request, "admin/import_html.html", {"form": ImportHTMLForm()}
                 )

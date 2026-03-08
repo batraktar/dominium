@@ -67,7 +67,7 @@
 </style>
 
 <!-- JS -->
-<script>
+<script nonce="{{ request.csp_nonce }}">
     const cursor = document.getElementById("custom-cursor");
     const outline = cursor.querySelector(".cursor-outline");
     const filled = cursor.querySelector(".cursor-filled");

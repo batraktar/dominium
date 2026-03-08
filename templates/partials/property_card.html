@@ -6,6 +6,9 @@
           src="{{ property.main_image.image.url }}"
           loading="lazy"
           decoding="async"
+          width="1200"
+          height="900"
+          sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
           class="w-full h-56 object-cover"
           alt="{{ property.title }}"
         />
@@ -16,6 +19,9 @@
           src="https://via.placeholder.com/400x300"
           loading="lazy"
           decoding="async"
+          width="400"
+          height="300"
+          sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
           class="w-full h-48 object-cover"
           alt="Зображення відсутнє"
         />
@@ -23,11 +29,12 @@
     {% endif %}
 
     <div class="absolute top-3 right-3 flex gap-2 z-10">
-      <input type="hidden" id="csrf-token" value="{{ csrf_token }}" />
       {% with like_ids=liked_ids %}
         <button
+          type="button"
           class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full transition"
           data-property-id="{{ property.id }}"
+          aria-label="Додати до обраного"
         >
           {% if like_ids and property.id in like_ids %}
             <i class="ri-heart-fill text-red-500"></i>
@@ -44,6 +51,7 @@
           data-property-id="{{ property.id }}"
           data-featured="{{ property.featured_homepage|yesno:'true,false' }}"
           title="Керування блоком Топ-3"
+          aria-label="Керувати блоком Топ-3"
         >
           <i class="{% if property.featured_homepage %}ri-star-fill text-yellow-500{% else %}ri-star-line text-coolSage{% endif %}"></i>
         </button>
@@ -55,6 +63,7 @@
           data-share-toggle
           data-share-url="{{ property.absolute_url|default:property.get_absolute_url }}"
           data-share-title="{{ property.title }}"
+          aria-label="Поділитися об'єктом"
         >
           <i class="ri-share-forward-line text-coolSage"></i>
         </button>

@@ -50,14 +50,23 @@ jobs:
 
       - name: Lint
         run: |
-          black --check accounts house landing_doominium_real_state manage.py telegram_bot.py
-          isort --profile black --check-only accounts house landing_doominium_real_state manage.py telegram_bot.py
+          black --check accounts house dominium_backend manage.py telegram_bot.py
+          isort --profile black --check-only accounts house dominium_backend manage.py telegram_bot.py
 
       - name: Django checks & tests
         run: |
           python manage.py check
           python manage.py migrate --noinput
-          python manage.py test house landing_doominium_real_state
+          python manage.py test house dominium_backend
+
+      - name: Django deploy security checks (prod settings)
+        env:
+          DJANGO_ENV: prod
+          DJANGO_SECRET_KEY: prod-ci-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz
+          DJANGO_ALLOWED_HOSTS: example.com
+          DJANGO_CSRF_TRUSTED_ORIGINS: https://example.com
+        run: |
+          python manage.py check --deploy --fail-level WARNING --settings=dominium_backend.settings.prod
 
       - name: Prepare docker env
         run: cp .env.docker.example .env.docker

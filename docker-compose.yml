@@ -27,7 +27,7 @@ services:
       /bin/sh -c "
         python manage.py migrate --noinput &&
         python manage.py collectstatic --noinput &&
-        gunicorn landing_doominium_real_state.wsgi:application --bind 0.0.0.0:8000
+        gunicorn dominium_backend.wsgi:application --bind 0.0.0.0:8000
       "
 
   nginx:

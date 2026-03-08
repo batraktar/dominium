@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}
   Сторінку не знайдено - DOMINIUM
 {% endblock %}
@@ -61,13 +62,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const variants = document.querySelectorAll('.error-variant')
-      if (variants.length > 0) {
-        const randomIndex = Math.floor(Math.random() * variants.length)
-        variants[randomIndex].classList.remove('hidden')
-      }
-    })
-  </script>
+  {{ block.super }}
+  <script defer src="{% static 'base/assets/js/error_404.js' %}"></script>
 {% endblock %}

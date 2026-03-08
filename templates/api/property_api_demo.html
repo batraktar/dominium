@@ -26,7 +26,7 @@
         <i class="ri-refresh-line"></i>
         Оновити список
       </button>
-      <pre id="properties-output" class="bg-gray-900 text-gray-100 rounded-[9px] mt-4 p-4 overflow-x-auto text-sm">Завантаження...</pre>
+      <pre id="properties-output" data-api-url="{% url 'house_api:property_list' %}" class="bg-gray-900 text-gray-100 rounded-[9px] mt-4 p-4 overflow-x-auto text-sm">Завантаження...</pre>
     </div>
 
     <div class="bg-white rounded-[9px] p-6 text-deepOcean shadow-lg">
@@ -44,26 +44,5 @@
 
 {% block scripts %}
   {{ block.super }}
-  <script>
-    const outputNode = document.getElementById("properties-output");
-    const reloadBtn = document.getElementById("reload-properties");
-
-    async function loadProperties() {
-      outputNode.textContent = "Завантаження...";
-
-      try {
-        const response = await fetch("{% url 'house_api:property_list' %}");
-        if (!response.ok) {
-          throw new Error(`Статус ${response.status}`);
-        }
-        const data = await response.json();
-        outputNode.textContent = JSON.stringify(data, null, 2);
-      } catch (error) {
-        outputNode.textContent = `Помилка: ${error.message}`;
-      }
-    }
-
-    reloadBtn?.addEventListener("click", loadProperties);
-    loadProperties();
-  </script>
+  <script defer src="{% static 'base/assets/js/property_api_demo.js' %}"></script>
 {% endblock %}

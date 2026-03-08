@@ -1,4 +1,13 @@
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /accounts/
+Disallow: /_csp/report/
 
+{% if site_base_url %}
+Sitemap: {{ site_base_url }}/sitemap.xml
+Sitemap: {{ site_base_url }}/sitemap-images.xml
+{% else %}
 Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap.xml
+Sitemap: {{ request.scheme }}://{{ request.get_host }}/sitemap-images.xml
+{% endif %}

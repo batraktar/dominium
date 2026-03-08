@@ -1,5 +1,16 @@
 (function (window, document) {
-  const cfg = window.DOMINIUM_ADMIN_CONFIG || {};
+  function parseAdminConfig() {
+    const configNode = document.getElementById("admin-api-config");
+    if (!configNode) return {};
+    try {
+      return JSON.parse(configNode.textContent || "{}");
+    } catch (error) {
+      console.error("Invalid admin API config JSON.", error);
+      return {};
+    }
+  }
+
+  const cfg = window.DOMINIUM_ADMIN_CONFIG || parseAdminConfig();
   const {
     API_URL,
     BULK_ACTION_URL,
@@ -108,6 +119,39 @@ const tableBody = document.getElementById("properties-body");
       propertyId: null,
       uploading: false,
     };
+
+    function getCookie(name) {
+      const cookies = document.cookie ? document.cookie.split(";") : [];
+      for (const cookieRaw of cookies) {
+        const cookie = cookieRaw.trim();
+        if (cookie.startsWith(`${name}=`)) {
+          return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+      }
+      return "";
+    }
+
+    function getCsrfToken() {
+      return (
+        document.getElementById("csrf-token")?.value ||
+        document.querySelector("input[name='csrfmiddlewaretoken']")?.value ||
+        getCookie("csrftoken") ||
+        ""
+      );
+    }
+
+    function withCsrfHeaders(headers, method = "GET") {
+      const normalizedMethod = String(method || "GET").toUpperCase();
+      const safeMethods = ["GET", "HEAD", "OPTIONS", "TRACE"];
+      const result = { ...(headers || {}) };
+      if (!safeMethods.includes(normalizedMethod)) {
+        const csrf = getCsrfToken();
+        if (csrf && !result["X-CSRFToken"]) {
+          result["X-CSRFToken"] = csrf;
+        }
+      }
+      return result;
+    }
 
     const buildPropertyImagesUrl = (propertyId) =>
       PROPERTY_IMAGES_URL_TEMPLATE.replace("/0/", `/${propertyId}/`);
@@ -430,10 +474,16 @@ const tableBody = document.getElementById("properties-body");
     }
 
     async function fetchJSON(url, options = {}) {
+      const method = String(options.method || "GET").toUpperCase();
+      const headers = withCsrfHeaders(
+        { "Content-Type": "application/json", ...(options.headers || {}) },
+        method
+      );
       const response = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         ...options,
+        method,
+        headers,
+        credentials: "include",
       });
       if (!response.ok) {
         const text = await response.text();
@@ -589,6 +639,8 @@ const tableBody = document.getElementById("properties-body");
         try {
           await fetch(buildPropertyImageDetailUrl(imageId), {
             method: "DELETE",
+            headers: withCsrfHeaders({}, "DELETE"),
+            credentials: "include",
           });
           await loadPropertyImages(imageState.propertyId);
         } catch (error) {
@@ -609,9 +661,12 @@ const tableBody = document.getElementById("properties-body");
       try {
         const response = await fetch(buildPropertyImagesUrl(imageState.propertyId), {
           method: "POST",
-          headers: {
+          headers: withCsrfHeaders(
+            {
             "X-Requested-With": "XMLHttpRequest",
-          },
+            },
+            "POST"
+          ),
           credentials: "include",
           body: formData,
         });
@@ -646,9 +701,7 @@ const tableBody = document.getElementById("properties-body");
       try {
         const response = await fetch(buildPropertyImagesReorderUrl(imageState.propertyId), {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: withCsrfHeaders({ "Content-Type": "application/json" }, "POST"),
           credentials: "include",
           body: JSON.stringify({ order: ids }),
         });
@@ -962,7 +1015,7 @@ const tableBody = document.getElementById("properties-body");
         try {
           const response = await fetch(IMPORT_LINK_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: withCsrfHeaders({ "Content-Type": "application/json" }, "POST"),
             credentials: "include",
             body: JSON.stringify({ url, geocode: importGeocodeCheckbox?.checked || false }),
           });
@@ -1000,6 +1053,7 @@ const tableBody = document.getElementById("properties-body");
         try {
           const response = await fetch(IMPORT_HTML_URL, {
             method: "POST",
+            headers: withCsrfHeaders({}, "POST"),
             body: formData,
             credentials: "include",
           });
@@ -1082,11 +1136,17 @@ const tableBody = document.getElementById("properties-body");
       }
     }
 
-    document.addEventListener("DOMContentLoaded", async () => {
+    const bootstrap = async () => {
       await loadDictionaries();
       await loadHighlightSettings();
       await loadProperties();
-    });
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
 
     tableBody.addEventListener("click", handleEditClick);
     tableBody.addEventListener("change", handleRowSelectionChange);

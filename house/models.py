@@ -9,7 +9,6 @@ from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
-from geopy.geocoders import Nominatim
 from PIL import Image
 
 
@@ -135,27 +134,6 @@ class Property(models.Model):
                         self.longitude = original_lon
             else:
                 address_changed = True
-
-        coords_missing = self.latitude is None or self.longitude is None
-        should_geocode = False
-
-        if self.address:
-            if creating:
-                should_geocode = coords_missing
-            else:
-                should_geocode = address_changed or (
-                    coords_missing and (original_lat is None or original_lon is None)
-                )
-
-        if should_geocode:
-            try:
-                geolocator = Nominatim(user_agent="dominium", timeout=10)
-                location = geolocator.geocode(self.address)
-                if location:
-                    self.latitude = location.latitude
-                    self.longitude = location.longitude
-            except Exception as e:
-                print("⚠️ Geocode error:", e)
 
         # Генеруємо slug, якщо він ще не встановлений
         if not self.slug:

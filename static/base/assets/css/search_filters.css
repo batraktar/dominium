@@ -30,7 +30,7 @@ input[type="number"] {
     appearance: none;
     width: 16px;
     height: 16px;
-    background: #2196F3;
+    background: #133E44;
     border-radius: 50%;
     cursor: pointer;
 }
@@ -38,7 +38,7 @@ input[type="number"] {
 .range-slider::-moz-range-thumb {
     width: 16px;
     height: 16px;
-    background: #2196F3;
+    background: #133E44;
     border-radius: 50%;
     cursor: pointer;
 }
@@ -120,7 +120,7 @@ input[type="number"] {
 
 .custom-radio input:checked ~ .radio-mark {
     background-color: white;
-    border-color: #2196F3;
+    border-color: #133E44;
 }
 
 .radio-mark:after {
@@ -139,7 +139,7 @@ input[type="number"] {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #2196F3;
+    background: #133E44;
 }
 
 .toggle-switch {
@@ -180,7 +180,7 @@ input[type="number"] {
 }
 
 input:checked + .toggle-slider {
-    background-color: #2196F3;
+    background-color: #133E44;
 }
 
 input:checked + .toggle-slider:before {
@@ -209,4 +209,3 @@ button .ri-arrow-down-s-line {
     margin-left: auto;
     padding-left: 3rem;
 }
-

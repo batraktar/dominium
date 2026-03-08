@@ -2,23 +2,32 @@ import json
 import logging
 import os
 from decimal import Decimal, InvalidOperation
-from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
-from django.contrib.auth.decorators import user_passes_test
 from django.core.cache import cache
-from django.core.files.base import ContentFile
 from django.core.paginator import EmptyPage, Paginator
-from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
-from django.utils.html import strip_tags
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from PIL import Image, UnidentifiedImageError
+from rest_framework import status, viewsets
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import AllowAny, SAFE_METHODS
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from house.api.serializers import serialize_image, serialize_property
+from accounts.models import Favorite
+from house.api.drf_serializers import (
+    HighlightSettingsWriteSerializer,
+    PropertyWriteSerializer,
+)
+from house.api.permissions import IsStaffWriteOrReadOnly
+from house.api.serializers import serialize_property
 from house.models import (
     DealType,
     Feature,
@@ -27,9 +36,25 @@ from house.models import (
     PropertyImage,
     PropertyType,
 )
+from house.services.search import SORT_MAP as SEARCH_SORT_MAP
+from house.services.search import apply_text_query_filter
+from house.services.importer import (
+    InvalidImportURL,
+    PropertyImportError,
+    import_images_from_parsed,
+    import_property_from_url,
+)
+from house.utils.network_security import (
+    ImportContentTypeError,
+    ImportPayloadTooLargeError,
+    UnsafeImportURLError,
+    decode_html_payload,
+)
+from house.utils.sanitization import sanitize_rich_text
 from house.utils.currency import get_exchange_rates
 from house.utils.html_parser import parse_property_html
-from landing_doominium_real_state.views.common import get_client_ip
+from dominium_backend.seo_regions import collect_city_keywords, collect_region_keywords
+from dominium_backend.views.common import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +64,12 @@ def _parse_json(request):
         return json.loads(request.body.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
+
+
+@ensure_csrf_cookie
+@require_http_methods(["GET"])
+def csrf_token_view(request):
+    return JsonResponse({"csrfToken": get_token(request)})
 
 
 def _get_decimal(value, field_name, errors):
@@ -90,12 +121,28 @@ def _properties_queryset():
     ).prefetch_related("features", "images")
 
 
+def _apply_keyword_scope_filter(queryset, keywords: list[str]):
+    if not keywords:
+        return queryset.none()
+
+    keyword_filter = Q()
+    for keyword in keywords:
+        normalized = str(keyword or "").strip()
+        if not normalized:
+            continue
+        keyword_filter |= Q(address__icontains=normalized) | Q(title__icontains=normalized)
+
+    if not keyword_filter.children:
+        return queryset.none()
+    return queryset.filter(keyword_filter)
+
+
 def _create_property_from_parsed(data: dict):
     warnings: list[str] = []
     payload = {
         "title": data.get("title"),
         "address": data.get("address"),
-        "description": strip_tags(data.get("description_html") or "")[:4000],
+        "description": sanitize_rich_text(data.get("description_html") or ""),
         "price": data.get("price"),
         "area": int(round(data.get("area") or 0)),
         "rooms": int(data.get("rooms") or 1),
@@ -128,54 +175,15 @@ def _create_property_from_parsed(data: dict):
     except Exception as exc:
         return None, {"save": str(exc)}, warnings
 
-    warnings.extend(_import_images(property_obj, data))
+    warnings.extend(
+        import_images_from_parsed(
+            property_obj,
+            data,
+            timeout=getattr(settings, "REQUESTS_TIMEOUT", 10),
+        )
+    )
 
     return property_obj, None, warnings
-
-
-def _import_images(property_obj: Property, data: dict) -> list[str]:
-    warnings: list[str] = []
-    image_pairs: list[tuple[str, bool]] = []
-    main_image = data.get("main_image")
-    if main_image:
-        image_pairs.append((main_image, True))
-    for url in data.get("gallery") or []:
-        image_pairs.append((url, False))
-
-    seen = set()
-    has_main = property_obj.images.filter(is_main=True).exists()
-    timeout = getattr(settings, "REQUESTS_TIMEOUT", 10)
-
-    for index, (url, wants_main) in enumerate(image_pairs, start=1):
-        if not url or url in seen:
-            continue
-        seen.add(url)
-        try:
-            response = requests.get(url, timeout=timeout)
-            response.raise_for_status()
-        except requests.RequestException as exc:
-            warnings.append(f"{url}: {exc}")
-            continue
-
-        filename = (
-            os.path.basename(urlparse(url).path)
-            or f"import-{property_obj.pk}-{index}.jpg"
-        )
-        if not os.path.splitext(filename)[1]:
-            filename += ".jpg"
-
-        try:
-            content = ContentFile(response.content, name=filename)
-            property_obj.images.create(
-                image=content,
-                is_main=wants_main and not has_main,
-            )
-            if wants_main and not has_main:
-                has_main = True
-        except Exception as exc:
-            warnings.append(f"{url}: {exc}")
-
-    return warnings
 
 
 def _resolve_property_type_by_name(name: str | None):
@@ -234,7 +242,7 @@ def _update_fields(instance, data, errors):
     if "title" in data:
         instance.title = data["title"].strip()
     if "description" in data:
-        instance.description = data["description"].strip()
+        instance.description = sanitize_rich_text(data["description"])
     if "address" in data:
         instance.address = data["address"].strip()
 
@@ -257,6 +265,9 @@ def _update_fields(instance, data, errors):
             )
         except (TypeError, ValueError):
             errors["latitude"] = "Повинно бути числове значення."
+        else:
+            if instance.latitude is not None and not (-90 <= instance.latitude <= 90):
+                errors["latitude"] = "Широта повинна бути в межах від -90 до 90."
 
     if "longitude" in data:
         try:
@@ -265,6 +276,9 @@ def _update_fields(instance, data, errors):
             )
         except (TypeError, ValueError):
             errors["longitude"] = "Повинно бути числове значення."
+        else:
+            if instance.longitude is not None and not (-180 <= instance.longitude <= 180):
+                errors["longitude"] = "Довгота повинна бути в межах від -180 до 180."
     if "featured_homepage" in data:
         raw_value = data.get("featured_homepage")
         parsed = _get_bool(raw_value)
@@ -280,14 +294,35 @@ def _update_fields(instance, data, errors):
             instance.is_archived = parsed
 
 
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def property_collection(request):
-    if request.method == "GET":
-        queryset = _properties_queryset()
+class SecurePropertyViewSet(viewsets.ModelViewSet):
+    """
+    Hardened Property API:
+    - Public: read-only (GET).
+    - Unsafe methods: staff or explicit model permissions only.
+    - Explicit auth + throttling at the endpoint level.
+    """
 
-        explicit_archived = request.GET.get("is_archived")
-        status_filter = (request.GET.get("status") or "active").strip().lower()
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    permission_classes = [IsStaffWriteOrReadOnly]
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    serializer_class = PropertyWriteSerializer
+    permission_model = Property
+    lookup_url_kwarg = "property_id"
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        return _properties_queryset()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        query_params = request.query_params
+
+        explicit_archived = query_params.get("is_archived")
+        status_filter = (query_params.get("status") or "active").strip().lower()
         if explicit_archived not in (None, ""):
             archived_bool = _get_bool(explicit_archived)
             if archived_bool is True:
@@ -307,7 +342,7 @@ def property_collection(request):
                 status_filter = "active"
                 queryset = queryset.filter(is_archived=False)
 
-        deal_type = request.GET.get("deal_type")
+        deal_type = query_params.get("deal_type")
         if deal_type:
             if str(deal_type).isdigit():
                 queryset = queryset.filter(deal_type_id=int(deal_type))
@@ -316,7 +351,7 @@ def property_collection(request):
 
         property_type_filters = [
             value.strip()
-            for value in request.GET.getlist("property_type")
+            for value in query_params.getlist("property_type")
             if value.strip()
         ]
         if property_type_filters:
@@ -337,33 +372,43 @@ def property_collection(request):
             elif slug_filters:
                 queryset = queryset.filter(property_type__slug__in=slug_filters)
 
-        search_query = request.GET.get("q")
-        if search_query:
-            queryset = queryset.filter(title__icontains=search_query.strip())
+        city_slug = (query_params.get("city_slug") or "").strip().lower()
+        region_slug = (query_params.get("region_slug") or "").strip().lower()
+        if city_slug:
+            queryset = _apply_keyword_scope_filter(queryset, collect_city_keywords(city_slug))
+        elif region_slug:
+            queryset = _apply_keyword_scope_filter(queryset, collect_region_keywords(region_slug))
 
-        area_min = _try_parse_int(request.GET.get("area_min"))
-        area_max = _try_parse_int(request.GET.get("area_max"))
+        queryset = apply_text_query_filter(queryset, query_params.get("q"))
+
+        area_min = _try_parse_int(query_params.get("area_min"))
+        area_max = _try_parse_int(query_params.get("area_max"))
         if area_min is not None:
             queryset = queryset.filter(area__gte=area_min)
         if area_max is not None:
             queryset = queryset.filter(area__lte=area_max)
 
-        min_price = request.GET.get("price_min")
-        max_price = request.GET.get("price_max")
-        if min_price:
+        price_errors = {}
+        min_price = _get_decimal(query_params.get("price_min"), "price_min", price_errors)
+        max_price = _get_decimal(query_params.get("price_max"), "price_max", price_errors)
+        if min_price is not None:
             queryset = queryset.filter(price__gte=min_price)
-        if max_price:
+        if max_price is not None:
             queryset = queryset.filter(price__lte=max_price)
 
-        rooms_min = _try_parse_int(request.GET.get("rooms_min"))
-        rooms_max = _try_parse_int(request.GET.get("rooms_max"))
+        rooms_min = _try_parse_int(query_params.get("rooms_min"))
+        rooms_max = _try_parse_int(query_params.get("rooms_max"))
+        rooms_filtered = False
         if rooms_min is not None:
             queryset = queryset.filter(rooms__gte=rooms_min)
+            rooms_filtered = True
         if rooms_max is not None:
-            queryset = queryset.filter(rooms__lte=rooms_max)
+            if rooms_max < 6:
+                queryset = queryset.filter(rooms__lte=rooms_max)
+            rooms_filtered = True
 
-        rooms_param = (request.GET.get("rooms") or "").strip()
-        if rooms_param:
+        rooms_param = (query_params.get("rooms") or "").strip()
+        if rooms_param and not rooms_filtered:
             room_tokens = [
                 token.strip() for token in rooms_param.split(",") if token.strip()
             ]
@@ -377,7 +422,7 @@ def property_collection(request):
             if room_filter.children:
                 queryset = queryset.filter(room_filter)
 
-        featured = request.GET.get("featured")
+        featured = query_params.get("featured")
         if featured not in (None, ""):
             featured_bool = _get_bool(featured)
             if featured_bool is True:
@@ -385,12 +430,16 @@ def property_collection(request):
             elif featured_bool is False:
                 queryset = queryset.filter(featured_homepage=False)
 
-        ordering = request.GET.get("ordering", "-created_at")
+        sort_key = (query_params.get("sort") or "").strip()
+        mapped_ordering = SEARCH_SORT_MAP.get(sort_key)
+        ordering = mapped_ordering or query_params.get("ordering", "-created_at")
         allowed_ordering = {
             "created_at",
             "-created_at",
             "price",
             "-price",
+            "area",
+            "-area",
             "title",
             "-title",
         }
@@ -399,12 +448,12 @@ def property_collection(request):
         queryset = queryset.order_by(ordering)
 
         try:
-            page_number = int(request.GET.get("page", 1))
+            page_number = int(query_params.get("page", 1))
         except (TypeError, ValueError):
             page_number = 1
-        raw_page_size = request.GET.get("page_size")
+        raw_page_size = query_params.get("page_size")
         if raw_page_size is None:
-            raw_page_size = request.GET.get("per_page")
+            raw_page_size = query_params.get("per_page")
         try:
             page_size = int(raw_page_size or 10)
         except (TypeError, ValueError):
@@ -418,95 +467,79 @@ def property_collection(request):
             page_obj = paginator.page(paginator.num_pages or 1)
 
         data = [serialize_property(property_obj, request) for property_obj in page_obj]
-        payload = {
-            "results": data,
-            "count": paginator.count,
-            "total_pages": paginator.num_pages,
-            "page": page_obj.number,
-            "page_size": page_obj.paginator.per_page,
-            "ordering": ordering,
-            "status": status_filter,
-        }
-        return JsonResponse(payload, status=200)
-
-    payload = _parse_json(request)
-    if payload is None:
-        return JsonResponse({"error": "Некоректний JSON."}, status=400)
-
-    errors = {}
-    required_fields = ("title", "address", "price", "area", "rooms")
-    missing = [field for field in required_fields if not payload.get(field)]
-    if missing:
-        return JsonResponse(
-            {"error": f"Відсутні обов'язкові поля: {', '.join(missing)}."}, status=400
+        return Response(
+            {
+                "results": data,
+                "count": paginator.count,
+                "total_pages": paginator.num_pages,
+                "page": page_obj.number,
+                "page_size": page_obj.paginator.per_page,
+                "ordering": ordering,
+                "status": status_filter,
+            },
+            status=status.HTTP_200_OK,
         )
 
-    with transaction.atomic():
-        property_obj = Property()
-        _update_fields(property_obj, payload, errors)
-        _apply_relation(property_obj, payload, errors, update_features=False)
+    def retrieve(self, request, *args, **kwargs):
+        property_obj = self.get_object()
+        return Response(
+            serialize_property(property_obj, request),
+            status=status.HTTP_200_OK,
+        )
 
-        if errors:
-            transaction.set_rollback(True)
-            return JsonResponse({"errors": errors}, status=400)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        property_obj = serializer.save()
+        property_obj = self.get_queryset().get(pk=property_obj.pk)
+        return Response(
+            serialize_property(property_obj, request),
+            status=status.HTTP_201_CREATED,
+        )
 
-        property_obj.save()
+    def update(self, request, *args, **kwargs):
+        property_obj = self.get_object()
+        serializer = self.get_serializer(property_obj, data=request.data, partial=False)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        updated = serializer.save()
+        updated = self.get_queryset().get(pk=updated.pk)
+        return Response(
+            serialize_property(updated, request),
+            status=status.HTTP_200_OK,
+        )
 
-        if payload.get("feature_ids") is not None:
-            _apply_relation(
-                property_obj,
-                {"feature_ids": payload["feature_ids"]},
-                errors,
-                update_features=True,
-            )
-            if errors:
-                transaction.set_rollback(True)
-                return JsonResponse({"errors": errors}, status=400)
+    def partial_update(self, request, *args, **kwargs):
+        property_obj = self.get_object()
+        serializer = self.get_serializer(property_obj, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        updated = serializer.save()
+        updated = self.get_queryset().get(pk=updated.pk)
+        return Response(
+            serialize_property(updated, request),
+            status=status.HTTP_200_OK,
+        )
 
-    property_obj.refresh_from_db()
-    property_obj = (
-        Property.objects.select_related("property_type", "deal_type")
-        .prefetch_related("features", "images")
-        .get(pk=property_obj.pk)
-    )
-    return JsonResponse(serialize_property(property_obj, request), status=201)
-
-
-@csrf_exempt
-def property_item(request, property_id):
-    try:
-        property_obj = _properties_queryset().get(pk=property_id)
-    except Property.DoesNotExist:
-        return JsonResponse({"error": "Об'єкт не знайдено."}, status=404)
-
-    if request.method == "GET":
-        return JsonResponse(serialize_property(property_obj, request), status=200)
-
-    if request.method in {"PATCH", "PUT"}:
-        payload = _parse_json(request)
-        if payload is None:
-            return JsonResponse({"error": "Некоректний JSON."}, status=400)
-
-        errors = {}
-        with transaction.atomic():
-            _update_fields(property_obj, payload, errors)
-            _apply_relation(property_obj, payload, errors, update_features=True)
-
-            if errors:
-                transaction.set_rollback(True)
-                return JsonResponse({"errors": errors}, status=400)
-
-            property_obj.save()
-
-        property_obj.refresh_from_db()
-        property_obj = _properties_queryset().get(pk=property_obj.pk)
-        return JsonResponse(serialize_property(property_obj, request), status=200)
-
-    if request.method == "DELETE":
+    def destroy(self, request, *args, **kwargs):
+        property_obj = self.get_object()
         property_obj.delete()
-        return JsonResponse({"status": "deleted"}, status=200)
+        return Response({"status": "deleted"}, status=status.HTTP_200_OK)
 
-    return HttpResponseNotAllowed(["GET", "PATCH", "PUT", "DELETE"])
+
+property_collection = SecurePropertyViewSet.as_view(
+    {"get": "list", "post": "create"}
+)
+property_item = SecurePropertyViewSet.as_view(
+    {"get": "retrieve", "patch": "partial_update", "put": "update", "delete": "destroy"}
+)
+
+
+@require_http_methods(["GET"])
+def property_by_slug(request, slug):
+    property_obj = get_object_or_404(_properties_queryset(), slug=slug)
+    return JsonResponse({"result": serialize_property(property_obj, request)}, status=200)
 
 
 @require_http_methods(["GET"])
@@ -527,6 +560,37 @@ def deal_type_collection(request):
 def feature_collection(request):
     items = Feature.objects.all().order_by("name")
     data = [{"id": item.id, "name": item.name} for item in items]
+    return JsonResponse({"results": data, "count": len(data)}, status=200)
+
+
+@require_http_methods(["GET"])
+def liked_properties_collection(request):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"detail": "Authentication credentials were not provided."},
+            status=401,
+        )
+
+    favorites = (
+        Favorite.objects.filter(user=request.user)
+        .select_related(
+            "property__deal_type",
+            "property__property_type",
+        )
+        .prefetch_related("property__images")
+    )
+    properties = [favorite.property for favorite in favorites]
+    for property_obj in properties:
+        property_obj.absolute_url = request.build_absolute_uri(
+            property_obj.get_absolute_url()
+        )
+
+    ids_only = (request.GET.get("ids") or "").lower() in {"1", "true", "yes"}
+    if ids_only:
+        data = [property_obj.id for property_obj in properties]
+        return JsonResponse({"results": data, "count": len(data)}, status=200)
+
+    data = [serialize_property(property_obj, request) for property_obj in properties]
     return JsonResponse({"results": data, "count": len(data)}, status=200)
 
 
@@ -561,79 +625,55 @@ def _serialize_highlight_settings(settings_obj):
     }
 
 
-@csrf_exempt
-@require_http_methods(["GET", "PATCH", "POST"])
-def highlight_settings_view(request):
-    settings_obj = HomepageHighlightSettings.objects.first()
+class SecureHighlightSettingsViewSet(viewsets.ViewSet):
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    permission_classes = [IsStaffWriteOrReadOnly]
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    permission_model = HomepageHighlightSettings
 
-    if request.method == "GET":
-        return JsonResponse(
-            {"result": _serialize_highlight_settings(settings_obj)}, status=200
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
+
+    def list(self, request):
+        settings_obj = HomepageHighlightSettings.objects.prefetch_related(
+            "property_types"
+        ).first()
+        return Response(
+            {"result": _serialize_highlight_settings(settings_obj)},
+            status=status.HTTP_200_OK,
         )
 
-    payload = _parse_json(request)
-    if payload is None:
-        return JsonResponse({"error": "Некоректний JSON."}, status=400)
+    def create(self, request):
+        return self._upsert(request)
 
-    created = False
-    if settings_obj is None:
-        settings_obj = HomepageHighlightSettings.objects.create()
-        created = True
+    def partial_update(self, request):
+        return self._upsert(request)
 
-    errors = {}
-    if "limit" in payload:
-        limit = _get_int(payload.get("limit"), "limit", errors)
-        if limit is not None:
-            if limit <= 0:
-                errors["limit"] = "Значення повинно бути більше 0."
-            else:
-                settings_obj.limit = limit
+    def _upsert(self, request):
+        existing = HomepageHighlightSettings.objects.prefetch_related("property_types").first()
+        created = existing is None
 
-    if "price_min" in payload:
-        price_min = _get_decimal(payload.get("price_min"), "price_min", errors)
-        if price_min is not None or payload.get("price_min") in ("", None):
-            settings_obj.price_min = price_min
+        serializer = HighlightSettingsWriteSerializer(
+            existing,
+            data=request.data,
+            partial=True,
+        )
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    if "price_max" in payload:
-        price_max = _get_decimal(payload.get("price_max"), "price_max", errors)
-        if price_max is not None or payload.get("price_max") in ("", None):
-            settings_obj.price_max = price_max
+        settings_obj = serializer.save()
+        settings_obj.refresh_from_db()
+        return Response(
+            {"result": _serialize_highlight_settings(settings_obj)},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
-    if "region_keyword" in payload:
-        settings_obj.region_keyword = (payload.get("region_keyword") or "").strip()
 
-    property_type_ids = payload.get("property_type_ids")
-    property_types_to_set = None
-    if property_type_ids is not None:
-        try:
-            property_type_ids = [int(pk) for pk in property_type_ids]
-        except (TypeError, ValueError):
-            errors["property_type_ids"] = "Список має містити ідентифікатори."
-        else:
-            property_types = list(PropertyType.objects.filter(id__in=property_type_ids))
-            missing = set(property_type_ids) - {item.id for item in property_types}
-            if missing:
-                errors["property_type_ids"] = (
-                    f"Типи з ID {', '.join(map(str, missing))} не знайдено."
-                )
-            else:
-                property_types_to_set = property_types
-
-    if errors:
-        if created:
-            settings_obj.delete()
-        return JsonResponse({"errors": errors}, status=400)
-
-    settings_obj.save()
-
-    if property_types_to_set is not None:
-        settings_obj.property_types.set(property_types_to_set)
-
-    settings_obj.refresh_from_db()
-    status_code = 201 if created else 200
-    return JsonResponse(
-        {"result": _serialize_highlight_settings(settings_obj)}, status=status_code
-    )
+highlight_settings_view = SecureHighlightSettingsViewSet.as_view(
+    {"get": "list", "post": "create", "patch": "partial_update"}
+)
 
 
 def _import_rate_limited(request):
@@ -652,9 +692,37 @@ def _import_rate_limited(request):
     return False
 
 
-def _ensure_staff(request):
+def _parse_geocode_flag(raw_value):
+    parsed = _get_bool(raw_value)
+    if parsed is None and raw_value not in (None, ""):
+        raise ValueError("Поле 'geocode' має бути булевим значенням.")
+    return bool(parsed)
+
+
+def _read_uploaded_bytes_with_limit(uploaded_file) -> bytes:
+    limit = int(getattr(settings, "IMPORT_MAX_HTML_BYTES", 2 * 1024 * 1024))
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in uploaded_file.chunks():
+        total += len(chunk)
+        if total > limit:
+            raise ImportPayloadTooLargeError(
+                f"Файл перевищує ліміт {limit} байт і не може бути імпортований."
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _ensure_staff_only(request):
     if not request.user.is_authenticated or not request.user.is_staff:
         return JsonResponse({"error": "forbidden"}, status=403)
+    return None
+
+
+def _ensure_staff(request):
+    guard = _ensure_staff_only(request)
+    if guard:
+        return guard
     if _import_rate_limited(request):
         return JsonResponse(
             {"error": "Too many import requests. Try again later."}, status=429
@@ -662,7 +730,6 @@ def _ensure_staff(request):
     return None
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def property_import(request):
     guard_response = _ensure_staff(request)
@@ -717,7 +784,6 @@ def property_import(request):
     return JsonResponse({"created": created, "errors": errors}, status=status_code)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def property_import_html(request):
     guard_response = _ensure_staff(request)
@@ -728,7 +794,11 @@ def property_import_html(request):
     if not files:
         return JsonResponse({"error": "Не передано файлів для імпорту."}, status=400)
 
-    geocode = request.POST.get("geocode") in {"1", "true", "on"}
+    try:
+        geocode = _parse_geocode_flag(request.POST.get("geocode"))
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
     rates = get_exchange_rates()
     created = []
     errors = []
@@ -736,10 +806,14 @@ def property_import_html(request):
     for uploaded in files:
         name = getattr(uploaded, "name", "unnamed.html")
         try:
-            content = uploaded.read().decode("utf-8")
-        except UnicodeDecodeError:
+            raw_html = _read_uploaded_bytes_with_limit(uploaded)
+            content = decode_html_payload(raw_html)
+        except ImportPayloadTooLargeError as exc:
+            errors.append({"file": name, "error": str(exc)})
+            continue
+        except Exception:
             errors.append(
-                {"file": name, "error": "Не вдалося прочитати файл у кодуванні UTF-8."}
+                {"file": name, "error": "Не вдалося прочитати файл імпорту."}
             )
             continue
 
@@ -769,7 +843,6 @@ def property_import_html(request):
     return JsonResponse({"created": created, "errors": errors}, status=status_code)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def property_import_link(request):
     guard_response = _ensure_staff(request)
@@ -784,32 +857,34 @@ def property_import_link(request):
     if not url:
         return JsonResponse({"error": "Поле 'url' обов'язкове."}, status=400)
 
-    geocode = bool(payload.get("geocode"))
+    try:
+        geocode = _parse_geocode_flag(payload.get("geocode"))
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
 
     try:
-        response = requests.get(url, timeout=getattr(settings, "REQUESTS_TIMEOUT", 10))
-        response.raise_for_status()
+        property_obj, warnings = import_property_from_url(
+            url,
+            timeout=getattr(settings, "REQUESTS_TIMEOUT", 10),
+            geocode_missing=geocode,
+        )
+    except InvalidImportURL as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except (
+        UnsafeImportURLError,
+        ImportPayloadTooLargeError,
+        ImportContentTypeError,
+    ) as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
     except requests.RequestException as exc:
         return JsonResponse(
             {"error": f"Не вдалося завантажити HTML: {exc}"}, status=400
         )
-
-    try:
-        parsed = parse_property_html(
-            response.text,
-            source=url,
-            rates=get_exchange_rates(),
-            geocode_missing=geocode,
-        )
+    except PropertyImportError as exc:
+        return JsonResponse({"error": str(exc)}, status=422)
     except Exception as exc:
-        logger.exception("Помилка парсингу URL %s: %s", url, exc)
-        return JsonResponse({"error": f"Не вдалося розібрати HTML: {exc}"}, status=400)
-
-    property_obj, validation_errors, warnings = _create_property_from_parsed(
-        parsed.as_dict()
-    )
-    if validation_errors:
-        return JsonResponse({"errors": validation_errors}, status=400)
+        logger.exception("Помилка імпорту URL %s: %s", url, exc)
+        return JsonResponse({"error": f"Внутрішня помилка імпорту: {exc}"}, status=500)
 
     return JsonResponse(
         {
@@ -823,8 +898,38 @@ def property_import_link(request):
     )
 
 
-def _is_staff(user):
-    return user.is_authenticated and user.is_staff
+def _validate_admin_image_upload(upload):
+    filename = str(getattr(upload, "name", "") or "")
+    extension = os.path.splitext(filename.lower())[1]
+    if extension in {".svg", ".svgz"}:
+        return "SVG-зображення не підтримуються."
+    if extension and extension not in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff"}:
+        return "Непідтримуваний формат зображення."
+
+    content_type = str(getattr(upload, "content_type", "") or "").lower()
+    if content_type == "image/svg+xml":
+        return "SVG-зображення не підтримуються."
+    if content_type and not content_type.startswith("image/"):
+        return "Файл має бути зображенням."
+
+    max_bytes = max(1, int(getattr(settings, "ADMIN_IMAGE_MAX_BYTES", 8 * 1024 * 1024) or (8 * 1024 * 1024)))
+    size = getattr(upload, "size", None)
+    if isinstance(size, int) and size > max_bytes:
+        return f"Файл перевищує ліміт {max_bytes} байт."
+
+    # MIME/extension can be spoofed, so verify image signature/payload.
+    try:
+        if hasattr(upload, "seek"):
+            upload.seek(0)
+        with Image.open(upload) as image:
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        return "Файл пошкоджений або не є валідним зображенням."
+    finally:
+        if hasattr(upload, "seek"):
+            upload.seek(0)
+
+    return None
 
 
 def serialize_image(image_obj, request=None):
@@ -835,10 +940,12 @@ def serialize_image(image_obj, request=None):
     }
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
-@user_passes_test(_is_staff)
 def property_bulk_action(request):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     payload = _parse_json(request)
     if payload is None:
         return JsonResponse(
@@ -879,10 +986,12 @@ def property_bulk_action(request):
     )
 
 
-@csrf_exempt
 @require_http_methods(["GET", "POST"])
-@user_passes_test(_is_staff)
 def property_image_list(request, property_id):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     property_obj = get_object_or_404(Property, pk=property_id)
 
     if request.method == "GET":
@@ -901,9 +1010,21 @@ def property_image_list(request, property_id):
             {"error": "Потрібно надіслати хоча б одне фото."}, status=400
         )
 
+    max_files = max(1, int(getattr(settings, "ADMIN_IMAGE_UPLOAD_MAX_FILES", 20) or 20))
+    if len(images) > max_files:
+        return JsonResponse(
+            {"error": f"За один запит можна завантажити не більше {max_files} фото."},
+            status=400,
+        )
+
     created = []
     errors = []
     for index, upload in enumerate(images, start=1):
+        validation_error = _validate_admin_image_upload(upload)
+        if validation_error:
+            errors.append({"file": getattr(upload, "name", "файл"), "error": validation_error})
+            continue
+
         is_main = bool(request.POST.get("is_main")) and index == len(images)
         image_obj = PropertyImage(property=property_obj, image=upload, is_main=is_main)
         try:
@@ -916,10 +1037,12 @@ def property_image_list(request, property_id):
     return JsonResponse({"created": created, "errors": errors}, status=status_code)
 
 
-@csrf_exempt
 @require_http_methods(["PATCH", "DELETE"])
-@user_passes_test(_is_staff)
 def property_image_detail(request, image_id):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     image_obj = get_object_or_404(PropertyImage, pk=image_id)
 
     if request.method == "PATCH":
@@ -940,10 +1063,12 @@ def property_image_detail(request, image_id):
     return JsonResponse({"status": "deleted"}, status=200)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
-@user_passes_test(_is_staff)
 def property_images_reorder(request, property_id):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     property_obj = get_object_or_404(Property, pk=property_id)
     payload = _parse_json(request)
     if payload is None:

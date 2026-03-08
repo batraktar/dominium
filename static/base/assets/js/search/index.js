@@ -1,5 +1,8 @@
 (() => {
-  const API_SEARCH_URL = window.SEARCH_API_URL || "/api/properties/";
+  const API_SEARCH_URL =
+    document.getElementById("property-results")?.dataset.searchApiUrl ||
+    document.body?.dataset.searchApiUrl ||
+    "/api/properties/";
   const AUTO_DELAY = 600;
 
   const { search } = window.DominiumSearchAPI;

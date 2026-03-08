@@ -1,0 +1,101 @@
+{% load static %}
+{% load security_filters %}
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#133E44" />
+
+    <title>{{ meta_title|default:'DOMINIUM - React' }}</title>
+    <meta name="description" content="{{ meta_description|default:'DOMINIUM - агенція нерухомості.' }}" />
+    <meta name="robots" content="{{ meta_robots|default:'index, follow' }}" />
+    <meta name="dominium-runtime-shell" content="react-spa" />
+
+    <link rel="canonical" href="{{ canonical_url|default:request.build_absolute_uri }}" />
+    <meta property="og:type" content="{{ og_type|default:'website' }}" />
+    <meta property="og:title" content="{{ og_title|default:meta_title }}" />
+    <meta property="og:description" content="{{ meta_description|default:'' }}" />
+    <meta property="og:url" content="{{ canonical_url|default:request.build_absolute_uri }}" />
+    <meta property="og:site_name" content="DOMINIUM Realty" />
+    <meta property="og:image" content="{{ og_image|default:'' }}" />
+    <meta property="og:image:alt" content="{{ og_image_alt|default:og_title }}" />
+    <meta property="og:locale" content="uk_UA" />
+    {% if meta_published_time %}<meta property="article:published_time" content="{{ meta_published_time }}" />{% endif %}
+    {% if meta_modified_time %}<meta property="article:modified_time" content="{{ meta_modified_time }}" />{% endif %}
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ og_title|default:meta_title }}" />
+    <meta name="twitter:description" content="{{ meta_description|default:'' }}" />
+    <meta name="twitter:image" content="{{ og_image|default:'' }}" />
+    <meta name="twitter:url" content="{{ canonical_url|default:request.build_absolute_uri }}" />
+
+    <link rel="icon" type="image/svg+xml" href="{% static 'base/assets/img/ПОВНИЙ ЗНАК _О-16.svg' %}" />
+    <link rel="alternate icon" type="image/png" sizes="32x32" href="{% static 'base/assets/img/favicon-32x32.png' %}" />
+    <link rel="alternate icon" type="image/png" sizes="16x16" href="{% static 'base/assets/img/favicon-16x16.png' %}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'base/assets/img/apple-touch-icon.png' %}" />
+    <link rel="alternate" hreflang="uk-UA" href="{{ canonical_url|default:request.build_absolute_uri }}" />
+    <link rel="alternate" hreflang="x-default" href="{{ canonical_url|default:request.build_absolute_uri }}" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'base/assets/js/tailwind_config.js' %}?v=20260209b"></script>
+    <script nonce="{{ request.csp_nonce }}" src="https://cdn.tailwindcss.com"></script>
+    <script nonce="{{ request.csp_nonce }}" defer src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+    {% if structured_data %}
+      <script nonce="{{ request.csp_nonce }}" type="application/ld+json">
+        {{ structured_data|json_ld }}
+      </script>
+    {% endif %}
+
+    {% if react_assets.mode == 'dev' %}
+      <script nonce="{{ request.csp_nonce }}" type="module" src="{{ react_assets.dev_server }}/@vite/client"></script>
+      <script nonce="{{ request.csp_nonce }}" type="module" src="{{ react_assets.dev_server }}/{{ react_assets.entry }}"></script>
+    {% elif react_assets.mode == 'prod' %}
+      {% for css_path in react_assets.css %}
+        <link rel="stylesheet" href="{% static css_path %}" />
+      {% endfor %}
+      {% for preload_path in react_assets.imports %}
+        <link rel="modulepreload" href="{% static preload_path %}" />
+      {% endfor %}
+      <script nonce="{{ request.csp_nonce }}" type="module" src="{% static react_assets.js %}"></script>
+    {% endif %}
+  </head>
+  {% with register_query=request.GET.register login_query=request.GET.login %}
+  {% with rm=auth_modals.register lm=auth_modals.login %}
+  <body
+    class="bg-primary overflow-x-hidden"
+    {% if request.GET %}data-no-preloader="1"{% endif %}
+    data-register-open="{% if register_query or rm.open %}true{% else %}false{% endif %}"
+    data-login-open="{% if login_query or lm.open %}true{% else %}false{% endif %}"
+    data-user-is-staff="{% if request.user.is_staff %}1{% else %}0{% endif %}"
+    data-user-is-authenticated="{% if request.user.is_authenticated %}1{% else %}0{% endif %}"
+    data-user-display-name="{% if request.user.is_authenticated %}{{ request.user.display_name|default:'' }}{% endif %}"
+    data-user-email="{% if request.user.is_authenticated %}{{ request.user.email|default:'' }}{% endif %}"
+    data-user-phone="{% if request.user.is_authenticated and request.user.phone_number %}{{ request.user.phone_number }}{% endif %}"
+  >
+  {% endwith %}
+  {% endwith %}
+    <input type="hidden" id="django-csrf-token" value="{{ csrf_token }}" />
+
+    {% if react_assets.mode == 'missing' %}
+      <section class="min-h-screen flex items-center justify-center px-4 text-center text-white">
+        <div class="max-w-[760px]">
+          <h1 class="text-3xl font-ermilov mb-4">React bundle недоступний</h1>
+          <p class="text-base font-fixel text-creamBeige/90">
+            Збірка фронтенду не знайдена. Запусти <code class="bg-black/20 px-1 rounded">cd frontend-react && npm run build</code>
+            або налаштуй <code class="bg-black/20 px-1 rounded">REACT_SPA_DEV_SERVER_URL</code>.
+          </p>
+        </div>
+      </section>
+    {% else %}
+      <div id="root"></div>
+    {% endif %}
+  </body>
+</html>

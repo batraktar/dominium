@@ -6,7 +6,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Імпорт налаштувань Django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "landing_doominium_real_state.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dominium_backend.settings")
 django.setup()
 
 from accounts.models import CustomUser, TelegramVerification

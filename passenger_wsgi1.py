@@ -2,6 +2,6 @@ import os
 import sys
 
 
-from landing_doominium_real_state.wsgi import application
+from dominium_backend.wsgi import application
 
 

@@ -1,9 +1,27 @@
 (() => {
+  const readCookie = (name) => {
+    const cookies = document.cookie ? document.cookie.split(";") : [];
+    for (const raw of cookies) {
+      const item = raw.trim();
+      if (item.startsWith(`${name}=`)) {
+        return decodeURIComponent(item.slice(name.length + 1));
+      }
+    }
+    return "";
+  };
+
+  const getFlag = ({ globalName, bodyDataName }) => {
+    if (typeof window[globalName] === "boolean") return window[globalName];
+    const value = document.body?.dataset?.[bodyDataName];
+    return value === "1" || value === "true";
+  };
+
   const getCsrfToken =
     (window.DominiumSearchAPI && window.DominiumSearchAPI.getCsrfToken) ||
     (() =>
       document.getElementById("csrf-token")?.value ||
       document.querySelector("input[name='csrfmiddlewaretoken']")?.value ||
+      readCookie("csrftoken") ||
       "");
 
   async function apiToggle(url, bodyParams = undefined) {
@@ -58,7 +76,7 @@
   }
 
   async function handleLikeClick(button) {
-    if (!window.userIsAuthenticated) {
+    if (!getFlag({ globalName: "userIsAuthenticated", bodyDataName: "userIsAuthenticated" })) {
       window.location.href = "/login/";
       return;
     }
@@ -124,7 +142,7 @@
   }
 
   function initFeaturedToggles(scope = document) {
-    if (!window.userIsStaff) return;
+    if (!getFlag({ globalName: "userIsStaff", bodyDataName: "userIsStaff" })) return;
     const csrfToken = getCsrfToken();
     if (!csrfToken) return;
     scope.querySelectorAll("[data-featured-toggle]").forEach((button) => {

@@ -1,3 +1,4 @@
+{% load security_filters %}
 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm mb-4 sm:mb-8">
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6">
         <h2 class="text-2xl sm:text-3xl font-ermilov text-deepOcean mb-4 sm:mb-0">
@@ -36,15 +37,15 @@
     <div class="border-t border-gray-200 py-6">
         <h3 class="text-xl font-ermilov text-deepOcean mb-4">Опис</h3>
         <div class="property-description font-fixel text-deepOcean leading-relaxed">
-            {{ property.description|safe }}
+            {{ property.description|sanitize_html }}
         </div>
     </div>
 
-    {% if property.features.exists %}
+    {% if property_features %}
     <div class="border-t border-gray-200 py-6">
         <h3 class="text-xl font-fixel mb-4">Зручності</h3>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            {% for feature in property.features.all %}
+            {% for feature in property_features %}
             <div class="flex items-center space-x-2">
                 <i class="ri-checkbox-circle-line text-primary"></i>
                 <span class="text-gray-600">{{ feature.name }}</span>

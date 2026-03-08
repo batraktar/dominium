@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn psycopg2-binary
 
 COPY . .
 
-ENV DJANGO_SETTINGS_MODULE=landing_doominium_real_state.settings.prod
+ENV DJANGO_SETTINGS_MODULE=dominium_backend.settings.prod
 EXPOSE 8000
 
-CMD ["gunicorn", "landing_doominium_real_state.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "dominium_backend.wsgi:application", "--bind", "0.0.0.0:8000"]

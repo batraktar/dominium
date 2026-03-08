@@ -1,8 +1,17 @@
 {% load static %}
 <section class="hero relative bg-cover bg-center py-[130px] md:py-[160px] xl:py-[250px] overflow-hidden">
-  <!-- Фонове відео -->
-  <video autoplay muted loop playsinline class="absolute top-0 left-0 w-full h-full object-cover z-0">
-    <source src="{% static 'base/assets/video/compressed/2.mp4' %}" type="video/mp4" />Ваш браузер не підтримує відео.
+  <!-- Фонове відео завантажується відкладено, щоб не блокувати LCP -->
+  <video
+    autoplay
+    muted
+    loop
+    playsinline
+    preload="none"
+    aria-hidden="true"
+    data-lazy-video="hero"
+    class="absolute top-0 left-0 w-full h-full object-cover z-0"
+  >
+    <source data-src="{% static 'base/assets/video/compressed/2.mp4' %}" type="video/mp4" />
   </video>
 
   <!-- Напівпрозора маска (за бажанням) -->

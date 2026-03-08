@@ -5,15 +5,20 @@
   Головна – DOMINIUM
 {% endblock %}
 
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+{% endblock %}
+
 {% block content %}
   {% include 'partials/hero.html' %}
   {% include 'partials/filter_modal.html' %}
   {% include 'partials/featured_properties.html' %}
   {% include 'partials/about.html' %}
   {% include 'partials/contact.html' %}
-  {% include 'partials/mobile_nav.html' %}
 {% endblock %}
 
-{% comment %} {% block scripts %}
-  <script src="{% static 'base/assets/js/filters.js' %}"></script>
-{% endblock %} {% endcomment %}
+{% block scripts %}
+  {{ block.super }}
+  <script defer src="{% static 'base/assets/js/lazy_hero_video.js' %}"></script>
+{% endblock %}

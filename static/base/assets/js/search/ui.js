@@ -87,9 +87,9 @@
     const cards = () => document.querySelectorAll(".grid-cols-1 > div");
 
     function activateGrid() {
-      gridButton.classList.add("bg-blue-50", "text-primary");
+      gridButton.classList.add("bg-secondary", "text-primary");
       gridButton.classList.remove("bg-white", "text-gray-500");
-      listButton.classList.remove("bg-blue-50", "text-primary");
+      listButton.classList.remove("bg-secondary", "text-primary");
       listButton.classList.add("bg-white", "text-gray-500");
       resultsGrid.classList.add(...AUTO_LAYOUT_CLASSES.grid);
       resultsGrid.classList.remove(...AUTO_LAYOUT_CLASSES.listAdd);
@@ -103,9 +103,9 @@
     }
 
     function activateList() {
-      listButton.classList.add("bg-blue-50", "text-primary");
+      listButton.classList.add("bg-secondary", "text-primary");
       listButton.classList.remove("bg-white", "text-gray-500");
-      gridButton.classList.remove("bg-blue-50", "text-primary");
+      gridButton.classList.remove("bg-secondary", "text-primary");
       gridButton.classList.add("bg-white", "text-gray-500");
       resultsGrid.classList.add(...AUTO_LAYOUT_CLASSES.listAdd);
       resultsGrid.classList.remove(...AUTO_LAYOUT_CLASSES.grid);
@@ -127,7 +127,7 @@
     listButton.addEventListener("click", activateList);
   }
 
-  function buildPropertyCard(property, { likedIds, csrfToken, userIsStaff }) {
+  function buildPropertyCard(property, { likedIds, userIsStaff }) {
     const absoluteUrl =
       property.absolute_url || `${window.location.origin}/property/${property.slug}/`;
     const imageUrl =
@@ -150,7 +150,7 @@
     const liked = likedIds.includes(property.id);
     const likeIconClass = liked ? "ri-heart-fill text-red-500" : "ri-heart-line text-coolSage";
     const featuredButton = userIsStaff
-      ? `<button type="button" class="featured-toggle w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition" data-featured-toggle data-property-id="${property.id}" data-featured="${property.featured_homepage ? "true" : "false"}" title="Керування блоком Топ-3">
+      ? `<button type="button" class="featured-toggle w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition" data-featured-toggle data-property-id="${property.id}" data-featured="${property.featured_homepage ? "true" : "false"}" title="Керування блоком Топ-3" aria-label="Керувати блоком Топ-3">
           <i class="${property.featured_homepage ? "ri-star-fill text-yellow-500" : "ri-star-line text-coolSage"}"></i>
         </button>`
       : "";
@@ -160,16 +160,24 @@
         <div class="bg-white rounded-[8px] shadow-lg overflow-hidden flex flex-col h-full">
           <div class="relative h-56">
             <a href="${escapeHtml(absoluteUrl)}">
-              <img src="${escapeHtml(imageUrl)}" loading="lazy" decoding="async" class="w-full h-56 object-cover" alt="${escapeHtml(property.title)}" />
+              <img
+                src="${escapeHtml(imageUrl)}"
+                loading="lazy"
+                decoding="async"
+                width="1200"
+                height="900"
+                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                class="w-full h-56 object-cover"
+                alt="${escapeHtml(property.title)}"
+              />
             </a>
             <div class="absolute top-3 right-3 flex gap-2 z-10">
-              <input type="hidden" id="csrf-token" value="${escapeHtml(csrfToken)}" />
-              <button class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full transition" data-property-id="${property.id}">
+              <button type="button" class="like-button w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full transition" data-property-id="${property.id}" aria-label="Додати до обраного">
                 <i class="${likeIconClass}"></i>
               </button>
               ${featuredButton}
               <div class="relative" data-share-container>
-                <button type="button" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition" data-share-toggle data-share-url="${escapeHtml(absoluteUrl)}" data-share-title="${escapeHtml(property.title)}">
+                <button type="button" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition" data-share-toggle data-share-url="${escapeHtml(absoluteUrl)}" data-share-title="${escapeHtml(property.title)}" aria-label="Поділитися об'єктом">
                   <i class="ri-share-forward-line text-coolSage"></i>
                 </button>
                 <div class="share-menu absolute right-0 mt-2 w-40 rounded-lg bg-white shadow-lg py-2 hidden z-20" data-share-menu>
@@ -311,7 +319,7 @@
   }
 
   function renderResults(payload, params, opts) {
-    const { resultsSection, likedIds, csrfToken, userIsStaff } = opts;
+    const { resultsSection, likedIds, userIsStaff } = opts;
     if (!resultsSection) return;
 
     if (!payload.results || !payload.results.length) {
@@ -324,7 +332,7 @@
     }
 
     const cardsHtml = payload.results
-      .map((property) => buildPropertyCard(property, { likedIds, csrfToken, userIsStaff }))
+      .map((property) => buildPropertyCard(property, { likedIds, userIsStaff }))
       .join("");
     const gridHtml = `
       <div class="container mx-auto px-4 py-6">

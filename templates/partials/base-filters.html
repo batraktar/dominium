@@ -74,22 +74,6 @@
 {% endblock %}
 
 {% block scripts %}
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const headerQField = document.getElementById("q-main");
-      const hiddenQField = document.getElementById("q-hidden");
-      const searchForm = document.getElementById("main-search-form");
-      const submitBtn = searchForm?.querySelector('button[type="submit"]');
-
-      if (!submitBtn || !headerQField || !hiddenQField) {
-        console.warn("[filters] Не вдалося знайти поля для синхронізації запиту.");
-        return;
-      }
-
-      submitBtn.addEventListener("click", () => {
-        hiddenQField.value = headerQField.value;
-      });
-    });
-  </script>
-  <script src="{% static 'base/assets/js/filter-sliders.js' %}"></script>
+  <script defer src="{% static 'base/assets/js/search/base_filters_sync.js' %}"></script>
+  <script defer src="{% static 'base/assets/js/filter-sliders.js' %}"></script>
 {% endblock %}

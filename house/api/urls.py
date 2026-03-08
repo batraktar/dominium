@@ -1,11 +1,16 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
 
 app_name = "house_api"
 
 urlpatterns = [
+    path("csrf/", views.csrf_token_view, name="csrf_token"),
+    path("auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("properties/", views.property_collection, name="property_list"),
+    path("properties/by-slug/<slug:slug>/", views.property_by_slug, name="property_by_slug"),
     path("properties/<int:property_id>/", views.property_item, name="property_detail"),
     path(
         "properties/bulk-action/",
@@ -30,6 +35,11 @@ urlpatterns = [
     path("property-types/", views.property_type_collection, name="property_type_list"),
     path("deal-types/", views.deal_type_collection, name="deal_type_list"),
     path("features/", views.feature_collection, name="feature_list"),
+    path(
+        "liked-properties/",
+        views.liked_properties_collection,
+        name="liked_properties",
+    ),
     path(
         "highlight-settings/", views.highlight_settings_view, name="highlight_settings"
     ),

@@ -1,0 +1,70 @@
+import { useMemo } from 'react'
+import { getCsrfTokenFromDom } from '../../../shared/utils/csrf.js'
+import { buildVisiblePages } from '../utils/searchPageUtils.js'
+
+export default function useSearchPageViewModel({
+  filterState,
+  resultsDataState,
+  uiState,
+  derivedState,
+  actionHandlers,
+}) {
+  const todayDate = useMemo(() => new Intl.DateTimeFormat('uk-UA').format(new Date()), [])
+  const visiblePages = useMemo(
+    () => buildVisiblePages(filterState.page, resultsDataState.totalPages),
+    [filterState.page, resultsDataState.totalPages],
+  )
+
+  return {
+    queryInput: filterState.queryInput,
+    setQueryInput: filterState.setQueryInput,
+    query: filterState.query,
+    openDropdown: uiState.openDropdown,
+    toggleDropdown: actionHandlers.toggleDropdown,
+    propertyTypeSummary: derivedState.propertyTypeSummary,
+    propertyTypes: resultsDataState.propertyTypes,
+    selectedPropertyTypes: filterState.selectedPropertyTypes,
+    togglePropertyType: actionHandlers.togglePropertyType,
+    resetPropertyTypes: actionHandlers.resetPropertyTypes,
+    priceRange: filterState.priceRange,
+    areaRange: filterState.areaRange,
+    roomsRange: filterState.roomsRange,
+    resetPriceRange: actionHandlers.resetPriceRange,
+    resetAreaRange: actionHandlers.resetAreaRange,
+    resetRoomsRange: actionHandlers.resetRoomsRange,
+    handlePriceMinInput: actionHandlers.handlePriceMinInput,
+    handlePriceMaxInput: actionHandlers.handlePriceMaxInput,
+    handleAreaMinInput: actionHandlers.handleAreaMinInput,
+    handleAreaMaxInput: actionHandlers.handleAreaMaxInput,
+    handleRoomsMinInput: actionHandlers.handleRoomsMinInput,
+    handleRoomsMaxInput: actionHandlers.handleRoomsMaxInput,
+    activeChips: derivedState.activeChips,
+    clearChip: actionHandlers.clearChip,
+    handleHeaderSubmit: actionHandlers.handleHeaderSubmit,
+    handleMainSubmit: actionHandlers.handleMainSubmit,
+    csrfToken: getCsrfTokenFromDom(),
+    totalCount: resultsDataState.totalCount,
+    sortOption: filterState.sortOption,
+    selectedSortLabel: derivedState.selectedSortLabel,
+    handleSortOptionChange: actionHandlers.handleSortOptionChange,
+    perPage: filterState.perPage,
+    handlePerPageChange: actionHandlers.handlePerPageChange,
+    currency: filterState.currency,
+    handleCurrencyChange: actionHandlers.handleCurrencyChange,
+    selectedCurrencyMeta: derivedState.selectedCurrencyMeta,
+    todayDate,
+    results: resultsDataState.results,
+    isLoading: resultsDataState.isLoading,
+    likedIds: uiState.likedIds,
+    openShareMenuId: uiState.openShareMenuId,
+    handleToggleShareMenu: actionHandlers.handleToggleShareMenu,
+    toggleLike: actionHandlers.toggleLike,
+    toggleFeatured: actionHandlers.toggleFeatured,
+    handleResultShare: actionHandlers.handleResultShare,
+    page: filterState.page,
+    totalPages: resultsDataState.totalPages,
+    visiblePages,
+    setPage: filterState.setPage,
+    searchError: resultsDataState.searchError,
+  }
+}

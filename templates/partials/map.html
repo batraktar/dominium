@@ -3,15 +3,22 @@
 
   {% if property.latitude and property.longitude %}
     <div class="h-[320px] rounded-lg overflow-hidden relative bg-white/10">
-      <div id="map" class="w-full h-full z-0"></div>
+      <div
+        id="map"
+        class="w-full h-full z-0"
+        data-lat="{{ property.latitude|default:'' }}"
+        data-lon="{{ property.longitude|default:'' }}"
+        data-title="{{ property.title|default:'' }}"
+        data-address="{{ property.address|default:'' }}"
+      ></div>
       <div id="map-controls" class="absolute top-2 right-2 z-10 bg-white rounded shadow px-2 py-1 text-sm font-fixel">
-        <label class="mr-2"><input type="radio" name="basemap" value="map" checked />Map</label>
-        <label><input type="radio" name="basemap" value="satellite" />Satellite</label>
+        <label class="mr-2"><input type="radio" name="basemap" value="map" />Map</label>
+        <label><input type="radio" name="basemap" value="satellite" checked />Satellite</label>
       </div>
     </div>
 
     <div class="text-xs text-gray-400 font-fixel text-right mt-2">
-      Дані карти: <a href="https://www.openstreetmap.org/copyright" target="_blank" class="underline">© OpenStreetMap contributors</a>, Tiles: © Esri
+      Дані карти: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" class="underline">© OpenStreetMap contributors</a>, Tiles: © Esri
     </div>
   {% else %}
     <div class="h-[320px] rounded-lg border border-white/30 bg-white/5 flex flex-col items-center justify-center text-sm font-fixel text-deepOcean/80 px-6 text-center">
@@ -19,75 +26,4 @@
       Координати цього об'єкта ще не додані. Зв’яжіться з менеджером, щоб отримати точну адресну точку.
     </div>
   {% endif %}
-
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      const latRaw = '{{ property.latitude|default:"" }}'
-      const lonRaw = '{{ property.longitude|default:"" }}'
-      const lat = parseFloat(String(latRaw).replace(',', '.'))
-      const lon = parseFloat(String(lonRaw).replace(',', '.'))
-
-      if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        const map = L.map('map', {
-          attributionControl: false
-        }).setView([lat, lon], 15)
-    
-        const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
-        })
-    
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri'
-        })
-    
-        street.addTo(map)
-    
-        const popupContent = `<div class="font-fixel text-deepOcean">
-                                    <b>{{ property.title }}</b><br>{{ property.address }}
-                                  </div>`
-    
-        const marker = L.marker([lat, lon]).addTo(map).bindPopup(popupContent).openPopup()
-    
-        setTimeout(() => map.invalidateSize(), 500)
-    
-        // Обробка перемикання карти
-        const radios = document.querySelectorAll('#map-controls input[name="basemap"]')
-        radios.forEach((radio) => {
-          radio.addEventListener('change', function () {
-            if (this.value === 'map') {
-              map.removeLayer(satellite)
-              map.addLayer(street)
-            } else {
-              map.removeLayer(street)
-              map.addLayer(satellite)
-            }
-          })
-        })
-      }
-    })
-  </script>
-
-  <style>
-    /* Мобільна адаптація перемикача */
-    #map-controls {
-      font-size: 12px;
-      padding: 4px 8px;
-    }
-    
-    @media (min-width: 640px) {
-      #map-controls {
-        font-size: 14px;
-        padding: 6px 10px;
-      }
-    }
-    
-    #map-controls input {
-      transform: scale(1.1);
-      margin-right: 4px;
-    }
-  </style>
 </div>

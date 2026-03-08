@@ -4,20 +4,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>Реєстрація завершена</title>
-    <meta http-equiv="refresh" content="2;url={{ bot_link }}" />
-    <script>
-      setTimeout(() => {
-        window.location.href = '{{ bot_link }}'
-      }, 5000)
-    </script>
+    <meta http-equiv="refresh" content="3;url={{ bot_link }}" />
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="h-screen flex items-center justify-center bg-gray-100 text-gray-800">
     <div class="bg-white shadow-lg p-6 rounded-xl text-center max-w-md w-full">
       <h2 class="text-xl font-semibold mb-4">Реєстрацію завершено</h2>
       <p class="mb-4">Зараз вас буде перенаправлено до Telegram-бота для підтвердження акаунта.</p>
-      <a href="{{ bot_link }}" target="_blank" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-full transition">Відкрити бот вручну</a>
+      <a href="{{ bot_link }}" target="_blank" rel="noopener noreferrer" class="inline-block bg-primary hover:bg-deepOcean text-white px-6 py-2 rounded-full transition">Відкрити бот вручну</a>
     </div>
   </body>
 </html>
-

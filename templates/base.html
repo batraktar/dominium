@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
 {% load socialaccount %}
+{% load security_filters %}
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
@@ -20,19 +21,29 @@
     {% with og_description_value=og_description|default:description %}
     {% with request.scheme|add:'://'|add:request.get_host|add:dominium_logo_svg as default_og_image %}
     {% with og_image_value=og_image|default:default_og_image %}
+    {% with robots_value=meta_robots|default:'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' %}
+    {% with og_image_alt_value=og_image_alt|default:og_title_value %}
     <meta name="description" content="{{ description }}" />
-    <meta name="robots" content="{{ meta_robots|default:'index, follow' }}" />
+    <meta name="robots" content="{{ robots_value }}" />
+    <meta name="googlebot" content="{{ googlebot_robots|default:robots_value }}" />
     <link rel="canonical" href="{{ canonical }}" />
+    <link rel="alternate" hreflang="uk-UA" href="{{ canonical }}" />
+    <link rel="alternate" hreflang="x-default" href="{{ canonical }}" />
     <meta property="og:type" content="{{ og_type_value }}" />
     <meta property="og:title" content="{{ og_title_value }}" />
     <meta property="og:description" content="{{ og_description_value }}" />
     <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:site_name" content="DOMINIUM Realty" />
     <meta property="og:image" content="{{ og_image_value }}" />
+    <meta property="og:image:alt" content="{{ og_image_alt_value }}" />
     <meta property="og:locale" content="uk_UA" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{ og_title_value }}" />
     <meta name="twitter:description" content="{{ og_description_value }}" />
     <meta name="twitter:image" content="{{ og_image_value }}" />
+    <meta name="twitter:image:alt" content="{{ og_image_alt_value }}" />
+    {% endwith %}
+    {% endwith %}
     {% endwith %}
     {% endwith %}
     {% endwith %}
@@ -49,48 +60,21 @@
     {% block extra_meta %}{% endblock %}
     {% endwith %}
     {% endwith %}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#133E44',
-              secondary: '#E9DFC7',
-              accent: '#377DFF',
-              deepOcean: '#133E44',
-              coolSage: '#758F8E',
-              warmSand: '#CAA988',
-              creamBeige: '#E7E0CE'
-            },
-            borderRadius: {
-              button: '8px'
-            },
-            fontSize: {
-              '3-5xl': '2.125rem', // кастомний розмір між 3xl і 4xl
-              '2-5xl': '1.700rem', // кастомний розмір між 2xl і 3xl
-            },
-          }
-        }
-      }
-    </script>
-    <script>
-      window.userIsAuthenticated = {{ user_is_authenticated|yesno:"true,false" }};
-      window.userIsStaff = {{ request.user.is_staff|yesno:"true,false" }};
-    </script>
-    
-    
-    <link rel="stylesheet" href="{% static 'base/assets/css/style-base.css' %}" />
+    <script nonce="{{ request.csp_nonce }}" src="{% static 'base/assets/js/tailwind_config.js' %}?v=20260209b"></script>
+    <script nonce="{{ request.csp_nonce }}" src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'base/assets/css/style-base.css' %}?v=20260209b" />
     {% block head %}{% endblock %}
     {% if structured_data %}
-      <script type="application/ld+json">
-        {{ structured_data|safe }}
+      <script nonce="{{ request.csp_nonce }}" type="application/ld+json">
+        {{ structured_data|json_ld }}
       </script>
     {% else %}
-      <script type="application/ld+json">
+      <script nonce="{{ request.csp_nonce }}" type="application/ld+json">
         {
           "@context": "https://schema.org",
           "@type": "RealEstateAgent",
@@ -106,13 +90,37 @@
         }
       </script>
     {% endif %}
+    <script nonce="{{ request.csp_nonce }}" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "DOMINIUM Realty",
+        "url": "{{ request.scheme }}://{{ request.get_host }}/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "{{ request.scheme }}://{{ request.get_host }}{% url 'property_search' %}?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
   </head>
 
   {% with register_query=request.GET.register login_query=request.GET.login %}
   {% with rm=auth_modals.register lm=auth_modals.login %}
-  <body class="bg-primary overflow-x-hidden" {% if request.GET %}data-no-preloader="1"{% endif %} data-register-open="{% if register_query or rm.open %}true{% else %}false{% endif %}" data-login-open="{% if login_query or lm.open %}true{% else %}false{% endif %}" data-user-is-staff="{% if request.user.is_staff %}1{% else %}0{% endif %}">
+  <body
+    class="bg-primary overflow-x-hidden"
+    {% if request.GET %}data-no-preloader="1"{% endif %}
+    data-register-open="{% if register_query or rm.open %}true{% else %}false{% endif %}"
+    data-login-open="{% if login_query or lm.open %}true{% else %}false{% endif %}"
+    data-user-is-staff="{% if request.user.is_staff %}1{% else %}0{% endif %}"
+    data-user-is-authenticated="{% if request.user.is_authenticated %}1{% else %}0{% endif %}"
+    data-user-display-name="{% if request.user.is_authenticated %}{{ request.user.display_name }}{% endif %}"
+    data-user-email="{% if request.user.is_authenticated %}{{ request.user.email|default:'' }}{% endif %}"
+    data-user-phone="{% if request.user.is_authenticated and request.user.phone_number %}{{ request.user.phone_number }}{% endif %}"
+  >
   {% endwith %}
   {% endwith %}
+    <a class="skip-link" href="#main-content">Перейти до основного контенту</a>
     <input type="hidden" id="csrf-token" value="{{ csrf_token }}" />
 
     {% include 'partials/preloader.html' %}
@@ -123,7 +131,7 @@
           {% include 'partials/header.html' %}
         {% endblock %}
 
-        <main class="{% block main_padding %}pt-0 pb-0{% endblock %}">
+        <main id="main-content" tabindex="-1" class="{% block main_padding %}pt-0 pb-0{% endblock %}">
           {% block content %}
 
           {% endblock %}
@@ -141,11 +149,12 @@
     {% include 'partials/mobile_nav.html' %}
 
     {% block scripts %}
-      <script src="{% static 'base/assets/js/scrollBtn.js' %}"></script>
-      <script src="{% static 'base/assets/js/likes/index.js' %}"></script>
-      <script src="{% static 'base/assets/js/share.js' %}"></script>
-      <script src="{% static 'base/assets/js/scroll-to-reshresh.js' %}"></script>
-      <script src="{% static 'base/assets/js/base_modals.js' %}"></script>
+      <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/preloader.js' %}"></script>
+      <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/scrollBtn.js' %}"></script>
+      <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/likes/index.js' %}"></script>
+      <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/share.js' %}"></script>
+      <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/scroll-to-reshresh.js' %}"></script>
+      <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/base_modals.js' %}"></script>
     {% endblock %}
   </body>
 </html>

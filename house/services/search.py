@@ -11,16 +11,21 @@ SORT_MAP = {
 }
 
 
+def apply_text_query_filter(queryset, query: str | None):
+    normalized_query = (query or "").strip()
+    if not normalized_query:
+        return queryset
+    return queryset.filter(
+        Q(title__icontains=normalized_query)
+        | Q(address__icontains=normalized_query)
+        | Q(deal_type__name__icontains=normalized_query)
+    )
+
+
 def build_search_queryset(queryset, params, *, default_sort: str = "date"):
     q = params
 
-    query = q.get("q")
-    if query:
-        queryset = queryset.filter(
-            Q(title__icontains=query)
-            | Q(address__icontains=query)
-            | Q(deal_type__name__icontains=query)
-        )
+    queryset = apply_text_query_filter(queryset, q.get("q"))
 
     property_type_slugs = q.getlist("property_type")
     if property_type_slugs:

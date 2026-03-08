@@ -9,83 +9,14 @@
 
 {% block head %}
   {{ block.super }}
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
-  <style>
-    .dropdown-trigger {
-      display: inline-flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      width: 100%;
-      background: #f1e9d3;
-      color: #133E44;
-      border: 1px solid rgba(234, 225, 198, 0.6);
-      border-radius: 12px;
-      padding: 0.6rem 1.2rem;
-      font-family: 'Fixel', sans-serif;
-      font-size: 0.875rem;
-      transition: background 0.2s ease;
-    }
-
-    .dropdown-trigger i {
-      font-size: 1rem;
-    }
-
-    .dropdown-trigger:hover,
-    .dropdown-trigger:focus {
-      outline: none;
-      background: #f6f0df;
-      box-shadow: 0 0 0 2px rgba(19, 62, 68, 0.2);
-    }
-
-    .dropdown-menu {
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      background: #fff;
-      border: 1px solid rgba(234, 225, 198, 0.6);
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(15, 50, 54, 0.15);
-      min-width: 160px;
-      overflow: hidden;
-      z-index: 30;
-    }
-
-    .dropdown-menu.full-width {
-      left: 0;
-      right: auto;
-      width: 100%;
-    }
-
-    .dropdown-item {
-      display: block;
-      padding: 0.6rem 1rem;
-      font-family: 'Fixel', sans-serif;
-      font-size: 0.875rem;
-      color: #133E44;
-      text-decoration: none;
-      transition: background 0.2s ease;
-    }
-
-    .dropdown-item:hover {
-      background: #f6f0df;
-    }
-
-    .dropdown-item.active {
-      font-weight: 600;
-      background: #f6f0df;
-    }
-
-    @media (max-width: 768px) {
-      .dropdown-trigger {
-        width: 100%;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'base/assets/css/search-filters.css' %}?v=20260209b" />
+  {% if prev_page_url %}
+    <link rel="prev" href="{{ prev_page_url }}" />
+  {% endif %}
+  {% if next_page_url %}
+    <link rel="next" href="{{ next_page_url }}" />
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -99,7 +30,11 @@
     {% include 'partials/property_list.html' %}
   </section>
 
-  <section id="property-results" class="w-full max-w-[480px] sm:max-w-full mx-auto px-4 py-6">
+  <section
+    id="property-results"
+    class="w-full max-w-[480px] sm:max-w-full mx-auto px-4 py-6"
+    data-search-api-url="{% url 'house_api:property_list' %}"
+  >
     {% include 'partials/property_cards.html' %}
   </section>
 
@@ -124,9 +59,6 @@
 
 {% block scripts %}
   {{ block.super }}
-  <script>
-    window.SEARCH_API_URL = "{% url 'house_api:property_list' %}";
-  </script>
   <script defer src="{% static 'base/assets/js/search/api.js' %}"></script>
   <script defer src="{% static 'base/assets/js/search/ui.js' %}"></script>
   <script defer src="{% static 'base/assets/js/search/index.js' %}"></script>

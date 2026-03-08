@@ -7,7 +7,7 @@ import sys
 def main():
     """Run administrative tasks."""
     os.environ.setdefault(
-        "DJANGO_SETTINGS_MODULE", "landing_doominium_real_state.settings"
+        "DJANGO_SETTINGS_MODULE", "dominium_backend.settings"
     )
     try:
         from django.core.management import execute_from_command_line

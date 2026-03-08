@@ -106,6 +106,54 @@
     let googleAuthPopup = null;
     let googleAuthMonitor = null;
     let googleAuthReloaded = false;
+    let googleAuthState = "";
+
+    function getCurrentPathWithQuery() {
+      return `${window.location.pathname}${window.location.search}${window.location.hash}` || "/";
+    }
+
+    function normalizeNextPath(rawNext, fallback = "/") {
+      if (!rawNext) return fallback;
+      try {
+        const parsed = new URL(rawNext, window.location.origin);
+        const candidate = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) {
+          return fallback;
+        }
+        return candidate;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    function createPopupState() {
+      try {
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+      } catch (_) {
+        return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      }
+    }
+
+    function buildGoogleAuthUrl(rawAuthUrl, popupState = "") {
+      const source = String(rawAuthUrl || "").trim();
+      if (!source) return "";
+
+      const fallbackPath = normalizeNextPath(getCurrentPathWithQuery(), "/");
+      let popupCompletePath = `/auth/popup-complete/?next=${encodeURIComponent(fallbackPath)}&parent_origin=${encodeURIComponent(window.location.origin)}`;
+      if (popupState) {
+        popupCompletePath += `&popup_state=${encodeURIComponent(popupState)}`;
+      }
+
+      try {
+        const url = new URL(source, window.location.origin);
+        url.searchParams.set("next", popupCompletePath);
+        return url.toString();
+      } catch (_) {
+        return source;
+      }
+    }
 
     function clearGoogleMonitor() {
       if (googleAuthMonitor) {
@@ -114,20 +162,35 @@
       }
     }
 
+    function closeGooglePopup() {
+      if (googleAuthPopup && !googleAuthPopup.closed) {
+        googleAuthPopup.close();
+      }
+      googleAuthPopup = null;
+      googleAuthState = "";
+    }
+
     function openGooglePopup(url) {
-      if (!url) return;
+      const popupState = createPopupState();
+      googleAuthState = popupState;
+      const resolvedUrl = buildGoogleAuthUrl(url, popupState);
+      if (!resolvedUrl) {
+        googleAuthState = "";
+        return;
+      }
+
       const width = 520;
       const height = 640;
       const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
       const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
       const features = `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no`;
 
-      const popup = window.open(url, "dominium-google-auth", features);
+      const popup = window.open(resolvedUrl, "dominium-google-auth", features);
       googleAuthPopup = popup;
       googleAuthReloaded = false;
       clearGoogleMonitor();
       if (!popup || popup.closed || typeof popup.closed === "undefined") {
-        window.location.href = url;
+        window.location.href = resolvedUrl;
       } else {
         popup.focus();
         googleAuthMonitor = setInterval(() => {
@@ -142,30 +205,51 @@
     }
 
     window.addEventListener("message", (event) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data === "dominium-auth-success") {
+      if (!googleAuthPopup || event.source !== googleAuthPopup) return;
+
+      const payload = event.data;
+      if (
+        payload &&
+        typeof payload === "object" &&
+        payload.state &&
+        googleAuthState &&
+        payload.state !== googleAuthState
+      ) {
+        return;
+      }
+
+      const isSuccess =
+        payload === "dominium-auth-success" ||
+        (payload && typeof payload === "object" && payload.type === "dominium-auth-success");
+      const isFailure = payload && typeof payload === "object" && payload.type === "dominium-auth-failed";
+
+      if (isFailure) {
+        const nextPath = normalizeNextPath(payload.next, getCurrentPathWithQuery());
+        const loginForm = document.getElementById("login-form");
+        const nextInput = loginForm ? loginForm.querySelector("input[name='next']") : null;
+        if (nextInput) nextInput.value = nextPath;
+
+        googleAuthReloaded = true;
+        closeGooglePopup();
+        openModal("login");
+        return;
+      }
+
+      if (isSuccess) {
+        const nextFromPayload = payload && typeof payload === "object" ? payload.next : "";
+        const nextPath = normalizeNextPath(nextFromPayload, getCurrentPathWithQuery());
+
         googleAuthReloaded = true;
         closeModal("login");
         closeModal("register");
-        if (googleAuthPopup && !googleAuthPopup.closed) {
-          googleAuthPopup.close();
+        closeGooglePopup();
+        if (nextPath && nextPath !== getCurrentPathWithQuery()) {
+          window.location.assign(nextPath);
+          return;
         }
         window.location.reload();
       }
     });
-
-    if (window.name === "dominium-google-auth" && window.opener) {
-      window.addEventListener("load", () => {
-        try {
-          window.opener.postMessage("dominium-auth-success", window.location.origin);
-        } catch (err) {
-          console.warn("Не вдалося повідомити основне вікно про авторизацію:", err);
-        }
-        setTimeout(() => {
-          window.close();
-        }, 300);
-      });
-    }
 
     document.querySelectorAll("[data-google-auth]").forEach((btn) => {
       btn.addEventListener("click", (event) => {

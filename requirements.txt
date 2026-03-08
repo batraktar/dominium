@@ -1,5 +1,7 @@
 asgiref==3.8.1
 Django==5.2
+djangorestframework>=3.15
+djangorestframework-simplejwt>=5.3
 geographiclib==2.0
 geopy==2.4.1
 sqlparse==0.5.3
@@ -8,6 +10,7 @@ Pillow
 whitenoise
 bs4
 requests
+nh3
 mysqlclient>=2.2
 cryptography>=42.0
 python-telegram-bot

@@ -749,7 +749,7 @@
 
 {% block scripts %}
   {{ block.super }}
-  <script id="admin-api-config" type="application/json">
+  <script nonce="{{ request.csp_nonce }}" id="admin-api-config" type="application/json">
     {
       "API_URL": "{% url 'house_api:property_list' %}",
       "BULK_ACTION_URL": "{% url 'house_api:property_bulk_action' %}",
@@ -763,11 +763,5 @@
       "PROPERTY_IMAGE_DETAIL_URL_TEMPLATE": "{% url 'house_api:property_image_detail' 0 %}"
     }
   </script>
-  <script>
-    window.DOMINIUM_ADMIN_CONFIG = JSON.parse(
-      document.getElementById('admin-api-config').textContent || '{}'
-    );
-  </script>
-  <script defer src="{% static 'base/assets/js/property_api_admin.js' %}"></script>
+  <script nonce="{{ request.csp_nonce }}" defer src="{% static 'base/assets/js/property_api_admin.js' %}"></script>
 {% endblock %}
-

@@ -2,8 +2,26 @@
   const { sendConsultation } = window.DominiumContactAPI;
   const { showNotification, bindNoEmailToggle, prefillFields } = window.DominiumContactUI;
 
+  function closeSuccessModal() {
+    const modal = document.getElementById("successModal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("contactForm");
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("[data-success-modal-close]")) {
+        closeSuccessModal();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeSuccessModal();
+      }
+    });
+
     if (!form) return;
 
     const propertyInput = document.getElementById("propertyTitle");

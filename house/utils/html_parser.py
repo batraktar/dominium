@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import asdict, dataclass
@@ -8,9 +9,15 @@ from functools import lru_cache
 from math import ceil
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
+from urllib.parse import parse_qs, unquote, urlparse
 
 from bs4 import BeautifulSoup, Tag
 
+from house.utils.image_selection import (
+    image_url_identity_key,
+    image_url_quality_score,
+    select_preferred_urls,
+)
 from house.utils.currency import get_exchange_rates
 
 logger = logging.getLogger(__name__)
@@ -75,13 +82,14 @@ LONGITUDE_ATTRS = (
     "data-lng-dec",
     "data-longitude-decimal",
 )
+GEO_POSITION_META = ("meta[name='geo.position']",)
 LATITUDE_META = (
-    "meta[name='geo.position']",
     "meta[property='place:location:latitude']",
+    "meta[name='geo.latitude']",
 )
 LONGITUDE_META = (
-    "meta[name='geo.position']",
     "meta[property='place:location:longitude']",
+    "meta[name='geo.longitude']",
 )
 
 
@@ -397,23 +405,44 @@ def _extract_images(soup: BeautifulSoup) -> Tuple[str, List[str]]:
         else ""
     )
 
-    gallery_urls: List[str] = []
+    gallery_candidates: List[tuple[str, int]] = []
     for link in soup.select("#estate-images a, .gallery a"):
         if isinstance(link, Tag):
             href = link.get("href")
             if href:
-                gallery_urls.append(href)
+                gallery_candidates.append((href, 30))
 
     for image in soup.select("#estate-images img, .gallery img"):
         if isinstance(image, Tag):
+            parent_link = image.find_parent("a")
+            if (
+                isinstance(parent_link, Tag)
+                and parent_link.has_attr("href")
+                and parent_link.get("href")
+            ):
+                # If an image is wrapped by an anchor, prefer anchor href
+                # (usually full-size/original) and skip thumbnail src.
+                continue
             src = image.get("src")
             if src:
-                gallery_urls.append(src)
+                gallery_candidates.append((src, 10))
 
-    gallery: List[str] = []
-    for url in gallery_urls:
-        if url and url not in gallery:
-            gallery.append(url)
+    gallery = select_preferred_urls(gallery_candidates)
+
+    if main_image:
+        main_key = image_url_identity_key(main_image)
+        if main_key:
+            preferred_main = next(
+                (url for url in gallery if image_url_identity_key(url) == main_key), None
+            )
+            if preferred_main:
+                main_image = preferred_main
+        # If keys differ but main looks lower quality (e.g. watermark/thumbnail),
+        # prefer the first gallery candidate.
+        if gallery and image_url_quality_score(main_image) < image_url_quality_score(
+            gallery[0]
+        ):
+            main_image = gallery[0]
 
     if not main_image and gallery:
         main_image = gallery[0]
@@ -430,34 +459,165 @@ def _extract_coordinates(
         if lat is not None and lon is not None:
             return lat, lon
 
-    for selector in LATITUDE_META:
+    for selector in GEO_POSITION_META:
         tag = soup.select_one(selector)
         if tag and isinstance(tag, Tag):
             content = tag.get("content") or tag.get("value")
             lat, lon = _parse_geo_position(content)
             if lat is not None and lon is not None:
                 return lat, lon
+
+    lat_value = None
+    lon_value = None
+
+    for selector in LATITUDE_META:
+        tag = soup.select_one(selector)
+        if tag and isinstance(tag, Tag):
+            lat_value = _safe_float(tag.get("content") or tag.get("value"))
+            if lat_value is not None:
+                break
 
     for selector in LONGITUDE_META:
         tag = soup.select_one(selector)
         if tag and isinstance(tag, Tag):
-            content = tag.get("content") or tag.get("value")
-            lat, lon = _parse_geo_position(content)
-            if lat is not None and lon is not None:
-                return lat, lon
+            lon_value = _safe_float(tag.get("content") or tag.get("value"))
+            if lon_value is not None:
+                break
 
-    script_tag = soup.find(string=re.compile(r"latitude", re.IGNORECASE))
+    if lat_value is not None and lon_value is not None:
+        return lat_value, lon_value
+
+    json_ld_coords = _extract_coordinates_from_json_ld(soup)
+    if json_ld_coords != (None, None):
+        return json_ld_coords
+
+    map_url_coords = _extract_coordinates_from_map_urls(soup)
+    if map_url_coords != (None, None):
+        return map_url_coords
+
+    script_tag = soup.find(
+        string=re.compile(r"(latitude|longitude|lat|lng|lon)", re.IGNORECASE)
+    )
     if script_tag:
         lat = _extract_float(
-            script_tag, default=None, pattern=r"latitude\s*[:=]\s*([0-9.\-]+)"
+            script_tag,
+            default=None,
+            pattern=r"(?:latitude|lat)\s*[:=]\s*([0-9.\-]+)",
         )
         lon = _extract_float(
-            script_tag, default=None, pattern=r"longitude\s*[:=]\s*([0-9.\-]+)"
+            script_tag,
+            default=None,
+            pattern=r"(?:longitude|lng|lon)\s*[:=]\s*([0-9.\-]+)",
         )
         if lat is not None and lon is not None:
             return lat, lon
 
     return None, None
+
+
+def _extract_coordinates_from_json_ld(
+    soup: BeautifulSoup,
+) -> Tuple[Optional[float], Optional[float]]:
+    for script in soup.select("script[type='application/ld+json']"):
+        if not isinstance(script, Tag):
+            continue
+        payload = script.string or script.get_text(" ", strip=True)
+        if not payload:
+            continue
+        try:
+            parsed = json.loads(payload)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        latitude, longitude = _find_geo_in_json(parsed)
+        if latitude is not None and longitude is not None:
+            return latitude, longitude
+    return None, None
+
+
+def _find_geo_in_json(node) -> Tuple[Optional[float], Optional[float]]:
+    if isinstance(node, dict):
+        latitude = _safe_float(node.get("latitude") or node.get("lat"))
+        longitude = _safe_float(
+            node.get("longitude") or node.get("lng") or node.get("lon")
+        )
+        if latitude is not None and longitude is not None:
+            return latitude, longitude
+
+        for value in node.values():
+            lat, lon = _find_geo_in_json(value)
+            if lat is not None and lon is not None:
+                return lat, lon
+        return None, None
+
+    if isinstance(node, list):
+        for value in node:
+            lat, lon = _find_geo_in_json(value)
+            if lat is not None and lon is not None:
+                return lat, lon
+    return None, None
+
+
+def _extract_coordinates_from_map_urls(
+    soup: BeautifulSoup,
+) -> Tuple[Optional[float], Optional[float]]:
+    for element in soup.find_all(True):
+        for attr in ("src", "href", "data-src", "data-href"):
+            if not element.has_attr(attr):
+                continue
+            value = element.get(attr)
+            if not value or not isinstance(value, str):
+                continue
+            latitude, longitude = _extract_coordinates_from_map_url(value)
+            if latitude is not None and longitude is not None:
+                return latitude, longitude
+    return None, None
+
+
+def _extract_coordinates_from_map_url(
+    url: str,
+) -> Tuple[Optional[float], Optional[float]]:
+    parsed = urlparse(url.strip())
+    if not parsed.netloc:
+        return None, None
+
+    host = parsed.netloc.lower()
+    if "google." not in host and "openstreetmap." not in host:
+        return None, None
+
+    query = parse_qs(parsed.query)
+    for key in ("q", "ll", "center"):
+        values = query.get(key)
+        if not values:
+            continue
+        latitude, longitude = _parse_lat_lon_pair(values[0])
+        if latitude is not None and longitude is not None:
+            return latitude, longitude
+
+    fragment = unquote(parsed.fragment or "")
+    latitude, longitude = _parse_lat_lon_pair(fragment)
+    if latitude is not None and longitude is not None:
+        return latitude, longitude
+
+    path = unquote(parsed.path or "")
+    return _parse_lat_lon_pair(path)
+
+
+def _parse_lat_lon_pair(value: str) -> Tuple[Optional[float], Optional[float]]:
+    if not value:
+        return None, None
+
+    match = re.search(r"(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)", value)
+    if not match:
+        return None, None
+
+    latitude = _safe_float(match.group(1))
+    longitude = _safe_float(match.group(2))
+
+    if latitude is None or longitude is None:
+        return None, None
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        return None, None
+    return latitude, longitude
 
 
 def geocode_address(

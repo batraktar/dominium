@@ -1,7 +1,8 @@
 import requests
 from django.conf import settings
+from django.contrib.auth.decorators import user_passes_test
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 from house.services.importer import (
     InvalidImportURL,
@@ -10,18 +11,24 @@ from house.services.importer import (
 )
 
 
-@csrf_exempt
-def import_property_by_url(request):
-    if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "Only POST allowed"}, status=405
-        )
+def _is_staff(user):
+    return user.is_authenticated and user.is_staff
 
+
+@require_http_methods(["POST"])
+@user_passes_test(_is_staff)
+def import_property_by_url(request):
     url = request.POST.get("url")
+    geocode_flag = str(request.POST.get("geocode", "")).strip().lower()
+    geocode = geocode_flag in {"1", "true", "on", "yes"}
     timeout = getattr(settings, "REQUESTS_TIMEOUT", 10)
 
     try:
-        property_obj, warnings = import_property_from_url(url, timeout=timeout)
+        property_obj, warnings = import_property_from_url(
+            url,
+            timeout=timeout,
+            geocode_missing=geocode,
+        )
     except InvalidImportURL as exc:
         return JsonResponse({"status": "error", "message": str(exc)}, status=400)
     except requests.RequestException as exc:

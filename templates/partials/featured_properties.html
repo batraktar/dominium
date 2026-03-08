@@ -1,4 +1,5 @@
-<section class="py-16 pb-28">
+{% load static %}
+<section class="bg-primary py-16 pb-28">
   <div class="container mx-auto px-4">
     <div class="mb-6">
       <h2 class="text-2-5xl font-ermilov text-white text-center mt-2 mb-4">
@@ -16,12 +17,21 @@
                   {% if property.main_image %}
                     <img
                       src="{{ property.main_image.image.url }}"
+                      loading="lazy"
+                      decoding="async"
+                      width="1200"
+                      height="900"
+                      sizes="(max-width: 767px) 100vw, 33vw"
                       class="w-full h-56 object-cover"
                       alt="{{ property.title }}"
                     />
                   {% else %}
                     <img
                       src="https://placehold.co/400x300"
+                      loading="lazy"
+                      decoding="async"
+                      width="400"
+                      height="300"
                       class="w-full h-48 object-cover"
                       alt="Зображення відсутнє"
                     />
@@ -71,10 +81,10 @@
           {% endfor %}
         </div>
 
-        <div class="custom-swiper-prev !left-2 top-1/2 -translate-y-1/2 z-10 text-coolSage text-2xl absolute">
+        <div class="custom-swiper-prev !left-2 top-1/2 -translate-y-1/2 z-10 text-coolSage text-2xl absolute" role="button" tabindex="0" aria-label="Попередній слайд">
           <i class="ri-arrow-left-s-line"></i>
         </div>
-        <div class="custom-swiper-next !right-2 top-1/2 -translate-y-1/2 z-10 text-coolSage text-2xl absolute">
+        <div class="custom-swiper-next !right-2 top-1/2 -translate-y-1/2 z-10 text-coolSage text-2xl absolute" role="button" tabindex="0" aria-label="Наступний слайд">
           <i class="ri-arrow-right-s-line"></i>
         </div>
       </div>
@@ -87,12 +97,21 @@
             {% if property.main_image %}
               <img
                 src="{{ property.main_image.image.url }}"
+                loading="lazy"
+                decoding="async"
+                width="1200"
+                height="900"
+                sizes="(max-width: 1023px) 50vw, 33vw"
                 class="w-full h-56 object-cover"
                 alt="{{ property.title }}"
               />
             {% else %}
               <img
                 src="https://placehold.co/400x300"
+                loading="lazy"
+                decoding="async"
+                width="400"
+                height="300"
                 class="w-full h-48 object-cover"
                 alt="Зображення відсутнє"
               />
@@ -142,19 +161,5 @@
     </div>
   </div>
 </section>
-<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-<script>
-  new Swiper(".property-swiper", {
-    navigation: {
-      nextEl: ".custom-swiper-next",
-      prevEl: ".custom-swiper-prev"
-    },
-    slidesPerView: 1,
-    spaceBetween: 16,
-    grabCursor: true,
-    loop: true,
-    breakpoints: {
-      480: { slidesPerView: 1 }
-    }
-  });
-</script>
+<script defer src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+<script defer src="{% static 'base/assets/js/featured_swiper.js' %}"></script>

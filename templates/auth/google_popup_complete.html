@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>DOMINIUM - Завершення входу</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #f7faf9;
+        color: #133e44;
+      }
+      .card {
+        padding: 20px 24px;
+        border-radius: 12px;
+        border: 1px solid rgba(19, 62, 68, 0.12);
+        background: #fff;
+      }
+      .hint {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #537177;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <strong>Завершуємо авторизацію…</strong>
+      <div class="hint">Це вікно закриється автоматично.</div>
+    </div>
+
+    <script nonce="{{ request.csp_nonce }}">
+      (function () {
+        const authSuccess = {{ auth_success|yesno:"true,false" }};
+        const nextPath = "{{ next_path|escapejs }}" || "/";
+        const explicitOrigin = "{{ opener_origin|escapejs }}";
+        const popupState = "{{ popup_state|escapejs }}";
+
+        const resolveTargetOrigin = () => {
+          if (explicitOrigin) return explicitOrigin;
+          try {
+            if (document.referrer) {
+              const referrerOrigin = new URL(document.referrer).origin;
+              if (referrerOrigin) return referrerOrigin;
+            }
+          } catch (_) {
+            return "*";
+          }
+          return "*";
+        };
+
+        const notifyParent = () => {
+          if (!window.opener || window.opener === window) return false;
+
+          const payload = authSuccess
+            ? { type: "dominium-auth-success", next: nextPath }
+            : { type: "dominium-auth-failed", next: nextPath };
+
+          if (popupState) {
+            payload.state = popupState;
+          }
+
+          const targetOrigin = resolveTargetOrigin();
+          try {
+            window.opener.postMessage(payload, targetOrigin);
+            return true;
+          } catch (_) {
+            try {
+              window.opener.postMessage(payload, "*");
+              return true;
+            } catch (__){
+              return false;
+            }
+          }
+        };
+
+        const parentNotified = notifyParent();
+        const hasOpener = Boolean(window.opener && window.opener !== window);
+
+        if (hasOpener) {
+          window.setTimeout(() => window.close(), 120);
+          window.setTimeout(() => window.close(), 350);
+        }
+
+        if (!hasOpener || !parentNotified) {
+          if (authSuccess) {
+            window.location.replace(nextPath);
+            return;
+          }
+
+          const loginUrl = nextPath
+            ? `/?login=1&next=${encodeURIComponent(nextPath)}`
+            : "/?login=1";
+          window.location.replace(loginUrl);
+        }
+      })();
+    </script>
+  </body>
+</html>
