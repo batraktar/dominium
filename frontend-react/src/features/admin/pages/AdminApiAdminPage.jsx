@@ -2,7 +2,6 @@ import { useState } from 'react'
 import useAdminDashboard from '../hooks/useAdminDashboard.js'
 import AdminDashboard from '../components/AdminDashboard.jsx'
 import AdminPropertiesTable from '../components/AdminPropertiesTable.jsx'
-import CrmSyncPanel from '../components/CrmSyncPanel.jsx'
 import PropertyEditModal from '../components/PropertyEditModal.jsx'
 import HighlightTab from '../components/HighlightTab.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
@@ -11,9 +10,8 @@ function AdminNav({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'dashboard', label: 'Дашборд', icon: 'ri-dashboard-line' },
     { id: 'properties', label: 'Об\'єкти', icon: 'ri-home-4-line' },
-    { id: 'highlight', label: 'Топ 3', icon: 'ri-star-smile-line' },
+    { id: 'highlight', label: 'Топ', icon: 'ri-star-smile-line' },
     { id: 'settings', label: 'Налаштування', icon: 'ri-settings-3-line' },
-    { id: 'sync', label: 'CRM Sync', icon: 'ri-cloud-line' },
   ]
 
   return (
@@ -59,10 +57,6 @@ function AdminApiAdminPage() {
         {activeTab === 'highlight' && <HighlightTab />}
 
         {activeTab === 'settings' && <SettingsTab />}
-
-        {activeTab === 'sync' && (
-          <CrmSyncPanel onSyncComplete={refreshStats} />
-        )}
       </div>
 
       {editingPropertyId && (

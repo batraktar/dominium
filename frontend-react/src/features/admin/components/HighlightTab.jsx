@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
+import { CityAutocomplete } from './SettingsTab.jsx'
 
 function HighlightTab() {
   const [properties, setProperties] = useState([])
@@ -100,10 +101,11 @@ function HighlightTab() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Регіон</label>
-            <input type="text" value={settings.region_keyword}
-              onChange={e => setSettings({ ...settings, region_keyword: e.target.value })}
-              placeholder="напр. Хуст" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Регіон / місто</label>
+            <CityAutocomplete
+              value={settings.region_keyword}
+              onChange={(val) => setSettings({ ...settings, region_keyword: val })}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Мін. ціна $</label>
