@@ -83,8 +83,9 @@ function TemplateBlock({ block, index, onChange, onRemove, dragHandlers, isDragO
       ) : null}
 
       {block.type === 'text' ? (
-        <input type="text" value={block.value} onChange={e => onChange({ ...block, value: e.target.value })}
-          placeholder="Текст..." className="flex-1 min-w-0 px-1.5 py-0.5 bg-gray-50 border border-gray-200 rounded text-sm" />
+        <textarea value={block.value} onChange={e => onChange({ ...block, value: e.target.value })}
+          placeholder="Текст..." rows={2}
+          className="flex-1 min-w-0 px-1.5 py-0.5 bg-gray-50 border border-gray-200 rounded text-sm resize-none" />
       ) : block.type === 'newline' ? (
         <span className="flex-1 text-xs text-gray-400 italic">переніс</span>
       ) : (
@@ -164,7 +165,25 @@ function TemplateCard({ template, index, onChange, onRemove }) {
           ))}
           {blocks.length === 0 && <p className="text-gray-400 text-xs text-center py-2">Додайте блоки</p>}
         </div>
-        <p className="text-[10px] text-gray-400 font-mono truncate">{template.template || '(пусто)'}</p>
+        {template.template && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <p className="text-[10px] text-gray-400 mb-1 font-medium">Превʼю повідомлення:</p>
+            <div className="bg-[#E3F2FD] rounded-xl p-3 max-w-sm">
+              <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed font-fixel">
+                {template.template
+                  .replace(/\{title\}/g, 'Продаж будинку в Хусті')
+                  .replace(/\{price\}/g, '85 000')
+                  .replace(/\{address\}/g, 'вул. Шевченка, 10')
+                  .replace(/\{rooms\}/g, '3')
+                  .replace(/\{area\}/g, '95')
+                  .replace(/\{link\}/g, 'https://dominium.ua/property/abc123/')
+                  .replace(/\{deal_type\}/g, 'Продаж')
+                  .replace(/\{property_type\}/g, 'Будинок')
+                }
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
