@@ -1193,6 +1193,99 @@ def stats_view(request):
         "by_deal": by_deal_data,
     })
 
+
+@require_http_methods(["POST"])
+def crm_webhook_view(request):
+    payload = _parse_json(request)
+    if payload is None:
+        return JsonResponse({"error": "Некоректний JSON."}, status=400)
+
+    event = payload.get("event", "")
+    data = payload.get("data", {})
+
+    logger.info("CRM webhook received: event=%s, data=%s", event, str(data)[:200])
+
+    if event == "estate.created":
+        _handle_crm_estate_created(data)
+    elif event == "estate.updated":
+        _handle_crm_estate_updated(data)
+    elif event == "estate.deleted":
+        _handle_crm_estate_deleted(data)
+    elif event == "inquiry.created":
+        _handle_crm_inquiry_created(data)
+
+    return JsonResponse({"status": "ok"})
+
+
+def _handle_crm_estate_created(data):
+    crm_id = data.get("id")
+    if not crm_id:
+        return
+    from house.models import ExternalProperty, Client
+    from house.management.commands.sync_crm_properties import _map_crm_item_to_property, _sync_client
+    from django.db import transaction
+
+    with transaction.atomic():
+        client = _sync_client(data, None, logger)
+        mapped = _map_crm_item_to_property(data)
+        property_type = _resolve_type(mapped["property_type_name"])
+        deal_type = _resolve_deal(mapped["deal_type_name"])
+
+        property_obj = Property.objects.create(
+            title=mapped["title"], description=mapped["description"],
+            address=mapped["address"], price=mapped["price"],
+            area=mapped["area"], rooms=mapped["rooms"],
+            latitude=mapped["latitude"], longitude=mapped["longitude"],
+            property_type=property_type, deal_type=deal_type,
+            price_currency=mapped["price_currency"],
+            external_source="realtsoft", external_id=str(crm_id),
+            client=client,
+        )
+        ExternalProperty.objects.create(
+            crm_property_id=crm_id, property=property_obj,
+            crm_url=f"https://crm-dominium.realtsoft.net/estate/{crm_id}",
+            raw_data=data, sync_status="synced", source="realtsoft",
+        )
+    logger.info("Webhook: created property CRM#%s", crm_id)
+
+
+def _handle_crm_estate_updated(data):
+    crm_id = data.get("id")
+    if not crm_id:
+        return
+    from house.models import ExternalProperty
+    ext = ExternalProperty.objects.select_related("property").filter(crm_property_id=crm_id, source="realtsoft").first()
+    if not ext:
+        _handle_crm_estate_created(data)
+        return
+    from house.management.commands.sync_crm_properties import _map_crm_item_to_property
+    mapped = _map_crm_item_to_property(data)
+    prop = ext.property
+    for field in ["title", "description", "address", "price", "area", "rooms", "latitude", "longitude", "price_currency"]:
+        if field in mapped:
+            setattr(prop, field, mapped[field])
+    prop.save()
+    ext.raw_data = data
+    ext.save(update_fields=["raw_data", "last_synced"])
+    logger.info("Webhook: updated property CRM#%s", crm_id)
+
+
+def _handle_crm_estate_deleted(data):
+    crm_id = data.get("id")
+    if not crm_id:
+        return
+    from house.models import ExternalProperty
+    ext = ExternalProperty.objects.filter(crm_property_id=crm_id, source="realtsoft").first()
+    if ext:
+        ext.property.is_archived = True
+        ext.property.save(update_fields=["is_archived"])
+        logger.info("Webhook: archived property CRM#%s", crm_id)
+
+
+def _handle_crm_inquiry_created(data):
+    logger.info("Webhook: new inquiry %s", data)
+    # TODO: send Telegram notification
+
     payload = _parse_json(request)
     if payload is None:
         return JsonResponse({"error": "Некоректний JSON."}, status=400)

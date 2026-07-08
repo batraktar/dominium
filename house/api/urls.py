@@ -60,4 +60,5 @@ urlpatterns = [
     path("property-cities/", views.property_cities_view, name="property_cities"),
     path("clients/", views.clients_list_view, name="clients_list"),
     path("stats/", views.stats_view, name="stats"),
+    path("webhook/crm/", views.crm_webhook_view, name="crm_webhook"),
 ]]
