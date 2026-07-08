@@ -60,58 +60,41 @@ function TemplateBlock({ block, index, onChange, onRemove, dragHandlers, isDragO
   return (
     <div
       draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = 'move'
-        e.dataTransfer.setData('text/plain', String(index))
-        dragHandlers.onStart(index)
-      }}
-      onDragOver={(e) => {
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        dragHandlers.onOver(index)
-      }}
-      onDrop={(e) => {
-        e.preventDefault()
-        dragHandlers.onDrop(index)
-      }}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(index)); dragHandlers.onStart(index) }}
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; dragHandlers.onOver(index) }}
+      onDrop={(e) => { e.preventDefault(); dragHandlers.onDrop(index) }}
       onDragEnd={dragHandlers.onEnd}
-      className={`flex items-center gap-2 p-2 rounded-lg border transition ${
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded border transition text-sm ${
         isDragOver ? 'border-deepOcean bg-deepOcean/5' : 'border-gray-200 bg-white hover:border-gray-300'
       }`}
     >
-      <span className="text-gray-300 hover:text-gray-500 cursor-grab shrink-0 select-none">
-        <i className="ri-draggable text-base"></i>
+      <span className="text-gray-300 cursor-grab shrink-0 select-none text-xs">
+        <i className="ri-draggable"></i>
       </span>
 
-      <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
-        block.type === 'text' ? 'bg-gray-100 text-gray-600' :
-        block.type === 'newline' ? 'bg-yellow-100 text-yellow-700' :
-        'bg-deepOcean/10 text-deepOcean'
-      }`}>
-        <i className={`${bt?.icon || 'ri-text'} mr-1`}></i>
-        {bt?.label || 'Блок'}
-      </span>
+      {isVariable ? (
+        <span className="shrink-0 px-1.5 py-0.5 rounded bg-deepOcean/10 text-deepOcean text-xs font-medium">
+          {bt?.label}
+        </span>
+      ) : block.type === 'newline' ? (
+        <span className="shrink-0 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs">
+          ↵
+        </span>
+      ) : null}
 
       {block.type === 'text' ? (
-        <input
-          type="text"
-          value={block.value}
-          onChange={e => onChange({ ...block, value: e.target.value })}
-          placeholder="Текст..."
-          className="flex-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm min-w-0"
-        />
+        <input type="text" value={block.value} onChange={e => onChange({ ...block, value: e.target.value })}
+          placeholder="Текст..." className="flex-1 min-w-0 px-1.5 py-0.5 bg-gray-50 border border-gray-200 rounded text-sm" />
       ) : block.type === 'newline' ? (
-        <span className="flex-1 text-xs text-gray-400 italic">переніс рядка</span>
+        <span className="flex-1 text-xs text-gray-400 italic">переніс</span>
       ) : (
-        <span className="flex-1 px-2 py-1 bg-deepOcean/5 border border-dashed border-deepOcean/20 rounded text-sm text-deepOcean font-mono truncate">
+        <span className="flex-1 px-1.5 py-0.5 bg-deepOcean/5 border border-dashed border-deepOcean/20 rounded text-xs text-deepOcean font-mono truncate">
           {`{${block.type}}`}
         </span>
       )}
 
-      <button
-        onClick={(e) => { e.stopPropagation(); onRemove() }}
-        className="shrink-0 w-6 h-6 flex items-center justify-center rounded border border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 transition text-xs"
-      >
+      <button onClick={(e) => { e.stopPropagation(); onRemove() }}
+        className="shrink-0 w-5 h-5 flex items-center justify-center rounded border border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 transition text-xs">
         <i className="ri-close-line"></i>
       </button>
     </div>
@@ -124,9 +107,7 @@ function TemplateCard({ template, index, onChange, onRemove }) {
   const dragRef = useRef(null)
   const eventType = EVENT_TYPES.find(t => t.value === template.event_type) || EVENT_TYPES[0]
 
-  useEffect(() => {
-    setBlocks(parseTemplateToBlocks(template.template))
-  }, [template.template])
+  useEffect(() => { setBlocks(parseTemplateToBlocks(template.template)) }, [template.template])
 
   const emitBlocks = (newBlocks) => {
     setBlocks(newBlocks)
@@ -141,77 +122,49 @@ function TemplateCard({ template, index, onChange, onRemove }) {
     onStart: (i) => { dragRef.current = i },
     onOver: (i) => setDragOver(i),
     onDrop: (toIndex) => {
-      const fromIndex = dragRef.current
-      if (fromIndex === null || fromIndex === undefined || fromIndex === toIndex) {
-        setDragOver(null); dragRef.current = null; return
-      }
-      const newBlocks = [...blocks]
-      const [moved] = newBlocks.splice(fromIndex, 1)
-      newBlocks.splice(toIndex, 0, moved)
-      emitBlocks(newBlocks)
-      setDragOver(null)
-      dragRef.current = null
+      const from = dragRef.current
+      if (from === null || from === undefined || from === toIndex) { setDragOver(null); dragRef.current = null; return }
+      const nb = [...blocks]; const [moved] = nb.splice(from, 1); nb.splice(toIndex, 0, moved)
+      emitBlocks(nb); setDragOver(null); dragRef.current = null
     },
     onEnd: () => { setDragOver(null); dragRef.current = null },
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
-        <span className={`px-2 py-0.5 rounded text-xs font-medium ${eventType.color}`}>
-          <i className={`${eventType.icon} mr-1`}></i>{eventType.label}
+    <div className="bg-white rounded-lg border border-gray-200">
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100">
+        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${eventType.color}`}>
+          <i className={`${eventType.icon} mr-0.5`}></i>{eventType.label}
         </span>
-        <input
-          type="text"
-          value={template.name}
-          onChange={e => onChange({ ...template, name: e.target.value })}
-          placeholder="Назва шаблону"
-          className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm"
-        />
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+        <input type="text" value={template.name} onChange={e => onChange({ ...template, name: e.target.value })}
+          placeholder="Назва" className="flex-1 px-2 py-1 bg-white border border-gray-200 rounded text-sm" />
+        <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
           <input type="checkbox" checked={template.is_active}
-            onChange={e => onChange({ ...template, is_active: e.target.checked })}
-            className="accent-deepOcean w-4 h-4" />
-          Активний
+            onChange={e => onChange({ ...template, is_active: e.target.checked })} className="accent-deepOcean w-3.5 h-3.5" />
         </label>
         <button onClick={onRemove}
-          className="w-7 h-7 flex items-center justify-center rounded-lg border border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 transition">
-          <i className="ri-delete-bin-line text-sm"></i>
+          className="w-6 h-6 flex items-center justify-center rounded border border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 transition">
+          <i className="ri-close-line text-xs"></i>
         </button>
       </div>
-
-      <div className="p-4 space-y-3">
-        <div className="flex gap-1.5 flex-wrap">
+      <div className="p-3 space-y-2">
+        <div className="flex gap-1 flex-wrap">
           {BLOCK_TYPES.map(bt => (
             <button key={bt.type} onClick={() => addBlock(bt.type)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs hover:bg-deepOcean hover:text-white transition">
+              className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs hover:bg-deepOcean hover:text-white transition">
               <i className={bt.icon}></i>{bt.label}
             </button>
           ))}
         </div>
-
-        <div className="space-y-1.5 min-h-[48px]">
+        <div className="space-y-1 min-h-[32px]">
           {blocks.map((block, i) => (
-            <TemplateBlock
-              key={`${index}-${i}-${block.type}-${block.value?.slice(0, 10)}`}
-              block={block}
-              index={i}
-              onChange={(data) => updateBlock(i, data)}
-              onRemove={() => removeBlock(i)}
-              dragHandlers={dragHandlers}
-              isDragOver={dragOver === i}
-            />
+            <TemplateBlock key={`${index}-${i}-${block.type}-${block.value?.slice(0, 5)}`}
+              block={block} index={i} onChange={(d) => updateBlock(i, d)}
+              onRemove={() => removeBlock(i)} dragHandlers={dragHandlers} isDragOver={dragOver === i} />
           ))}
-          {blocks.length === 0 && (
-            <p className="text-gray-400 text-xs text-center py-3">Додайте блоки зверху</p>
-          )}
+          {blocks.length === 0 && <p className="text-gray-400 text-xs text-center py-2">Додайте блоки</p>}
         </div>
-
-        <div className="pt-2 border-t border-gray-100">
-          <p className="text-[11px] text-gray-400 font-mono break-all">
-            {template.template || '(пусто)'}
-          </p>
-        </div>
+        <p className="text-[10px] text-gray-400 font-mono truncate">{template.template || '(пусто)'}</p>
       </div>
     </div>
   )
@@ -223,19 +176,12 @@ function SyncLogsModal({ onClose }) {
 
   useEffect(() => {
     apiClient.get(apiEndpoints.appSettings, { query: { key: 'sync_logs' } })
-      .then(res => setLogs(res.data?.result?.sync_logs || []))
-      .catch(console.error)
-      .finally(() => setLoading(false))
+      .then(r => setLogs(r.data?.result?.sync_logs || []))
+      .catch(console.error).finally(() => setLoading(false))
   }, [])
 
-  const grouped = logs.reduce((acc, log) => {
-    const day = log.time?.split(' ')[0] || '?'
-    if (!acc[day]) acc[day] = []
-    acc[day].push(log)
-    return acc
-  }, {})
-
-  const style = { success: 'bg-green-50 border-green-200 text-green-700', error: 'bg-red-50 border-red-200 text-red-600', info: 'bg-blue-50 border-blue-200 text-blue-600' }
+  const grouped = logs.reduce((acc, l) => { const d = l.time?.split(' ')[0] || '?'; (acc[d] = acc[d] || []).push(l); return acc }, {})
+  const st = { success: 'bg-green-50 border-green-200', error: 'bg-red-50 border-red-200', info: 'bg-blue-50 border-blue-200' }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
@@ -248,12 +194,8 @@ function SyncLogsModal({ onClose }) {
         </div>
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? <p className="text-gray-400 text-center py-8">Завантаження...</p>
-            : logs.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <i className="ri-history-line text-4xl text-gray-200 mb-3 block"></i>
-                <p className="text-sm">Логів поки немає</p>
-              </div>
-            ) : (
+            : logs.length === 0 ? <div className="text-center py-12 text-gray-400"><i className="ri-history-line text-4xl text-gray-200 mb-3 block"></i><p className="text-sm">Логів поки немає</p></div>
+            : (
               <div className="space-y-6">
                 {Object.entries(grouped).reverse().map(([day, dayLogs]) => (
                   <div key={day}>
@@ -263,13 +205,9 @@ function SyncLogsModal({ onClose }) {
                     </p>
                     <div className="space-y-1.5 ml-5 border-l-2 border-gray-100 pl-4">
                       {dayLogs.map((log, i) => (
-                        <div key={i} className={`${style[log.status] || style.info} border rounded-lg px-3 py-2`}>
+                        <div key={i} className={`${st[log.status] || st.info} border rounded-lg px-3 py-2`}>
                           <span className="text-sm">{log.message}</span>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {log.time?.split(' ')[1]}
-                            {log.created !== undefined && ` +${log.created} ств.`}
-                            {log.updated !== undefined && ` +${log.updated} онов.`}
-                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">{log.time?.split(' ')[1]}{log.created !== undefined && ` +${log.created} ств.`}{log.updated !== undefined && ` +${log.updated} онов.`}</div>
                         </div>
                       ))}
                     </div>
@@ -290,67 +228,46 @@ function CityAutocomplete({ value, onChange }) {
   const [loading, setLoading] = useState(false)
   const ref = useRef(null)
 
-  useEffect(() => {
-    setQuery(value || '')
-  }, [value])
+  useEffect(() => { setQuery(value || '') }, [value])
 
   useEffect(() => {
     if (!open) return
     setLoading(true)
-    apiClient.get(apiEndpoints.properties, { query: { page_size: 200 } })
-      .then(res => {
-        const addrs = (res.data?.results || []).map(p => p.address || '')
-        const unique = [...new Set(addrs.map(a => a.split(',')[0].trim()).filter(Boolean))].sort()
-        setCities(unique)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    apiClient.get(apiEndpoints.propertyCities)
+      .then(r => setCities(r.data?.results || []))
+      .catch(console.error).finally(() => setLoading(false))
   }, [open])
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  const filtered = query
-    ? cities.filter(c => c.toLowerCase().includes(query.toLowerCase()))
-    : cities
+  const filtered = query ? cities.filter(c => c.toLowerCase().includes(query.toLowerCase())) : cities
 
   return (
     <div ref={ref} className="relative">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={query}
-            onChange={e => { setQuery(e.target.value); setOpen(true); onChange(e.target.value) }}
-            onFocus={() => setOpen(true)}
-            placeholder="Введіть або оберіть місто..."
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-deepOcean/20 focus:border-deepOcean pr-8"
-          />
-          {query && (
-            <button onClick={() => { setQuery(''); onChange('') }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <i className="ri-close-line text-sm"></i>
-            </button>
-          )}
-        </div>
+      <div className="relative">
+        <input type="text" value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); onChange(e.target.value) }}
+          onFocus={() => setOpen(true)}
+          placeholder="Введіть або оберіть місто..."
+          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-deepOcean/20 focus:border-deepOcean pr-8" />
+        {query && <button onClick={() => { setQuery(''); onChange('') }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <i className="ri-close-line text-sm"></i></button>}
       </div>
       {open && filtered.length > 0 && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {loading && <div className="px-4 py-2 text-sm text-gray-400">Завантаження...</div>}
           {filtered.slice(0, 30).map((city, i) => (
-            <button key={i}
-              onClick={() => { setQuery(city); onChange(city); setOpen(false) }}
+            <button key={i} onClick={() => { setQuery(city); onChange(city); setOpen(false) }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-deepOcean/5 transition flex items-center gap-2">
-              <i className="ri-map-pin-line text-gray-400 text-xs"></i>
-              {city}
+              <i className="ri-map-pin-line text-gray-400 text-xs"></i>{city}
             </button>
           ))}
-          {filtered.length > 30 && (
-            <div className="px-4 py-2 text-xs text-gray-400">...і ще {filtered.length - 30}</div>
-          )}
+          {filtered.length > 30 && <div className="px-4 py-2 text-xs text-gray-400">...і ще {filtered.length - 30}</div>}
         </div>
       )}
     </div>
@@ -372,219 +289,125 @@ function SettingsTab() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [settingsRes, templatesRes] = await Promise.all([
-        apiClient.get(apiEndpoints.appSettings),
-        apiClient.get(apiEndpoints.telegramTemplates),
-      ])
-      const s = settingsRes.data?.result || {}
-      if (s.crm) setCrmSettings(prev => ({ ...prev, ...s.crm }))
-      if (s.telegram) setTgSettings(prev => ({ ...prev, ...s.telegram }))
-      setTemplates(templatesRes.data?.results || [])
-    } catch (err) { console.error(err) }
+      const [s, t] = await Promise.all([apiClient.get(apiEndpoints.appSettings), apiClient.get(apiEndpoints.telegramTemplates)])
+      const d = s.data?.result || {}
+      if (d.crm) setCrmSettings(p => ({ ...p, ...d.crm }))
+      if (d.telegram) setTgSettings(p => ({ ...p, ...d.telegram }))
+      setTemplates(t.data?.results || [])
+    } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  const saveCrm = async () => {
+  const save = async (key, value) => {
     setSaving(true); setStatus(null)
     try {
-      await apiClient.request(apiEndpoints.appSettings, { method: 'POST', json: { key: 'crm', value: crmSettings }, csrf: true })
-      setStatus({ type: 'success', message: 'CRM збережено' })
-    } catch (err) { setStatus({ type: 'error', message: err.message }) }
-    finally { setSaving(false) }
-  }
-
-  const saveTelegram = async () => {
-    setSaving(true); setStatus(null)
-    try {
-      await apiClient.request(apiEndpoints.appSettings, { method: 'POST', json: { key: 'telegram', value: tgSettings }, csrf: true })
-      setStatus({ type: 'success', message: 'Telegram збережено' })
-    } catch (err) { setStatus({ type: 'error', message: err.message }) }
-    finally { setSaving(false) }
-  }
-
-  const saveTemplates = async () => {
-    setSaving(true); setStatus(null)
-    try {
-      await apiClient.request(apiEndpoints.telegramTemplates, { method: 'POST', json: { action: 'save', templates }, csrf: true })
-      setStatus({ type: 'success', message: 'Шаблони збережено' })
-    } catch (err) { setStatus({ type: 'error', message: err.message }) }
+      await apiClient.request(apiEndpoints.appSettings, { method: 'POST', json: { key, value }, csrf: true })
+      setStatus({ type: 'success', message: 'Збережено' })
+    } catch (e) { setStatus({ type: 'error', message: e.message }) }
     finally { setSaving(false) }
   }
 
   const testConnection = async () => {
-    setTestingConnection(true); setConnectionResult(null)
-    const start = Date.now()
+    setTestingConnection(true); setConnectionResult(null); const s = Date.now()
     try {
-      const res = await apiClient.get(apiEndpoints.properties, { query: { page_size: 1 } })
-      setConnectionResult({ success: true, message: `API доступне. ${res.data?.count || 0} об'єктів.`, duration: `${Date.now() - start}ms` })
-    } catch (err) {
-      setConnectionResult({ success: false, message: `Помилка: ${err.message}`, duration: `${Date.now() - start}ms` })
-    } finally { setTestingConnection(false) }
+      const r = await apiClient.get(apiEndpoints.properties, { query: { page_size: 1 } })
+      setConnectionResult({ ok: true, msg: `API доступне. ${r.data?.count || 0} об'єктів.`, dur: `${Date.now() - s}ms` })
+    } catch (e) { setConnectionResult({ ok: false, msg: `Помилка: ${e.message}`, dur: `${Date.now() - s}ms` }) }
+    finally { setTestingConnection(false) }
   }
 
-  const addTemplate = () => {
-    setTemplates(prev => [...prev, {
-      name: '', event_type: 'new_property', template: "{title}\n{price} $\n{address}\n{link}", is_active: true,
-    }])
-  }
-  const updateTemplate = (i, data) => setTemplates(prev => prev.map((t, idx) => idx === i ? data : t))
-  const removeTemplate = (i) => setTemplates(prev => prev.filter((_, idx) => idx !== i))
-
-  const INTERVALS = [
-    { value: 15, label: 'Кожні 15 хв' },
-    { value: 30, label: 'Кожні 30 хв' },
-    { value: 60, label: 'Кожну годину' },
-    { value: 360, label: 'Кожні 6 годин' },
-    { value: 1440, label: 'Раз на день' },
-  ]
+  const addTemplate = () => setTemplates(p => [...p, { name: '', event_type: 'new_property', template: "{title}\n{price} $\n{address}\n{link}", is_active: true }])
+  const updateTemplate = (i, d) => setTemplates(p => p.map((t, idx) => idx === i ? d : t))
+  const removeTemplate = (i) => setTemplates(p => p.filter((_, idx) => idx !== i))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {showLogs && <SyncLogsModal onClose={() => setShowLogs(false)} />}
-
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-deepOcean">
-          <i className="ri-settings-3-line mr-2"></i>Налаштування
-        </h2>
-        <button onClick={() => setShowLogs(true)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition">
-          <i className="ri-history-line"></i> Логи sync
+        <h2 className="text-xl font-semibold text-deepOcean"><i className="ri-settings-3-line mr-2"></i>Налаштування</h2>
+        <button onClick={() => setShowLogs(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition">
+          <i className="ri-history-line"></i>Логи
         </button>
       </div>
-
-      {status && (
-        <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-          <i className={status.type === 'success' ? 'ri-check-line' : 'ri-error-warning-line'}></i>
-          {status.message}
-        </div>
-      )}
-
+      {status && <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+        <i className={status.type === 'success' ? 'ri-check-line' : 'ri-error-warning-line'}></i>{status.message}
+      </div>}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-        {[
-          { id: 'crm', label: 'CRM', icon: 'ri-cloud-line' },
-          { id: 'telegram', label: 'Telegram', icon: 'ri-telegram-line' },
-        ].map(tab => (
+        {[{ id: 'crm', label: 'CRM', icon: 'ri-cloud-line' }, { id: 'telegram', label: 'Telegram', icon: 'ri-telegram-line' }].map(tab => (
           <button key={tab.id} onClick={() => setActiveSection(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition ${
-              activeSection === tab.id ? 'bg-white text-deepOcean shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}>
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeSection === tab.id ? 'bg-white text-deepOcean shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <i className={tab.icon}></i>{tab.label}
           </button>
         ))}
       </div>
 
       {activeSection === 'crm' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-deepOcean">Realtsoft CRM</h3>
-              <button onClick={testConnection} disabled={testingConnection}
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition disabled:opacity-50">
-                <i className={`ri-signal-tower-line ${testingConnection ? 'animate-pulse' : ''}`}></i>
-                {testingConnection ? 'Перевірка...' : 'Тест з\'єднання'}
-              </button>
-            </div>
-            {connectionResult && (
-              <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${connectionResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                <i className={connectionResult.success ? 'ri-check-line' : 'ri-error-warning-line'}></i>
-                <span>{connectionResult.message}</span>
-                <span className="text-xs text-gray-400 ml-auto">{connectionResult.duration}</span>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">API URL</label>
-                <input type="url" value={crmSettings.url} onChange={e => setCrmSettings({ ...crmSettings, url: e.target.value })}
-                  placeholder="https://crm-dominium.realtsoft.net" className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Secret Key</label>
-                <input type="password" value={crmSettings.secret_key} onChange={e => setCrmSettings({ ...crmSettings, secret_key: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Автосинхронізація</label>
-              <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm">
-                {INTERVALS.map(iv => <option key={iv.value} value={iv.value}>{iv.label}</option>)}
-              </select>
-            </div>
-            <button onClick={saveCrm} disabled={saving}
-              className="px-4 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-              {saving ? 'Збереження...' : 'Зберегти CRM'}
+        <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-deepOcean">Realtsoft CRM</h3>
+            <button onClick={testConnection} disabled={testingConnection}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition disabled:opacity-50">
+              <i className={`ri-signal-tower-line ${testingConnection ? 'animate-pulse' : ''}`}></i>
+              {testingConnection ? 'Перевірка...' : 'Тест'}
             </button>
           </div>
+          {connectionResult && <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${connectionResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+            <i className={connectionResult.ok ? 'ri-check-line' : 'ri-error-warning-line'}></i>
+            <span>{connectionResult.msg}</span><span className="text-xs text-gray-400 ml-auto">{connectionResult.dur}</span>
+          </div>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">API URL</label>
+              <input type="url" value={crmSettings.url} onChange={e => setCrmSettings({ ...crmSettings, url: e.target.value })}
+                placeholder="https://crm-dominium.realtsoft.net" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+            </div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+              <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Secret Key</label>
+              <input type="password" value={crmSettings.secret_key} onChange={e => setCrmSettings({ ...crmSettings, secret_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+            <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Автосинхронізація</label>
+              <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                {[{ v: 15, l: '15 хв' }, { v: 30, l: '30 хв' }, { v: 60, l: '1 год' }, { v: 360, l: '6 год' }, { v: 1440, l: '1 день' }].map(i => <option key={i.v} value={i.v}>{i.l}</option>)}
+              </select></div>
+          </div>
+          <button onClick={() => save('crm', crmSettings)} disabled={saving} className="px-4 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
+            {saving ? 'Збереження...' : 'Зберегти'}
+          </button>
         </div>
       )}
 
       {activeSection === 'telegram' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
             <h3 className="text-lg font-semibold text-deepOcean">Telegram Бот</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Токен бота</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Токен</label>
                 <input type="password" value={tgSettings.bot_token} onChange={e => setTgSettings({ ...tgSettings, bot_token: e.target.value })}
-                  placeholder="123456789:ABC..." className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm" />
-                <p className="text-xs text-gray-400 mt-1">Отримати у @BotFather</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
+                  placeholder="123456789:ABC..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
                 <input type="text" value={tgSettings.chat_id} onChange={e => setTgSettings({ ...tgSettings, chat_id: e.target.value })}
-                  placeholder="-100..." className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm" />
-                <p className="text-xs text-gray-400 mt-1">Отримати у @userinfobot</p>
-              </div>
-              <div className="flex items-end">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={tgSettings.enabled}
-                    onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })}
-                    className="w-5 h-5 accent-deepOcean" />
-                  <span className="text-sm font-medium text-gray-700">Увімкнути</span>
-                </label>
-              </div>
+                  placeholder="-100..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              <div className="flex items-end"><label className="flex items-center gap-2">
+                <input type="checkbox" checked={tgSettings.enabled} onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })} className="w-5 h-5 accent-deepOcean" />
+                <span className="text-sm font-medium text-gray-700">Увімкнути</span></label></div>
             </div>
-            <button onClick={saveTelegram} disabled={saving}
-              className="px-4 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-              {saving ? 'Збереження...' : 'Зберегти Telegram'}
+            <button onClick={() => save('telegram', tgSettings)} disabled={saving} className="px-4 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
+              {saving ? 'Збереження...' : 'Зберегти'}
             </button>
           </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-deepOcean">Шаблони повідомлень</h3>
+              <h3 className="text-lg font-semibold text-deepOcean">Шаблони</h3>
               <div className="flex gap-2">
-                <button onClick={addTemplate}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-coolSage text-white rounded-lg text-sm hover:bg-coolSage/90 transition">
-                  <i className="ri-add-line"></i> Додати
-                </button>
-                <button onClick={saveTemplates} disabled={saving}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-                  <i className="ri-save-line"></i> {saving ? '...' : 'Зберегти'}
-                </button>
+                <button onClick={addTemplate} className="inline-flex items-center gap-1 px-3 py-1.5 bg-coolSage text-white rounded-lg text-sm hover:bg-coolSage/90 transition"><i className="ri-add-line"></i>Додати</button>
+                <button onClick={() => save('templates', templates)} disabled={saving} className="inline-flex items-center gap-1 px-3 py-1.5 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50"><i className="ri-save-line"></i>{saving ? '...' : 'Зберегти'}</button>
               </div>
             </div>
-            <p className="text-xs text-gray-400">Додавайте блоки та перетягуйте для зміни порядку.</p>
-            <div className="space-y-4">
-              {templates.map((t, i) => (
-                <TemplateCard key={i} template={t} index={i}
-                  onChange={(data) => updateTemplate(i, data)}
-                  onRemove={() => removeTemplate(i)} />
-              ))}
-              {templates.length === 0 && (
-                <div className="text-center py-8 bg-gray-50 rounded-xl">
-                  <i className="ri-file-text-line text-3xl text-gray-200 mb-2 block"></i>
-                  <p className="text-gray-400 text-sm mb-2">Шаблонів ще немає</p>
-                  <button onClick={addTemplate} className="text-sm text-deepOcean hover:underline font-medium">Додати перший</button>
-                </div>
-              )}
+            <div className="space-y-3">
+              {templates.map((t, i) => <TemplateCard key={i} template={t} index={i} onChange={(d) => updateTemplate(i, d)} onRemove={() => removeTemplate(i)} />)}
+              {templates.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Шаблонів ще немає. <button onClick={addTemplate} className="text-deepOcean hover:underline">Додати</button></p>}
             </div>
           </div>
         </div>

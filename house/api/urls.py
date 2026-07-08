@@ -57,4 +57,5 @@ urlpatterns = [
     path("crm/sync/", views.crm_sync_view, name="crm_sync"),
     path("settings/", views.app_settings_view, name="app_settings"),
     path("telegram-templates/", views.telegram_templates_view, name="telegram_templates"),
+    path("property-cities/", views.property_cities_view, name="property_cities"),
 ]
