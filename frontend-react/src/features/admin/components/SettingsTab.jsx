@@ -344,70 +344,82 @@ function SettingsTab() {
       </div>
 
       {activeSection === 'crm' && (
-        <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-deepOcean">Realtsoft CRM</h3>
-            <button onClick={testConnection} disabled={testingConnection}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition disabled:opacity-50">
-              <i className={`ri-signal-tower-line ${testingConnection ? 'animate-pulse' : ''}`}></i>
-              {testingConnection ? 'Перевірка...' : 'Тест'}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-deepOcean">Realtsoft CRM</h3>
+              <button onClick={testConnection} disabled={testingConnection}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition disabled:opacity-50">
+                <i className={`ri-signal-tower-line ${testingConnection ? 'animate-pulse' : ''}`}></i>
+                {testingConnection ? 'Перевірка...' : 'Тест'}
+              </button>
+            </div>
+            {connectionResult && <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${connectionResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              <i className={connectionResult.ok ? 'ri-check-line' : 'ri-error-warning-line'}></i>
+              <span>{connectionResult.msg}</span><span className="text-xs text-gray-400 ml-auto">{connectionResult.dur}</span>
+            </div>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">API URL</label>
+                <input type="url" value={crmSettings.url} onChange={e => setCrmSettings({ ...crmSettings, url: e.target.value })}
+                  placeholder="https://crm-dominium.realtsoft.net" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Secret Key</label>
+                <input type="password" value={crmSettings.secret_key} onChange={e => setCrmSettings({ ...crmSettings, secret_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Автосинхронізація</label>
+                <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                  {[{ v: 15, l: '15 хв' }, { v: 30, l: '30 хв' }, { v: 60, l: '1 год' }, { v: 360, l: '6 год' }, { v: 1440, l: '1 день' }].map(i => <option key={i.v} value={i.v}>{i.l}</option>)}
+                </select></div>
+            </div>
+          </div>
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-5 py-3">
+            <button onClick={() => save('crm', crmSettings)} disabled={saving} className="px-5 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
+              {saving ? 'Збереження...' : 'Зберегти CRM'}
             </button>
           </div>
-          {connectionResult && <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${connectionResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-            <i className={connectionResult.ok ? 'ri-check-line' : 'ri-error-warning-line'}></i>
-            <span>{connectionResult.msg}</span><span className="text-xs text-gray-400 ml-auto">{connectionResult.dur}</span>
-          </div>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">API URL</label>
-              <input type="url" value={crmSettings.url} onChange={e => setCrmSettings({ ...crmSettings, url: e.target.value })}
-                placeholder="https://crm-dominium.realtsoft.net" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-            </div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-              <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Secret Key</label>
-              <input type="password" value={crmSettings.secret_key} onChange={e => setCrmSettings({ ...crmSettings, secret_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-            <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Автосинхронізація</label>
-              <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                {[{ v: 15, l: '15 хв' }, { v: 30, l: '30 хв' }, { v: 60, l: '1 год' }, { v: 360, l: '6 год' }, { v: 1440, l: '1 день' }].map(i => <option key={i.v} value={i.v}>{i.l}</option>)}
-              </select></div>
-          </div>
-          <button onClick={() => save('crm', crmSettings)} disabled={saving} className="px-4 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-            {saving ? 'Збереження...' : 'Зберегти'}
-          </button>
         </div>
       )}
 
       {activeSection === 'telegram' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
-            <h3 className="text-lg font-semibold text-deepOcean">Telegram Бот</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Токен</label>
-                <input type="password" value={tgSettings.bot_token} onChange={e => setTgSettings({ ...tgSettings, bot_token: e.target.value })}
-                  placeholder="123456789:ABC..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
-                <input type="text" value={tgSettings.chat_id} onChange={e => setTgSettings({ ...tgSettings, chat_id: e.target.value })}
-                  placeholder="-100..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-              <div className="flex items-end"><label className="flex items-center gap-2">
-                <input type="checkbox" checked={tgSettings.enabled} onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })} className="w-5 h-5 accent-deepOcean" />
-                <span className="text-sm font-medium text-gray-700">Увімкнути</span></label></div>
-            </div>
-            <button onClick={() => save('telegram', tgSettings)} disabled={saving} className="px-4 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-              {saving ? 'Збереження...' : 'Зберегти'}
-            </button>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-deepOcean">Шаблони</h3>
-              <div className="flex gap-2">
-                <button onClick={addTemplate} className="inline-flex items-center gap-1 px-3 py-1.5 bg-coolSage text-white rounded-lg text-sm hover:bg-coolSage/90 transition"><i className="ri-add-line"></i>Додати</button>
-                <button onClick={() => save('templates', templates)} disabled={saving} className="inline-flex items-center gap-1 px-3 py-1.5 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50"><i className="ri-save-line"></i>{saving ? '...' : 'Зберегти'}</button>
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="p-5 space-y-3">
+              <h3 className="text-lg font-semibold text-deepOcean">Telegram Бот</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Токен</label>
+                  <input type="password" value={tgSettings.bot_token} onChange={e => setTgSettings({ ...tgSettings, bot_token: e.target.value })}
+                    placeholder="123456789:ABC..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
+                  <input type="text" value={tgSettings.chat_id} onChange={e => setTgSettings({ ...tgSettings, chat_id: e.target.value })}
+                    placeholder="-100..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                <div className="flex items-end"><label className="flex items-center gap-2">
+                  <input type="checkbox" checked={tgSettings.enabled} onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })} className="w-5 h-5 accent-deepOcean" />
+                  <span className="text-sm font-medium text-gray-700">Увімкнути</span></label></div>
               </div>
             </div>
-            <div className="space-y-3">
-              {templates.map((t, i) => <TemplateCard key={i} template={t} index={i} onChange={(d) => updateTemplate(i, d)} onRemove={() => removeTemplate(i)} />)}
-              {templates.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Шаблонів ще немає. <button onClick={addTemplate} className="text-deepOcean hover:underline">Додати</button></p>}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-5 py-3">
+              <button onClick={() => save('telegram', tgSettings)} disabled={saving} className="px-5 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
+                {saving ? 'Збереження...' : 'Зберегти Telegram'}
+              </button>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-deepOcean">Шаблони повідомлень</h3>
+                <button onClick={addTemplate} className="inline-flex items-center gap-1 px-3 py-1.5 bg-coolSage text-white rounded-lg text-sm hover:bg-coolSage/90 transition"><i className="ri-add-line"></i>Додати</button>
+              </div>
+              <div className="space-y-3">
+                {templates.map((t, i) => <TemplateCard key={i} template={t} index={i} onChange={(d) => updateTemplate(i, d)} onRemove={() => removeTemplate(i)} />)}
+                {templates.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Шаблонів ще немає. <button onClick={addTemplate} className="text-deepOcean hover:underline">Додати перший</button></p>}
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-5 py-3">
+              <button onClick={() => save('templates', templates)} disabled={saving} className="px-5 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
+                {saving ? 'Збереження...' : 'Зберегти шаблони'}
+              </button>
             </div>
           </div>
         </div>

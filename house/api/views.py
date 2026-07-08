@@ -29,7 +29,9 @@ from house.api.drf_serializers import (
 from house.api.permissions import IsStaffWriteOrReadOnly
 from house.api.serializers import serialize_property, _absolute_url
 from house.models import (
+    Client,
     DealType,
+    ExternalProperty,
     Feature,
     HomepageHighlightSettings,
     Property,
@@ -1156,20 +1158,28 @@ def telegram_templates_view(request):
 
 @require_http_methods(["GET"])
 def property_cities_view(request):
-    from django.db.models import CharField
-    from django.db.models.functions import Lower
-    cities = (
-        ExternalProperty.objects
-        .exclude(raw_data={})
-        .values_list("raw_data", flat=True)
-    )
-    city_set = set()
-    for raw in cities:
+    import re
+    cities = set()
+    for raw in ExternalProperty.objects.exclude(raw_data={}).values_list("raw_data", flat=True):
         if not isinstance(raw, dict):
             continue
+
+        # Method 1: from street_name (locality names)
         street = str(raw.get("street_name") or "").strip()
         if street:
             city = street.split(",")[0].strip()
             if city:
-                city_set.add(city)
-    return JsonResponse({"results": sorted(city_set)})
+                cities.add(city)
+
+        # Method 2: from property name/title (e.g. "в м. Хуст", "у с. Тячівка")
+        name = str(raw.get("name") or raw.get("feed_title") or "").strip()
+        match = re.search(
+            r'(?:в|у|м\.|с\.|смт\.?|міст(?:і|о)?)\s+([А-Яа-яіїєґ\-\']+(?:\s+[А-Яа-яіїєґ\-\']+)*)',
+            name
+        )
+        if match:
+            city = match.group(1).strip()
+            if len(city) > 2 and len(city) < 30:
+                cities.add(city)
+
+    return JsonResponse({"results": sorted(cities)})
