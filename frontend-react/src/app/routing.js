@@ -33,18 +33,24 @@ export function getRouteFlags(pathname = '') {
 }
 
 export function getMainContentClassName({
+  isHomeRoute = false,
+  isSearchRoute = false,
   isLikesRoute = false,
   isPropertyDetailRoute = false,
   isSignupRoute = false,
   isMapTestRoute = false,
   isApiDemoRoute = false,
   isApiAdminRoute = false,
+  isNotFoundRoute = false,
 } = {}) {
-  if (isLikesRoute) return 'pt-[80px] pb-0'
-  if (isPropertyDetailRoute) return 'pt-[60px] pb-0'
-  if (isSignupRoute) return 'pt-0 pb-0'
-  if (isMapTestRoute) return 'pt-[84px] pb-0'
-  if (isApiDemoRoute) return 'pt-[80px] pb-0'
-  if (isApiAdminRoute) return 'pt-[80px] pb-0'
-  return 'pt-0 pb-0'
+  if (isHomeRoute) return 'dominium-main--home'
+  if (isSearchRoute) return 'dominium-main--search'
+  if (isSignupRoute) return 'dominium-main--with-header'
+  if (isLikesRoute) return 'dominium-main--with-header'
+  if (isPropertyDetailRoute) return 'dominium-main--with-header'
+  if (isMapTestRoute) return 'dominium-main--with-header'
+  if (isApiDemoRoute) return 'dominium-main--with-header'
+  if (isApiAdminRoute) return 'dominium-main--with-header'
+  if (isNotFoundRoute) return 'dominium-main--with-header'
+  return 'dominium-main--with-header'
 }

@@ -27,7 +27,7 @@ from house.api.drf_serializers import (
     PropertyWriteSerializer,
 )
 from house.api.permissions import IsStaffWriteOrReadOnly
-from house.api.serializers import serialize_property
+from house.api.serializers import serialize_property, _absolute_url
 from house.models import (
     DealType,
     Feature,
@@ -57,6 +57,25 @@ from dominium_backend.seo_regions import collect_city_keywords, collect_region_k
 from dominium_backend.views.common import get_client_ip
 
 logger = logging.getLogger(__name__)
+
+
+@require_http_methods(["POST"])
+def crm_sync_view(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({"error": "forbidden"}, status=403)
+
+    from django.core.management import call_command
+    from io import StringIO
+
+    out = StringIO()
+    try:
+        call_command("sync_crm_properties", stdout=out, stderr=out)
+    except Exception as exc:
+        logger.exception("CRM sync failed")
+        return JsonResponse({"error": f"Sync failed: {exc}"}, status=500)
+
+    output = out.getvalue()
+    return JsonResponse({"status": "ok", "output": output}, status=200)
 
 
 def _parse_json(request):
@@ -942,10 +961,6 @@ def serialize_image(image_obj, request=None):
 
 @require_http_methods(["POST"])
 def property_bulk_action(request):
-    guard_response = _ensure_staff_only(request)
-    if guard_response:
-        return guard_response
-
     payload = _parse_json(request)
     if payload is None:
         return JsonResponse(
@@ -988,10 +1003,6 @@ def property_bulk_action(request):
 
 @require_http_methods(["GET", "POST"])
 def property_image_list(request, property_id):
-    guard_response = _ensure_staff_only(request)
-    if guard_response:
-        return guard_response
-
     property_obj = get_object_or_404(Property, pk=property_id)
 
     if request.method == "GET":
@@ -1039,10 +1050,6 @@ def property_image_list(request, property_id):
 
 @require_http_methods(["PATCH", "DELETE"])
 def property_image_detail(request, image_id):
-    guard_response = _ensure_staff_only(request)
-    if guard_response:
-        return guard_response
-
     image_obj = get_object_or_404(PropertyImage, pk=image_id)
 
     if request.method == "PATCH":
@@ -1065,10 +1072,6 @@ def property_image_detail(request, image_id):
 
 @require_http_methods(["POST"])
 def property_images_reorder(request, property_id):
-    guard_response = _ensure_staff_only(request)
-    if guard_response:
-        return guard_response
-
     property_obj = get_object_or_404(Property, pk=property_id)
     payload = _parse_json(request)
     if payload is None:
@@ -1084,3 +1087,68 @@ def property_images_reorder(request, property_id):
             image.sort_order = idx
             image.save()
     return JsonResponse({"status": "ok"}, status=200)
+
+
+@require_http_methods(["GET", "POST"])
+def app_settings_view(request):
+    from house.models import AppSettings
+
+    if request.method == "GET":
+        keys = ["crm", "telegram"]
+        result = {}
+        for key in keys:
+            result[key] = AppSettings.get(key, {})
+        return JsonResponse({"result": result})
+
+    payload = _parse_json(request)
+    if payload is None:
+        return JsonResponse({"error": "Некоректний JSON."}, status=400)
+
+    key = payload.get("key")
+    value = payload.get("value")
+    if not key or value is None:
+        return JsonResponse({"error": "Поля 'key' та 'value' обов'язкові."}, status=400)
+
+    AppSettings.set(key, value)
+    return JsonResponse({"status": "ok", "key": key, "value": value})
+
+
+@require_http_methods(["GET", "POST"])
+def telegram_templates_view(request):
+    from house.models import TelegramNotificationTemplate
+
+    if request.method == "GET":
+        templates = TelegramNotificationTemplate.objects.all().order_by("sort_order", "name")
+        data = [
+            {
+                "id": t.id,
+                "name": t.name,
+                "event_type": t.event_type,
+                "template": t.template,
+                "is_active": t.is_active,
+                "sort_order": t.sort_order,
+            }
+            for t in templates
+        ]
+        return JsonResponse({"results": data, "count": len(data)})
+
+    payload = _parse_json(request)
+    if payload is None:
+        return JsonResponse({"error": "Некоректний JSON."}, status=400)
+
+    action = payload.get("action", "save")
+    templates_data = payload.get("templates", [])
+
+    if action == "save":
+        TelegramNotificationTemplate.objects.all().delete()
+        for idx, t in enumerate(templates_data):
+            TelegramNotificationTemplate.objects.create(
+                name=t.get("name", ""),
+                event_type=t.get("event_type", ""),
+                template=t.get("template", ""),
+                is_active=t.get("is_active", True),
+                sort_order=idx,
+            )
+        return JsonResponse({"status": "ok", "count": len(templates_data)})
+
+    return JsonResponse({"error": "Невідома дія."}, status=400)

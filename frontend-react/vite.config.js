@@ -68,6 +68,14 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
         },
+        '/api/settings': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
+        '/api/telegram-templates': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
       },
     },
   }

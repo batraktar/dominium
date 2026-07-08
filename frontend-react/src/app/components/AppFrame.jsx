@@ -29,8 +29,8 @@ function AppFrame({
 
       <Preloader />
 
-      <div className="fade-in">
-        <div id="scroll-container" className="min-h-screen">
+      <div className="fade-in dominium-shell">
+        <div id="scroll-container" className="dominium-scroll-container">
           {!isSearchRoute ? (
             <MainHeader
               userIsStaff={userIsStaff}
@@ -44,7 +44,8 @@ function AppFrame({
           <main
             id="main-content"
             tabIndex="-1"
-            className={getMainContentClassName({
+            className={`dominium-main dominium-main--with-mobile-nav ${getMainContentClassName({
+              isSearchRoute,
               isHomeRoute,
               isSignupRoute,
               isLikesRoute,
@@ -53,7 +54,7 @@ function AppFrame({
               isApiDemoRoute,
               isApiAdminRoute,
               isNotFoundRoute,
-            })}
+            })}`}
           >
             {children}
           </main>
@@ -62,14 +63,15 @@ function AppFrame({
 
           <div
             id="toast"
-            className="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white py-2 px-4 rounded-xl text-sm shadow-lg z-50"
+            className="dominium-floating-toast hidden fixed left-1/2 -translate-x-1/2 bg-green-500 text-white py-2 px-4 rounded-xl text-sm shadow-lg z-50"
           >
             Повідомлення
           </div>
           <a
             href="#"
             id="scrollToTop"
-            className="hidden fixed bottom-6 right-6 bg-accent text-white p-3 rounded-full shadow-lg hover:bg-opacity-90 z-50 transition-opacity duration-300"
+            className="dominium-scroll-top hidden fixed right-6 bg-accent text-white p-3 rounded-full shadow-lg hover:bg-opacity-90 z-50 transition-opacity duration-300"
+            aria-label="Повернутися нагору"
           >
             <i className="ri-arrow-up-line"></i>
           </a>

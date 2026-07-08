@@ -7,7 +7,7 @@ function PropertyPageContentSection({
   contactSidebarProps,
 }) {
   return (
-    <div className="pt-16">
+    <div>
       <PropertyPageGalleryBlock gallerySectionProps={gallerySectionProps} />
 
       <PropertyPageDetailsGridSection

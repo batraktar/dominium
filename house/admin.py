@@ -5,12 +5,15 @@ from django.urls import path
 from django.utils.html import format_html
 
 from .models import (
+    AppSettings,
+    Client,
     DealType,
     Feature,
     HomepageHighlightSettings,
     Property,
     PropertyImage,
     PropertyType,
+    TelegramNotificationTemplate,
 )
 from .services.importer import import_images_from_parsed
 from .utils.html_parser import parse_property_html
@@ -163,3 +166,21 @@ class HomepageHighlightSettingsAdmin(admin.ModelAdmin):
         if HomepageHighlightSettings.objects.exists():
             return False
         return super().has_add_permission(request)
+
+
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
+    list_display = ["crm_id", "name", "phone", "email"]
+    search_fields = ["name", "phone", "email", "crm_id"]
+
+
+@admin.register(AppSettings)
+class AppSettingsAdmin(admin.ModelAdmin):
+    list_display = ["key", "updated_at"]
+
+
+@admin.register(TelegramNotificationTemplate)
+class TelegramNotificationTemplateAdmin(admin.ModelAdmin):
+    list_display = ["name", "event_type", "is_active", "sort_order"]
+    list_editable = ["is_active", "sort_order"]
+    list_filter = ["event_type", "is_active"]

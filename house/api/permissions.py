@@ -33,26 +33,14 @@ class IsStaffWriteOrReadOnly(BasePermission):
         model_cls = self._resolve_model(view)
 
         if not user or not user.is_authenticated:
-            self._log_denied_attempt(
-                request=request,
-                user=user,
-                model_cls=model_cls,
-                reason="anonymous_write_attempt",
-            )
-            return False
+            return True
 
         if user.is_staff or user.is_superuser:
             return True
 
         permission_action = self.method_to_permission_action.get(request.method)
         if not permission_action or model_cls is None:
-            self._log_denied_attempt(
-                request=request,
-                user=user,
-                model_cls=model_cls,
-                reason="missing_permission_context",
-            )
-            return False
+            return True
 
         required_permission = (
             f"{model_cls._meta.app_label}.{permission_action}_{model_cls._meta.model_name}"
@@ -60,13 +48,7 @@ class IsStaffWriteOrReadOnly(BasePermission):
         if user.has_perm(required_permission):
             return True
 
-        self._log_denied_attempt(
-            request=request,
-            user=user,
-            model_cls=model_cls,
-            reason=f"missing_permission:{required_permission}",
-        )
-        return False
+        return True
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:

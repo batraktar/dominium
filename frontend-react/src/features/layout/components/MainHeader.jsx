@@ -12,7 +12,7 @@ function MainHeader({
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="relative h-5 md:h-10 overflow-visible flex items-center justify-center md:justify-start w-full md:w-auto">
-            <a href="/" aria-label="DOMINIUM - головна сторінка">
+            <a href="/" aria-label="DOMINIUM — головна сторінка">
               <img
                 src={logoBlack}
                 alt="DOMINIUM Logo"
@@ -25,13 +25,22 @@ function MainHeader({
           </div>
 
           <nav className="hidden md:flex items-center space-x-8" aria-label="Основна навігація">
-            <a href="/" className="text-deepOcean font-fixel font-normal hover:text-coolSage">
+            <a
+              href="/"
+              className="text-deepOcean font-fixel font-normal hover:text-coolSage"
+            >
               Головна
             </a>
-            <a href="/search/" className="text-deepOcean font-fixel font-normal hover:text-coolSage">
+            <a
+              href="/search/"
+              className="text-deepOcean font-fixel font-normal hover:text-coolSage"
+            >
               Пошук
             </a>
-            <a href="/likes/" className="text-deepOcean font-fixel font-normal hover:text-coolSage">
+            <a
+              href="/likes/"
+              className="text-deepOcean font-fixel font-normal hover:text-coolSage"
+            >
               Обране
             </a>
             {userIsStaff ? (
@@ -50,8 +59,6 @@ function MainHeader({
               href="https://www.facebook.com/61573653220530/"
               aria-label="Facebook DOMINIUM"
               className="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <i className="ri-facebook-fill ri-lg"></i>
             </a>
@@ -59,8 +66,6 @@ function MainHeader({
               href="https://www.instagram.com/dominium_realty_agency"
               aria-label="Instagram DOMINIUM"
               className="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <i className="ri-instagram-fill ri-lg"></i>
             </a>
@@ -68,11 +73,10 @@ function MainHeader({
               href="https://www.tiktok.com/@dominium_realty_agency"
               aria-label="TikTok DOMINIUM"
               className="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <i className="ri-tiktok-fill ri-lg"></i>
             </a>
+
             {userIsAuthenticated ? (
               <div className="flex items-center space-x-2 ml-4">
                 <span className="text-sm text-deepOcean">

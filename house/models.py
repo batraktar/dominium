@@ -47,6 +47,23 @@ class Feature(models.Model):
         return self.name
 
 
+class Client(models.Model):
+    crm_id = models.PositiveIntegerField(unique=True, help_text="ID клієнта в CRM")
+    name = models.CharField(max_length=255, blank=True, default="")
+    phone = models.CharField(max_length=50, blank=True, default="")
+    email = models.CharField(max_length=255, blank=True, default="")
+    crm_url = models.URLField(blank=True, default="")
+    raw_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name or f"Client #{self.crm_id}"
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 class Property(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, max_length=4569)
@@ -70,6 +87,40 @@ class Property(models.Model):
         "DealType", on_delete=models.SET_NULL, null=True, blank=True
     )
     features = models.ManyToManyField("Feature", blank=True)
+    client = models.ForeignKey(
+        "Client", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="properties", help_text="Власник об'єкта з CRM"
+    )
+
+    external_source = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        choices=[
+            ("", "Власний"),
+            ("realtsoft", "Realtsoft CRM"),
+            ("import", "Імпорт"),
+        ],
+        help_text="Джерело об'єкта.",
+    )
+    external_id = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="ID об'єкта у зовнішній системі.",
+    )
+    price_currency = models.CharField(
+        max_length=3,
+        blank=True,
+        default="USD",
+        choices=[
+            ("USD", "USD"),
+            ("EUR", "EUR"),
+            ("UAH", "UAH"),
+        ],
+        help_text="Валюта ціни.",
+    )
 
     slug = models.SlugField(unique=True, blank=True)
 
@@ -171,7 +222,61 @@ class Property(models.Model):
             models.Index(fields=["created_at"]),
             models.Index(fields=["deal_type"]),
             models.Index(fields=["property_type"]),
+            models.Index(fields=["external_source", "external_id"]),
         ]
+
+
+class ExternalProperty(models.Model):
+    SOURCE_CHOICES = [
+        ("realtsoft", "Realtsoft CRM"),
+        ("manual", "Вручну"),
+        ("import", "Імпорт"),
+    ]
+
+    crm_property_id = models.PositiveIntegerField(
+        help_text="ID об'єкта в CRM (Realtsoft).",
+    )
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="external_sources",
+    )
+    crm_url = models.URLField(
+        blank=True,
+        default="",
+        help_text="URL об'єкта в CRM.",
+    )
+    raw_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Оригінальні дані з CRM для історії.",
+    )
+    last_synced = models.DateTimeField(auto_now=True)
+    sync_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("synced", "Синхронізовано"),
+            ("error", "Помилка"),
+            ("pending", "Очікує"),
+        ],
+        default="synced",
+    )
+    source = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+        default="realtsoft",
+    )
+
+    class Meta:
+        unique_together = [("crm_property_id", "source")]
+        indexes = [
+            models.Index(fields=["crm_property_id"]),
+            models.Index(fields=["source"]),
+            models.Index(fields=["last_synced"]),
+        ]
+
+    def __str__(self):
+        return f"ExternalProperty {self.crm_property_id} ({self.source}) → {self.property}"
 
 
 class HomepageHighlightSettings(models.Model):
@@ -273,3 +378,52 @@ class PropertyImage(models.Model):
 
         # повертаємо ContentFile — Django додасть 'property_images/' з upload_to
         return ContentFile(buffer.getvalue(), name=webp_name)
+
+
+class AppSettings(models.Model):
+    key = models.CharField(max_length=100, unique=True)
+    value = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Setting: {self.key}"
+
+    class Meta:
+        verbose_name = "Налаштування додатку"
+        verbose_name_plural = "Налаштування додатку"
+
+    @classmethod
+    def get(cls, key, default=None):
+        try:
+            return cls.objects.get(key=key).value
+        except cls.DoesNotExist:
+            return default
+
+    @classmethod
+    def set(cls, key, value):
+        obj, _ = cls.objects.update_or_create(key=key, defaults={"value": value})
+        return obj
+
+
+class TelegramNotificationTemplate(models.Model):
+    name = models.CharField(max_length=100)
+    event_type = models.CharField(max_length=50, choices=[
+        ("new_property", "Новий об'єкт"),
+        ("price_changed", "Зміна ціни"),
+        ("new_inquiry", "Нова заявка"),
+        ("status_changed", "Зміна статусу"),
+    ])
+    template = models.TextField(
+        help_text="Шаблон повідомлення. Доступні змінні: {title}, {price}, {address}, {rooms}, {area}, {link}"
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_event_type_display()})"
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+        verbose_name = "Шаблон повідомлення"
+        verbose_name_plural = "Шаблони повідомлень"

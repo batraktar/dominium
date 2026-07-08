@@ -23,8 +23,6 @@ function MainFooter() {
             href="https://www.facebook.com/61573653220530/"
             aria-label="Facebook DOMINIUM"
             className="text-deepOcean hover:text-accent transition"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <i className="ri-facebook-fill ri-xl"></i>
           </a>
@@ -32,8 +30,6 @@ function MainFooter() {
             href="https://www.instagram.com/dominium_realty_agency"
             aria-label="Instagram DOMINIUM"
             className="text-deepOcean hover:text-accent transition"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <i className="ri-instagram-fill ri-xl"></i>
           </a>
@@ -41,8 +37,6 @@ function MainFooter() {
             href="https://www.tiktok.com/@dominium_realty_agency"
             aria-label="TikTok DOMINIUM"
             className="text-deepOcean hover:text-accent transition"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             <i className="ri-tiktok-fill ri-xl"></i>
           </a>

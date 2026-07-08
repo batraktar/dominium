@@ -97,6 +97,28 @@ python manage.py runserver
   `black accounts house dominium_backend manage.py telegram_bot.py`.
 - **Перевірки**: `python manage.py check` (попередження allauth залишаються до оновлення конфігів).
 
+### Один запуск для фронта + бека
+
+```bash
+make dev
+```
+
+Команда:
+- створює `dominium-vm`, якщо його немає
+- ставить backend-залежності з `requirements.dev.txt`
+- ставить frontend-залежності в `frontend-react/`, якщо `node_modules` ще немає
+- виконує `python manage.py migrate`
+- запускає Django на `http://127.0.0.1:8000`
+- запускає React/Vite на `http://127.0.0.1:5173`
+- автоматично прокидає `REACT_SPA_DEV_SERVER_URL` і `VITE_BACKEND_URL`
+
+Окремі команди:
+
+```bash
+make dev-backend
+make dev-frontend
+```
+
 ## Продакшн
 
 ```bash

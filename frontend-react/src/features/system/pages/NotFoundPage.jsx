@@ -66,8 +66,8 @@ function NotFoundPage() {
   const variant = useMemo(() => pickRandomVariant(), [])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-deepOcean text-coolSage text-center px-4">
-      <div>
+    <div className="flex min-h-[48vh] items-center justify-center bg-deepOcean text-coolSage text-center px-4 py-16 md:py-24">
+      <div className="max-w-3xl">
         <h1 className="text-6xl font-ermilov mb-4">{variant.title}</h1>
         <p className="text-2xl font-fixel mb-2">{variant.line1}</p>
         {variant.line2 ? <p className="text-xl font-fixel mb-6 italic opacity-80">{variant.line2}</p> : null}

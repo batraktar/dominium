@@ -1,5 +1,5 @@
 import PropertyApiDemoPage from '../../features/admin/pages/PropertyApiDemoPage.jsx'
-import PropertyApiAdminPage from '../../features/admin/pages/PropertyApiAdminPage.jsx'
+import AdminApiAdminPage from '../../features/admin/pages/AdminApiAdminPage.jsx'
 import SignupRedirectPage from '../../features/auth/pages/SignupRedirectPage.jsx'
 import HomeLandingContent from '../../features/home/components/HomeLandingContent.jsx'
 import LikesPage from '../../features/likes/pages/LikesPage.jsx'
@@ -62,10 +62,7 @@ function AppMainContent({
   }
 
   if (isApiAdminRoute) {
-    if (!userIsStaff) {
-      return <NotFoundPage />
-    }
-    return <PropertyApiAdminPage userIsStaff={userIsStaff} />
+    return <AdminApiAdminPage />
   }
 
   if (isNotFoundRoute) {

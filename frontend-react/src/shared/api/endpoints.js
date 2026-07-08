@@ -22,4 +22,6 @@ export const apiEndpoints = {
   login: '/login/',
   logout: '/logout/',
   googleAuth: '/accounts/google/login/?process=login',
+  appSettings: '/api/settings/',
+  telegramTemplates: '/api/telegram-templates/',
 }

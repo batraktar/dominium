@@ -69,6 +69,24 @@ def serialize_property(property_obj, request=None) -> dict:
     )
     price_amount = float(property_obj.price) if property_obj.price is not None else None
 
+    client = None
+    if hasattr(property_obj, "client") and property_obj.client:
+        c = property_obj.client
+        client = {
+            "id": c.id,
+            "name": c.name,
+            "phone": c.phone,
+            "email": c.email,
+            "crm_url": c.crm_url,
+        }
+
+    crm_url = None
+    ext = getattr(property_obj, "external_sources", None)
+    if ext:
+        ext_rel = ext.filter(source="realtsoft").first()
+        if ext_rel:
+            crm_url = ext_rel.crm_url
+
     return {
         "id": property_obj.id,
         "title": property_obj.title,
@@ -103,4 +121,7 @@ def serialize_property(property_obj, request=None) -> dict:
             if hasattr(property_obj, "get_absolute_url")
             else None
         ),
+        "client": client,
+        "crm_url": crm_url,
+        "external_source": getattr(property_obj, "external_source", ""),
     }

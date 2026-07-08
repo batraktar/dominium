@@ -3,3 +3,76 @@ body,
 #root {
   min-height: 100%;
 }
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+:root {
+  --dominium-header-offset: 80px;
+  --dominium-mobile-nav-height: 76px;
+  --dominium-shell-bottom-space: 24px;
+  --dominium-floating-offset: calc(var(--dominium-mobile-nav-height) + 16px);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --dominium-header-offset: 88px;
+    --dominium-mobile-nav-height: 0px;
+    --dominium-shell-bottom-space: 32px;
+    --dominium-floating-offset: 24px;
+  }
+}
+
+.dominium-shell,
+.dominium-scroll-container {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dominium-main {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+.dominium-main--home,
+.dominium-main--search,
+.dominium-main--bare {
+  padding-top: 0;
+}
+
+.dominium-main--with-header {
+  padding-top: var(--dominium-header-offset);
+}
+
+.dominium-main--with-mobile-nav {
+  padding-bottom: var(--dominium-shell-bottom-space);
+}
+
+.dominium-footer {
+  margin-top: auto;
+  padding-bottom: calc(1.5rem + var(--dominium-mobile-nav-height) + env(safe-area-inset-bottom));
+}
+
+.dominium-floating-toast,
+.dominium-scroll-top {
+  bottom: var(--dominium-floating-offset);
+}
+
+.dominium-mobile-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.property-description p {
+  margin-bottom: 1em;
+  line-height: 1.8;
+}
+
+.property-description p:last-child {
+  margin-bottom: 0;
+}

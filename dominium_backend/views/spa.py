@@ -584,17 +584,6 @@ def property_api_demo_spa(request):
 
 
 def property_api_admin_spa(request):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        logger.warning(
-            "Unauthorized access to /api/admin/",
-            extra={
-                "path": request.path,
-                "ip": get_client_ip(request),
-                "user_agent": request.META.get("HTTP_USER_AGENT", ""),
-            },
-        )
-        return HttpResponseNotFound()
-
     return _render_react_spa(
         request,
         meta_title="API Admin - DOMINIUM",

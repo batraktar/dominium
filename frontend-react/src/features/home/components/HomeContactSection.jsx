@@ -13,7 +13,7 @@ function HomeContactSection({
               Зв&apos;язок з нами
             </h2>
             <p className="text-white mb-8 font-fixel">
-              Маєте питання? Залиште свої контакти - ми швидко відповімо.
+              Маєте питання? Залиште свої контакти — ми швидко відповімо.
             </p>
             <div className="space-y-6">
               <div className="flex items-center">

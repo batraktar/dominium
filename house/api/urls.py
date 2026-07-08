@@ -54,4 +54,7 @@ urlpatterns = [
         views.property_import_link,
         name="property_import_link",
     ),
+    path("crm/sync/", views.crm_sync_view, name="crm_sync"),
+    path("settings/", views.app_settings_view, name="app_settings"),
+    path("telegram-templates/", views.telegram_templates_view, name="telegram_templates"),
 ]
