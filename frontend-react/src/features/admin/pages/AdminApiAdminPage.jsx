@@ -5,11 +5,13 @@ import AdminPropertiesTable from '../components/AdminPropertiesTable.jsx'
 import PropertyEditModal from '../components/PropertyEditModal.jsx'
 import HighlightTab from '../components/HighlightTab.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
+import ClientsTab from '../components/ClientsTab.jsx'
 
 function AdminNav({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'dashboard', label: 'Дашборд', icon: 'ri-dashboard-line' },
     { id: 'properties', label: 'Об\'єкти', icon: 'ri-home-4-line' },
+    { id: 'clients', label: 'Клієнти', icon: 'ri-user-line' },
     { id: 'highlight', label: 'Топ', icon: 'ri-star-smile-line' },
     { id: 'settings', label: 'Налаштування', icon: 'ri-settings-3-line' },
   ]
@@ -53,6 +55,8 @@ function AdminApiAdminPage() {
             onEditProperty={(property) => setEditingPropertyId(property.id)}
           />
         )}
+
+        {activeTab === 'clients' && <ClientsTab />}
 
         {activeTab === 'highlight' && <HighlightTab />}
 

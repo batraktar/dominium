@@ -25,4 +25,6 @@ export const apiEndpoints = {
   appSettings: '/api/settings/',
   telegramTemplates: '/api/telegram-templates/',
   propertyCities: '/api/property-cities/',
+  clients: '/api/clients/',
+  stats: '/api/stats/',
 }

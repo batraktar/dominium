@@ -1132,7 +1132,66 @@ def telegram_templates_view(request):
             }
             for t in templates
         ]
-        return JsonResponse({"results": data, "count": len(data)})
+    return JsonResponse({"results": data, "count": len(data)})
+
+
+@require_http_methods(["GET"])
+def stats_view(request):
+    from django.db.models import Count, Avg, Sum
+    from django.db.models.functions import TruncMonth
+    from datetime import datetime, timedelta
+
+    total = Property.objects.count()
+    active = Property.objects.filter(is_archived=False).count()
+    archived = Property.objects.filter(is_archived=True).count()
+    featured = Property.objects.filter(featured_homepage=True).count()
+    total_images = PropertyImage.objects.count()
+    total_clients = Client.objects.count()
+
+    avg_price = Property.objects.filter(is_archived=False).aggregate(avg=Avg("price"))["avg"]
+    avg_area = Property.objects.filter(is_archived=False).aggregate(avg=Avg("area"))["avg"]
+
+    monthly = (
+        Property.objects
+        .filter(created_at__gte=datetime.now() - timedelta(days=365))
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    monthly_data = [{"month": m["month"].strftime("%Y-%m"), "count": m["count"]} for m in monthly]
+
+    by_type = (
+        Property.objects
+        .filter(is_archived=False)
+        .values("property_type__name")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+    by_type_data = [{"type": t["property_type__name"] or "Інше", "count": t["count"]} for t in by_type]
+
+    by_deal = (
+        Property.objects
+        .filter(is_archived=False)
+        .values("deal_type__name")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+    by_deal_data = [{"deal": d["deal_type__name"] or "Інше", "count": d["count"]} for d in by_deal]
+
+    return JsonResponse({
+        "total": total,
+        "active": active,
+        "archived": archived,
+        "featured": featured,
+        "total_images": total_images,
+        "total_clients": total_clients,
+        "avg_price": round(float(avg_price or 0)),
+        "avg_area": round(float(avg_area or 0)),
+        "monthly": monthly_data,
+        "by_type": by_type_data,
+        "by_deal": by_deal_data,
+    })
 
     payload = _parse_json(request)
     if payload is None:
@@ -1183,3 +1242,27 @@ def property_cities_view(request):
                 cities.add(city)
 
     return JsonResponse({"results": sorted(cities)})
+
+
+@require_http_methods(["GET"])
+def clients_list_view(request):
+    from house.models import Client
+    clients = Client.objects.annotate(property_count=Count("properties")).order_by("-property_count")
+    query = (request.GET.get("q") or "").strip()
+    if query:
+        clients = clients.filter(
+            Q(name__icontains=query) | Q(phone__icontains=query) | Q(email__icontains=query)
+        )
+    data = [
+        {
+            "id": c.id,
+            "crm_id": c.crm_id,
+            "name": c.name,
+            "phone": c.phone,
+            "email": c.email,
+            "crm_url": c.crm_url,
+            "property_count": c.property_count,
+        }
+        for c in clients[:200]
+    ]
+    return JsonResponse({"results": data, "count": len(data)})

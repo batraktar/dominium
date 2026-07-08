@@ -2,6 +2,31 @@ import { useState, useEffect, useCallback } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
 
+function exportToCsv(data, filename) {
+  const headers = ['ID', 'Назва', 'Адреса', 'Ціна', 'Валюта', 'Площа', 'Кімнат', 'Тип', 'Угода', 'Топ', 'CRM URL']
+  const rows = data.map(p => [
+    p.id,
+    `"${(p.title || '').replace(/"/g, '""')}"`,
+    `"${(p.address || '').replace(/"/g, '""')}"`,
+    p.price || '',
+    p.price_currency || 'USD',
+    p.area || '',
+    p.rooms || '',
+    p.property_type?.name || '',
+    p.deal_type?.name || '',
+    p.featured_homepage ? 'Так' : 'Ні',
+    p.crm_url || '',
+  ])
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+  const BOM = '\uFEFF'
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename || 'export.csv'
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
 function PropertyRow({ property, onEdit, onToggleFeatured, onDelete, selected, onSelect }) {
   const mainImage = property.main_image?.url || property.images?.[0]?.url
   const dealName = property.deal_type?.name || '—'
@@ -90,17 +115,24 @@ function AdminPropertiesTable({ onEditProperty }) {
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('active')
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('')
+  const [dealTypeFilter, setDealTypeFilter] = useState('')
   const [perPage, setPerPage] = useState(20)
+  const [propertyTypes, setPropertyTypes] = useState([])
+  const [dealTypes, setDealTypes] = useState([])
+
+  useEffect(() => {
+    apiClient.get(apiEndpoints.propertyTypes).then(r => setPropertyTypes(r.data?.results || []))
+    apiClient.get(apiEndpoints.dealTypes).then(r => setDealTypes(r.data?.results || []))
+  }, [])
 
   const loadProperties = useCallback(async () => {
     setLoading(true)
     try {
-      const query = {
-        page,
-        page_size: perPage,
-        status: statusFilter,
-      }
+      const query = { page, page_size: perPage, status: statusFilter }
       if (search) query.q = search
+      if (propertyTypeFilter) query.property_type = propertyTypeFilter
+      if (dealTypeFilter) query.deal_type = dealTypeFilter
 
       const response = await apiClient.get(apiEndpoints.properties, { query })
       setProperties(response.data?.results || [])
@@ -110,7 +142,7 @@ function AdminPropertiesTable({ onEditProperty }) {
     } finally {
       setLoading(false)
     }
-  }, [page, perPage, statusFilter, search])
+  }, [page, perPage, statusFilter, search, propertyTypeFilter, dealTypeFilter])
 
   useEffect(() => { loadProperties() }, [loadProperties])
 
@@ -180,10 +212,32 @@ function AdminPropertiesTable({ onEditProperty }) {
               <option value="archived">Архів</option>
               <option value="all">Усі</option>
             </select>
+            <select
+              value={propertyTypeFilter}
+              onChange={(e) => { setPropertyTypeFilter(e.target.value); setPage(1) }}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepOcean/20 text-sm"
+            >
+              <option value="">Усі типи</option>
+              {propertyTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select
+              value={dealTypeFilter}
+              onChange={(e) => { setDealTypeFilter(e.target.value); setPage(1) }}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deepOcean/20 text-sm"
+            >
+              <option value="">Усі угоди</option>
+              {dealTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
           </div>
           <div className="flex gap-2">
             {selectedIds.size > 0 && (
               <>
+                <button onClick={() => {
+                  const selected = properties.filter(p => selectedIds.has(p.id))
+                  exportToCsv(selected, `dominium_export_${new Date().toISOString().slice(0,10)}.csv`)
+                }} className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  <i className="ri-download-line mr-1"></i> CSV ({selectedIds.size})
+                </button>
                 <button onClick={() => handleBulkAction('archive')} className="px-3 py-2 text-sm bg-deepOcean text-white rounded-lg hover:bg-deepOcean/90">
                   В архів ({selectedIds.size})
                 </button>

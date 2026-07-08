@@ -58,4 +58,6 @@ urlpatterns = [
     path("settings/", views.app_settings_view, name="app_settings"),
     path("telegram-templates/", views.telegram_templates_view, name="telegram_templates"),
     path("property-cities/", views.property_cities_view, name="property_cities"),
-]
+    path("clients/", views.clients_list_view, name="clients_list"),
+    path("stats/", views.stats_view, name="stats"),
+]]
