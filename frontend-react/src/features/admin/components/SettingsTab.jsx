@@ -139,12 +139,13 @@ function TemplateCard({ template, index, onChange, onRemove }) {
         </span>
         <input type="text" value={template.name} onChange={e => onChange({ ...template, name: e.target.value })}
           placeholder="Назва" className="flex-1 px-2 py-1 bg-white border border-gray-200 rounded text-sm" />
-        <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0">
           <input type="checkbox" checked={template.is_active}
             onChange={e => onChange({ ...template, is_active: e.target.checked })} className="accent-deepOcean w-3.5 h-3.5" />
-        </label>
+          <span className="hidden sm:inline">Активний</span>
+        </div>
         <button onClick={onRemove}
-          className="w-6 h-6 flex items-center justify-center rounded border border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 transition">
+          className="w-6 h-6 flex items-center justify-center rounded border border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 transition shrink-0">
           <i className="ri-close-line text-xs"></i>
         </button>
       </div>
@@ -393,9 +394,10 @@ function SettingsTab() {
                 </select></div>
             </div>
           </div>
-          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-5 py-3">
-            <button onClick={() => save('crm', crmSettings)} disabled={saving} className="px-5 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-              {saving ? 'Збереження...' : 'Зберегти CRM'}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-5 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+            <button onClick={() => save('crm', crmSettings)} disabled={saving}
+              className="px-8 py-3 bg-deepOcean text-white rounded-xl text-base font-semibold hover:bg-deepOcean/90 transition disabled:opacity-50 shadow-lg shadow-deepOcean/20">
+              {saving ? '⏳ Збереження...' : '💾 Зберегти CRM'}
             </button>
           </div>
         </div>
@@ -418,13 +420,14 @@ function SettingsTab() {
                   <span className="text-sm font-medium text-gray-700">Увімкнути</span></label></div>
               </div>
             </div>
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-5 py-3">
-              <button onClick={() => save('telegram', tgSettings)} disabled={saving} className="px-5 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-                {saving ? 'Збереження...' : 'Зберегти Telegram'}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-5 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+              <button onClick={() => save('telegram', tgSettings)} disabled={saving}
+                className="px-8 py-3 bg-deepOcean text-white rounded-xl text-base font-semibold hover:bg-deepOcean/90 transition disabled:opacity-50 shadow-lg shadow-deepOcean/20">
+                {saving ? '⏳ Збереження...' : '💾 Зберегти Telegram'}
               </button>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm">
             <div className="p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-deepOcean">Шаблони повідомлень</h3>
@@ -435,9 +438,11 @@ function SettingsTab() {
                 {templates.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Шаблонів ще немає. <button onClick={addTemplate} className="text-deepOcean hover:underline">Додати перший</button></p>}
               </div>
             </div>
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-5 py-3">
-              <button onClick={() => save('templates', templates)} disabled={saving} className="px-5 py-2 bg-deepOcean text-white rounded-lg text-sm hover:bg-deepOcean/90 transition disabled:opacity-50">
-                {saving ? 'Збереження...' : 'Зберегти шаблони'}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-5 py-4 flex justify-end items-center gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+              <span className="text-xs text-gray-400 mr-auto">{templates.length} шаблонів</span>
+              <button onClick={() => save('templates', templates)} disabled={saving}
+                className="px-8 py-3 bg-deepOcean text-white rounded-xl text-base font-semibold hover:bg-deepOcean/90 transition disabled:opacity-50 shadow-lg shadow-deepOcean/20">
+                {saving ? '⏳ Збереження...' : '💾 Зберегти шаблони'}
               </button>
             </div>
           </div>
