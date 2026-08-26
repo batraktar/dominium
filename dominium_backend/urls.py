@@ -3,7 +3,9 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.shortcuts import render
+from django.templatetags.static import static as static_url
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from dominium_backend.sitemaps import (
     CityLandingSitemap,
@@ -27,6 +29,14 @@ sitemaps = {
 }
 
 urlpatterns = [
+    path(
+        "favicon.ico",
+        RedirectView.as_view(
+            url=static_url("base/assets/img/favicon.svg"),
+            permanent=True,
+        ),
+        name="favicon",
+    ),
     path("", include("accounts.urls")),
     path("admin/", admin.site.urls),
     path("", public_views.base, name="start_page"),
