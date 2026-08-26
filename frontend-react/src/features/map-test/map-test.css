@@ -6,6 +6,26 @@
   accent-color: #758f8e;
 }
 
+.dominium-map-marker-wrap {
+  background: transparent;
+  border: 0;
+}
+
+.dominium-map-marker {
+  display: block;
+  width: 40px;
+  height: 48px;
+  filter: drop-shadow(0 3px 5px rgba(15, 47, 52, 0.35));
+  transform-origin: 50% 100%;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.dominium-map-marker-wrap:hover .dominium-map-marker,
+.dominium-map-marker-wrap:focus .dominium-map-marker {
+  filter: drop-shadow(0 5px 8px rgba(15, 47, 52, 0.45));
+  transform: translateY(-2px) scale(1.05);
+}
+
 .map-list-item {
   list-style: none;
 }

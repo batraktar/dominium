@@ -1,5 +1,6 @@
 import json
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.test import Client, SimpleTestCase, TestCase, override_settings
@@ -9,6 +10,7 @@ from PIL import Image, ImageDraw
 from accounts.models import CustomUser
 from house.models import DealType, Property, PropertyImage, PropertyType
 from house.services.importer import import_property_from_url
+from house.services.search import apply_currency_display
 from house.utils.html_parser import parse_property_html
 from house.utils.image_selection import image_url_identity_key
 from house.utils.network_security import UnsafeImportURLError, ensure_safe_import_url
@@ -44,6 +46,83 @@ class PropertyApiSmokeTest(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Тестова квартира")
         self.assertEqual(payload["results"][0]["property_type"]["name"], "Квартира")
+
+    @patch(
+        "house.api.views.get_exchange_rates",
+        return_value={"USD": 40, "EUR": 50, "UAH": 1},
+    )
+    def test_list_properties_converts_selected_currency_and_returns_alternatives(
+        self, _mock_rates
+    ):
+        Property.objects.create(
+            title="Валютний тест",
+            address="Ужгород",
+            price=100000,
+            area=54,
+            rooms=2,
+            property_type=self.property_type,
+            deal_type=self.deal_type,
+        )
+
+        response = self.client.get(
+            reverse("house_api:property_list"), {"currency": "UAH"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        result = payload["results"][0]
+        self.assertEqual(result["display_price"], 4000000)
+        self.assertEqual(result["display_currency_code"], "UAH")
+        self.assertEqual(result["display_currency_symbol"], "₴")
+        self.assertEqual(
+            result["other_currency_values"],
+            [
+                {"code": "USD", "symbol": "$", "value": 100000},
+                {"code": "EUR", "symbol": "€", "value": 80000},
+            ],
+        )
+        self.assertEqual(payload["exchange_rates"], {"USD": 40.0, "EUR": 50.0})
+
+    def test_currency_conversion_respects_source_currency_and_missing_price(self):
+        options = {
+            "USD": {"symbol": "$"},
+            "EUR": {"symbol": "€"},
+            "UAH": {"symbol": "₴"},
+        }
+        eur_property = SimpleNamespace(price=1000, price_currency="EUR")
+        uah_property = SimpleNamespace(price=40000, price_currency="UAH")
+        missing_price = SimpleNamespace(price=None, price_currency="USD")
+
+        apply_currency_display(
+            [eur_property, uah_property, missing_price],
+            {"USD": 40, "EUR": 50, "UAH": 1},
+            options,
+            "USD",
+        )
+
+        self.assertEqual(eur_property.display_price, 1250)
+        self.assertEqual(uah_property.display_price, 1000)
+        self.assertIsNone(missing_price.display_price)
+        self.assertEqual(missing_price.other_currency_values, [])
+
+    def test_list_properties_places_locality_before_street_address(self):
+        Property.objects.create(
+            title="Продається будинок у м. Хуст",
+            address="Карпатська, 10",
+            price=50000,
+            area=90,
+            rooms=3,
+            property_type=self.property_type,
+            deal_type=self.deal_type,
+        )
+
+        response = self.client.get(reverse("house_api:property_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["results"][0]["display_address"],
+            "Хуст, Карпатська, 10",
+        )
 
     def test_create_property_via_api(self):
         self.client.force_login(self.staff)

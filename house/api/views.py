@@ -7,7 +7,7 @@ import requests
 from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import EmptyPage, Paginator
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -39,7 +39,7 @@ from house.models import (
     PropertyType,
 )
 from house.services.search import SORT_MAP as SEARCH_SORT_MAP
-from house.services.search import apply_text_query_filter
+from house.services.search import apply_currency_display, apply_text_query_filter
 from house.services.importer import (
     InvalidImportURL,
     PropertyImportError,
@@ -59,6 +59,12 @@ from dominium_backend.seo_regions import collect_city_keywords, collect_region_k
 from dominium_backend.views.common import get_client_ip
 
 logger = logging.getLogger(__name__)
+
+SEARCH_CURRENCY_OPTIONS = {
+    "USD": {"symbol": "$", "label": "USD"},
+    "EUR": {"symbol": "€", "label": "EUR"},
+    "UAH": {"symbol": "₴", "label": "UAH"},
+}
 
 
 @require_http_methods(["POST"])
@@ -207,28 +213,7 @@ def _create_property_from_parsed(data: dict):
     return property_obj, None, warnings
 
 
-def _resolve_property_type_by_name(name: str | None):
-    if not name:
-        return None
-    normalized = name.strip()
-    if not normalized:
-        return None
-    obj = PropertyType.objects.filter(name__iexact=normalized).first()
-    if obj:
-        return obj
-    return PropertyType.objects.create(name=normalized)
-
-
-def _resolve_deal_type_by_name(name: str | None):
-    if not name:
-        return None
-    normalized = name.strip()
-    if not normalized:
-        return None
-    obj = DealType.objects.filter(name__iexact=normalized).first()
-    if obj:
-        return obj
-    return DealType.objects.create(name=normalized)
+from house.utils.resolve import resolve_property_type as _resolve_property_type_by_name, resolve_deal_type as _resolve_deal_type_by_name
 
 
 def _apply_relation(instance, data, errors, *, update_features=False):
@@ -487,6 +472,15 @@ class SecurePropertyViewSet(viewsets.ModelViewSet):
         except EmptyPage:
             page_obj = paginator.page(paginator.num_pages or 1)
 
+        selected_currency = str(query_params.get("currency") or "USD").upper()
+        if selected_currency not in SEARCH_CURRENCY_OPTIONS:
+            selected_currency = "USD"
+        rates_meta = apply_currency_display(
+            page_obj.object_list,
+            get_exchange_rates(),
+            SEARCH_CURRENCY_OPTIONS,
+            selected_currency,
+        )
         data = [serialize_property(property_obj, request) for property_obj in page_obj]
         return Response(
             {
@@ -497,6 +491,10 @@ class SecurePropertyViewSet(viewsets.ModelViewSet):
                 "page_size": page_obj.paginator.per_page,
                 "ordering": ordering,
                 "status": status_filter,
+                "exchange_rates": {
+                    "USD": float(rates_meta["usd_rate"]),
+                    "EUR": float(rates_meta["eur_rate"]),
+                },
             },
             status=status.HTTP_200_OK,
         )
@@ -963,6 +961,10 @@ def serialize_image(image_obj, request=None):
 
 @require_http_methods(["POST"])
 def property_bulk_action(request):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     payload = _parse_json(request)
     if payload is None:
         return JsonResponse(
@@ -1012,6 +1014,10 @@ def property_image_list(request, property_id):
         data = [serialize_image(image, request) for image in images]
         return JsonResponse({"results": data, "count": len(data)}, status=200)
 
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     images = request.FILES.getlist("images")
     if not images:
         single = request.FILES.get("image")
@@ -1052,6 +1058,10 @@ def property_image_list(request, property_id):
 
 @require_http_methods(["PATCH", "DELETE"])
 def property_image_detail(request, image_id):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     image_obj = get_object_or_404(PropertyImage, pk=image_id)
 
     if request.method == "PATCH":
@@ -1074,6 +1084,10 @@ def property_image_detail(request, image_id):
 
 @require_http_methods(["POST"])
 def property_images_reorder(request, property_id):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     property_obj = get_object_or_404(Property, pk=property_id)
     payload = _parse_json(request)
     if payload is None:
@@ -1095,11 +1109,23 @@ def property_images_reorder(request, property_id):
 def app_settings_view(request):
     from house.models import AppSettings
 
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     if request.method == "GET":
         keys = ["crm", "telegram"]
         result = {}
         for key in keys:
-            result[key] = AppSettings.get(key, {})
+            value = AppSettings.get(key, {})
+            if not isinstance(value, dict):
+                value = {}
+            sanitized = dict(value)
+            for secret_field in ("api_key", "secret_key", "bot_token"):
+                if secret_field in sanitized:
+                    sanitized[f"has_{secret_field}"] = bool(sanitized[secret_field])
+                    sanitized[secret_field] = ""
+            result[key] = sanitized
         return JsonResponse({"result": result})
 
     payload = _parse_json(request)
@@ -1111,8 +1137,16 @@ def app_settings_view(request):
     if not key or value is None:
         return JsonResponse({"error": "Поля 'key' та 'value' обов'язкові."}, status=400)
 
+    if isinstance(value, dict):
+        existing = AppSettings.get(key, {})
+        if isinstance(existing, dict):
+            value = dict(value)
+            for secret_field in ("api_key", "secret_key", "bot_token"):
+                if secret_field in existing and not value.get(secret_field):
+                    value[secret_field] = existing[secret_field]
+
     AppSettings.set(key, value)
-    return JsonResponse({"status": "ok", "key": key, "value": value})
+    return JsonResponse({"status": "ok", "key": key})
 
 
 @require_http_methods(["GET", "POST"])
@@ -1132,7 +1166,32 @@ def telegram_templates_view(request):
             }
             for t in templates
         ]
-    return JsonResponse({"results": data, "count": len(data)})
+        return JsonResponse({"results": data, "count": len(data)})
+
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
+    payload = _parse_json(request)
+    if payload is None:
+        return JsonResponse({"error": "Некоректний JSON."}, status=400)
+
+    action = payload.get("action", "save")
+    templates_data = payload.get("templates", [])
+
+    if action == "save":
+        TelegramNotificationTemplate.objects.all().delete()
+        for idx, t in enumerate(templates_data):
+            TelegramNotificationTemplate.objects.create(
+                name=t.get("name", ""),
+                event_type=t.get("event_type", ""),
+                template=t.get("template", ""),
+                is_active=t.get("is_active", True),
+                sort_order=t.get("sort_order", idx),
+            )
+        return JsonResponse({"status": "ok", "count": len(templates_data)})
+
+    return JsonResponse({"error": "Невідома дія."}, status=400)
 
 
 @require_http_methods(["GET"])
@@ -1222,7 +1281,7 @@ def _handle_crm_estate_created(data):
     if not crm_id:
         return
     from house.models import ExternalProperty, Client
-    from house.management.commands.sync_crm_properties import _map_crm_item_to_property, _sync_client
+    from house.management.commands.sync_crm_properties import _map_crm_item_to_property, _resolve_type, _resolve_deal, _sync_client
     from django.db import transaction
 
     with transaction.atomic():
@@ -1284,28 +1343,6 @@ def _handle_crm_estate_deleted(data):
 
 def _handle_crm_inquiry_created(data):
     logger.info("Webhook: new inquiry %s", data)
-    # TODO: send Telegram notification
-
-    payload = _parse_json(request)
-    if payload is None:
-        return JsonResponse({"error": "Некоректний JSON."}, status=400)
-
-    action = payload.get("action", "save")
-    templates_data = payload.get("templates", [])
-
-    if action == "save":
-        TelegramNotificationTemplate.objects.all().delete()
-        for idx, t in enumerate(templates_data):
-            TelegramNotificationTemplate.objects.create(
-                name=t.get("name", ""),
-                event_type=t.get("event_type", ""),
-                template=t.get("template", ""),
-                is_active=t.get("is_active", True),
-                sort_order=idx,
-            )
-        return JsonResponse({"status": "ok", "count": len(templates_data)})
-
-    return JsonResponse({"error": "Невідома дія."}, status=400)
 
 
 @require_http_methods(["GET"])
@@ -1340,6 +1377,10 @@ def property_cities_view(request):
 @require_http_methods(["GET"])
 def clients_list_view(request):
     from house.models import Client
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
     clients = Client.objects.annotate(property_count=Count("properties")).order_by("-property_count")
     query = (request.GET.get("q") or "").strip()
     if query:

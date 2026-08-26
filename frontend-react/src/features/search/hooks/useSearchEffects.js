@@ -25,6 +25,7 @@ export default function useSearchEffects({
   setResults,
   setTotalCount,
   setTotalPages,
+  setExchangeRates,
   setPage,
 }) {
   useSearchLoadPropertyTypesEffect({
@@ -58,6 +59,7 @@ export default function useSearchEffects({
     setResults,
     setTotalCount,
     setTotalPages,
+    setExchangeRates,
     setPage,
   })
 }

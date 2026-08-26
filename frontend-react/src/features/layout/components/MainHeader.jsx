@@ -6,9 +6,10 @@ function MainHeader({
   userDisplayName = '',
   onLogout,
   googleAuthUrl,
+  className = '',
 }) {
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+    <header className={`fixed top-0 left-0 right-0 bg-white shadow-md z-50 ${className}`}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="relative h-5 md:h-10 overflow-visible flex items-center justify-center md:justify-start w-full md:w-auto">

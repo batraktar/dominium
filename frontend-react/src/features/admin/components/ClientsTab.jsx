@@ -5,97 +5,156 @@ import { apiEndpoints } from '../../../shared/api/endpoints.js'
 function ClientsTab() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput.trim())
+    }, 300)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [searchInput])
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(null)
+
     try {
       const query = search ? { q: search } : {}
-      const res = await apiClient.get(apiEndpoints.clients, { query })
-      setClients(res.data?.results || [])
-    } catch (err) {
-      console.error(err)
+      const response = await apiClient.get(apiEndpoints.clients, { query })
+      setClients(response.data?.results || [])
+    } catch (loadError) {
+      setError(loadError?.message || 'Не вдалося завантажити клієнтів.')
+      setClients([])
     } finally {
       setLoading(false)
     }
   }, [search])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-deepOcean">
-          <i className="ri-user-line mr-2"></i>Клієнти
-        </h2>
-        <span className="text-sm text-gray-500">{clients.length} клієнтів</span>
+    <div className="admin-panel">
+      <div className="admin-panel__header">
+        <div>
+          <h2 className="admin-panel__title">
+            <i className="ri-user-line mr-2" aria-hidden="true"></i>
+            Клієнти
+          </h2>
+          <p className="admin-panel__subtitle">
+            {loading ? 'Оновлюємо список...' : `${clients.length} клієнтів у поточній вибірці.`}
+          </p>
+        </div>
+        <button type="button" onClick={load} className="admin-button admin-button--secondary" disabled={loading}>
+          <i className={`ri-refresh-line ${loading ? 'admin-spin' : ''}`}></i>
+          Оновити
+        </button>
       </div>
 
-      <input
-        type="search"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Пошук за ім'ям, телефоном або email..."
-        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-deepOcean/20 focus:border-deepOcean"
-      />
+      <div className="admin-filter-grid admin-filter-grid--compact">
+        <label className="admin-field admin-search-field">
+          <span>Пошук клієнта</span>
+          <i className="ri-search-line" aria-hidden="true"></i>
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Ім’я, телефон або email"
+            className="admin-input admin-search-input"
+          />
+        </label>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-gray-400">
-            <i className="ri-loader-4-line animate-spin text-2xl"></i>
+      {error ? (
+        <div className="mx-5 mt-4">
+          <div className="admin-alert admin-alert--error" role="status">
+            <i className="ri-error-warning-line" aria-hidden="true"></i>
+            {error}
           </div>
-        ) : clients.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <i className="ri-user-line text-3xl text-gray-200 mb-2 block"></i>
-            <p className="text-sm">Клієнтів не знайдено</p>
-          </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50 text-left text-gray-500 uppercase text-xs tracking-wider">
+        </div>
+      ) : null}
+
+      <div className="admin-table-wrap">
+        <table className="admin-table admin-table--compact">
+          <thead>
+            <tr>
+              <th>Ім’я</th>
+              <th>Телефон</th>
+              <th>Email</th>
+              <th className="text-center">Об’єкти</th>
+              <th className="text-right">CRM</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th className="px-4 py-3">Ім'я</th>
-                <th className="px-4 py-3">Телефон</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3 text-center">Об'єкти</th>
-                <th className="px-4 py-3 text-right">CRM</th>
+                <td colSpan="5">
+                  <div className="admin-empty-state">
+                    <i className="ri-loader-4-line admin-spin" aria-hidden="true"></i>
+                    <p>Завантаження клієнтів</p>
+                    <span>Отримуємо дані з CRM-зв’язків.</span>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {clients.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-medium text-deepOcean">
-                    {c.name || <span className="text-gray-400">—</span>}
+            ) : clients.length === 0 ? (
+              <tr>
+                <td colSpan="5">
+                  <div className="admin-empty-state">
+                    <i className="ri-user-search-line" aria-hidden="true"></i>
+                    <p>Клієнтів не знайдено</p>
+                    <span>Спробуйте інший запит або очистьте пошук.</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              clients.map((client) => (
+                <tr key={client.id}>
+                  <td>
+                    <p className="admin-property-title">{client.name || 'Без імені'}</p>
+                    {client.crm_id ? (
+                      <p className="admin-property-meta">CRM ID: {client.crm_id}</p>
+                    ) : null}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {c.phone ? (
-                      <a href={`tel:${c.phone}`} className="hover:text-deepOcean">{c.phone}</a>
-                    ) : <span className="text-gray-400">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {c.email || <span className="text-gray-400">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {c.property_count > 0 ? (
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-deepOcean/10 text-deepOcean text-xs font-bold">
-                        {c.property_count}
-                      </span>
+                  <td>
+                    {client.phone ? (
+                      <a href={`tel:${client.phone}`} className="text-deepOcean hover:underline">
+                        {client.phone}
+                      </a>
                     ) : (
-                      <span className="text-gray-300">0</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    {c.crm_url && (
-                      <a href={c.crm_url} target="_blank" rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-700 text-xs">
+                  <td>{client.email || <span className="text-gray-400">—</span>}</td>
+                  <td className="text-center">
+                    <span className="admin-badge admin-badge--neutral">
+                      {client.property_count || 0}
+                    </span>
+                  </td>
+                  <td className="text-right">
+                    {client.crm_url ? (
+                      <a
+                        href={client.crm_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="admin-icon-button"
+                        title="Відкрити CRM"
+                        aria-label="Відкрити CRM"
+                      >
                         <i className="ri-external-link-line"></i>
                       </a>
+                    ) : (
+                      <span className="text-gray-300">—</span>
                     )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

@@ -36,10 +36,11 @@ function SearchResultsSection({
             const mainImageUrl = rawImageUrl ? buildMediaUrl(rawImageUrl) : FALLBACK_IMAGE_URL
             const dealName = property.deal_type?.name || 'Угода'
             const rentalDeal = isRentalDeal(dealName)
+            const displayPrice = property.display_price ?? property.price
             const formattedPrice =
-              property.price == null
+              displayPrice == null
                 ? 'Ціна за запитом'
-                : `${selectedCurrencyMeta.symbol} ${formatNumber(property.price)}`
+                : `${property.display_currency_symbol || selectedCurrencyMeta.symbol} ${formatNumber(displayPrice)}`
 
             return (
               <SearchResultCard
@@ -51,9 +52,10 @@ function SearchResultsSection({
                 userIsStaff={userIsStaff}
                 isShareMenuOpen={openShareMenuId === property.id}
                 formattedPrice={formattedPrice}
-                showRentSuffix={rentalDeal && property.price != null}
+                showRentSuffix={rentalDeal && displayPrice != null}
                 dealName={dealName}
                 dealTagClassName={formatDealTagClass(dealName)}
+                displayAddress={property.display_address || property.address}
                 onToggleLike={onToggleLike}
                 onToggleFeatured={onToggleFeatured}
                 onToggleShareMenu={onToggleShareMenu}

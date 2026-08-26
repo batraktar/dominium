@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
 
@@ -103,15 +103,12 @@ function TemplateBlock({ block, index, onChange, onRemove, dragHandlers, isDragO
 }
 
 function TemplateCard({ template, index, onChange, onRemove }) {
-  const [blocks, setBlocks] = useState(() => parseTemplateToBlocks(template.template))
+  const blocks = useMemo(() => parseTemplateToBlocks(template.template), [template.template])
   const [dragOver, setDragOver] = useState(null)
   const dragRef = useRef(null)
   const eventType = EVENT_TYPES.find(t => t.value === template.event_type) || EVENT_TYPES[0]
 
-  useEffect(() => { setBlocks(parseTemplateToBlocks(template.template)) }, [template.template])
-
   const emitBlocks = (newBlocks) => {
-    setBlocks(newBlocks)
     onChange({ ...template, template: blocksToTemplate(newBlocks) })
   }
 
@@ -242,21 +239,32 @@ function SyncLogsModal({ onClose }) {
 }
 
 function CityAutocomplete({ value, onChange }) {
-  const [query, setQuery] = useState(value || '')
   const [cities, setCities] = useState([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const ref = useRef(null)
+  const hasLoadedCities = useRef(false)
 
-  useEffect(() => { setQuery(value || '') }, [value])
+  const query = value || ''
 
-  useEffect(() => {
-    if (!open) return
+  const loadCities = useCallback(async () => {
+    if (hasLoadedCities.current || loading) return
     setLoading(true)
-    apiClient.get(apiEndpoints.propertyCities)
-      .then(r => setCities(r.data?.results || []))
-      .catch(console.error).finally(() => setLoading(false))
-  }, [open])
+    try {
+      const response = await apiClient.get(apiEndpoints.propertyCities)
+      setCities(response.data?.results || [])
+      hasLoadedCities.current = true
+    } catch {
+      setCities([])
+    } finally {
+      setLoading(false)
+    }
+  }, [loading])
+
+  const openCityList = () => {
+    setOpen(true)
+    loadCities()
+  }
 
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -270,11 +278,11 @@ function CityAutocomplete({ value, onChange }) {
     <div ref={ref} className="relative">
       <div className="relative">
         <input type="text" value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true); onChange(e.target.value) }}
-          onFocus={() => setOpen(true)}
+          onChange={e => { onChange(e.target.value); openCityList() }}
+          onFocus={openCityList}
           placeholder="Введіть або оберіть місто..."
-          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-deepOcean/20 focus:border-deepOcean pr-8" />
-        {query && <button onClick={() => { setQuery(''); onChange('') }}
+          className="admin-input pr-8" />
+        {query && <button type="button" onClick={() => { onChange('') }}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
           <i className="ri-close-line text-sm"></i></button>}
       </div>
@@ -282,7 +290,7 @@ function CityAutocomplete({ value, onChange }) {
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {loading && <div className="px-4 py-2 text-sm text-gray-400">Завантаження...</div>}
           {filtered.slice(0, 30).map((city, i) => (
-            <button key={i} onClick={() => { setQuery(city); onChange(city); setOpen(false) }}
+            <button key={i} type="button" onClick={() => { onChange(city); setOpen(false) }}
               className="w-full text-left px-4 py-2 text-sm hover:bg-deepOcean/5 transition flex items-center gap-2">
               <i className="ri-map-pin-line text-gray-400 text-xs"></i>{city}
             </button>
@@ -295,26 +303,46 @@ function CityAutocomplete({ value, onChange }) {
 }
 
 function SettingsTab() {
-  const [activeSection, setActiveSection] = useState('crm')
+  const [activeSection, setActiveSection] = useState('general')
   const [crmSettings, setCrmSettings] = useState({ url: '', api_key: '', secret_key: '', sync_interval: 30 })
   const [tgSettings, setTgSettings] = useState({ bot_token: '', chat_id: '', enabled: false })
   const [templates, setTemplates] = useState([])
+  const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [logsLoading, setLogsLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(null)
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionResult, setConnectionResult] = useState(null)
   const [showLogs, setShowLogs] = useState(false)
 
+  const loadLogs = useCallback(async () => {
+    setLogsLoading(true)
+    try {
+      const response = await apiClient.get(apiEndpoints.appSettings, { query: { key: 'sync_logs' } })
+      setLogs(response.data?.result?.sync_logs || [])
+    } catch (e) {
+      setStatus({ type: 'error', message: e.message || 'Не вдалося завантажити логи' })
+      setLogs([])
+    } finally {
+      setLogsLoading(false)
+    }
+  }, [])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [s, t] = await Promise.all([apiClient.get(apiEndpoints.appSettings), apiClient.get(apiEndpoints.telegramTemplates)])
+      const [s, t, l] = await Promise.all([
+        apiClient.get(apiEndpoints.appSettings),
+        apiClient.get(apiEndpoints.telegramTemplates),
+        apiClient.get(apiEndpoints.appSettings, { query: { key: 'sync_logs' } }),
+      ])
       const d = s.data?.result || {}
       if (d.crm) setCrmSettings(p => ({ ...p, ...d.crm }))
       if (d.telegram) setTgSettings(p => ({ ...p, ...d.telegram }))
       setTemplates(t.data?.results || [])
-    } catch (e) { console.error(e) }
+      setLogs(l.data?.result?.sync_logs || [])
+    } catch (e) { setStatus({ type: 'error', message: e.message || 'Не вдалося завантажити налаштування' }) }
     finally { setLoading(false) }
   }, [])
 
@@ -323,9 +351,19 @@ function SettingsTab() {
   const save = async (key, value) => {
     setSaving(true); setStatus(null)
     try {
-      await apiClient.request(apiEndpoints.appSettings, { method: 'POST', json: { key, value }, csrf: true })
+      if (key === 'templates') {
+        await apiClient.request(apiEndpoints.telegramTemplates, { method: 'POST', json: { action: 'save', templates: value }, csrf: true })
+        const templatesResponse = await apiClient.get(apiEndpoints.telegramTemplates)
+        setTemplates(templatesResponse.data?.results || [])
+      } else {
+        await apiClient.request(apiEndpoints.appSettings, { method: 'POST', json: { key, value }, csrf: true })
+        const settingsResponse = await apiClient.get(apiEndpoints.appSettings)
+        const nextSettings = settingsResponse.data?.result || {}
+        if (nextSettings.crm) setCrmSettings(p => ({ ...p, ...nextSettings.crm }))
+        if (nextSettings.telegram) setTgSettings(p => ({ ...p, ...nextSettings.telegram }))
+      }
       setStatus({ type: 'success', message: 'Збережено' })
-    } catch (e) { setStatus({ type: 'error', message: e.message }) }
+    } catch (e) { setStatus({ type: 'error', message: e.message || 'Не вдалося зберегти налаштування' }) }
     finally { setSaving(false) }
   }
 
@@ -341,110 +379,262 @@ function SettingsTab() {
   const addTemplate = () => setTemplates(p => [...p, { name: '', event_type: 'new_property', template: "{title}\n{price} $\n{address}\n{link}", is_active: true }])
   const updateTemplate = (i, d) => setTemplates(p => p.map((t, idx) => idx === i ? d : t))
   const removeTemplate = (i) => setTemplates(p => p.filter((_, idx) => idx !== i))
+  const activeTemplatesCount = templates.filter(template => template.is_active).length
+  const lastLog = logs[logs.length - 1]
+  const settingsSections = [
+    { id: 'general', label: 'Статус', icon: 'ri-dashboard-line' },
+    { id: 'crm', label: 'CRM', icon: 'ri-cloud-line' },
+    { id: 'telegram', label: 'Telegram', icon: 'ri-telegram-line' },
+    { id: 'templates', label: 'Шаблони', icon: 'ri-chat-settings-line', count: templates.length },
+    { id: 'logs', label: 'Історія', icon: 'ri-history-line', count: logs.length },
+  ]
 
   return (
-    <div className="space-y-4">
+    <div className="settings-tab">
       {showLogs && <SyncLogsModal onClose={() => setShowLogs(false)} />}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-deepOcean"><i className="ri-settings-3-line mr-2"></i>Налаштування</h2>
-        <button onClick={() => setShowLogs(true)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition">
-          <i className="ri-history-line"></i>Логи
+      <div className="settings-tab__header">
+        <div>
+          <h2 className="settings-tab__title"><i className="ri-settings-3-line"></i>Налаштування</h2>
+          <p className="settings-tab__subtitle">CRM, Telegram-сповіщення, шаблони повідомлень та історія синхронізації.</p>
+        </div>
+        <button onClick={load} disabled={loading} className="admin-button admin-button--secondary">
+          <i className={`ri-refresh-line ${loading ? 'admin-spin' : ''}`}></i>
+          Оновити
         </button>
       </div>
+
       {status && <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${status.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
         <i className={status.type === 'success' ? 'ri-check-line' : 'ri-error-warning-line'}></i>{status.message}
       </div>}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-        {[{ id: 'crm', label: 'CRM', icon: 'ri-cloud-line' }, { id: 'telegram', label: 'Telegram', icon: 'ri-telegram-line' }].map(tab => (
-          <button key={tab.id} onClick={() => setActiveSection(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeSection === tab.id ? 'bg-white text-deepOcean shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <i className={tab.icon}></i>{tab.label}
+      {loading && (
+        <div className="admin-alert admin-alert--info" role="status">
+          <i className="ri-loader-4-line admin-spin" aria-hidden="true"></i>
+          Завантаження налаштувань...
+        </div>
+      )}
+
+      <div className="settings-tab__nav" aria-label="Розділи налаштувань">
+        {settingsSections.map(section => (
+          <button key={section.id} onClick={() => setActiveSection(section.id)}
+            className={`settings-tab__nav-button ${activeSection === section.id ? 'is-active' : ''}`}>
+            <span><i className={section.icon}></i>{section.label}</span>
+            {section.count !== undefined && <small>{section.count}</small>}
           </button>
         ))}
       </div>
 
+      {activeSection === 'general' && (
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>Загальний стан</h3>
+              <p>Короткий зріз підключень і активності без зміни даних.</p>
+            </div>
+          </div>
+          <div className="settings-status-grid">
+            <div className="settings-status-card">
+              <i className="ri-cloud-line"></i>
+              <div>
+                <span>CRM</span>
+                <strong>{crmSettings.url ? 'URL задано' : 'URL не задано'}</strong>
+                <p>{crmSettings.sync_interval ? `Синхронізація кожні ${crmSettings.sync_interval} хв` : 'Інтервал не задано'}</p>
+              </div>
+            </div>
+            <div className="settings-status-card">
+              <i className="ri-telegram-line"></i>
+              <div>
+                <span>Telegram</span>
+                <strong>{tgSettings.enabled ? 'Увімкнено' : 'Вимкнено'}</strong>
+                <p>{tgSettings.chat_id ? 'Chat ID задано' : 'Chat ID не задано'}</p>
+              </div>
+            </div>
+            <div className="settings-status-card">
+              <i className="ri-chat-settings-line"></i>
+              <div>
+                <span>Шаблони</span>
+                <strong>{activeTemplatesCount} активних</strong>
+                <p>{templates.length} всього</p>
+              </div>
+            </div>
+            <div className="settings-status-card">
+              <i className="ri-history-line"></i>
+              <div>
+                <span>Історія</span>
+                <strong>{logs.length} записів</strong>
+                <p>{lastLog?.time || 'Останніх подій немає'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeSection === 'crm' && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-deepOcean">Realtsoft CRM</h3>
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>CRM</h3>
+              <p>Параметри Realtsoft API та інтервал автоматичної синхронізації.</p>
+            </div>
+            <div className="settings-section__actions">
               <button onClick={testConnection} disabled={testingConnection}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition disabled:opacity-50">
+                className="admin-button admin-button--secondary">
                 <i className={`ri-signal-tower-line ${testingConnection ? 'animate-pulse' : ''}`}></i>
                 {testingConnection ? 'Перевірка...' : 'Тест'}
               </button>
             </div>
+          </div>
+          <div className="settings-section__body">
             {connectionResult && <div className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${connectionResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
               <i className={connectionResult.ok ? 'ri-check-line' : 'ri-error-warning-line'}></i>
               <span>{connectionResult.msg}</span><span className="text-xs text-gray-400 ml-auto">{connectionResult.dur}</span>
             </div>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">API URL</label>
+            <div className="admin-form-grid">
+              <label className="admin-field admin-form-grid__full">
+                <span>API URL</span>
                 <input type="url" value={crmSettings.url} onChange={e => setCrmSettings({ ...crmSettings, url: e.target.value })}
-                  placeholder="https://crm-dominium.realtsoft.net" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-              </div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Secret Key</label>
-                <input type="password" value={crmSettings.secret_key} onChange={e => setCrmSettings({ ...crmSettings, secret_key: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-              <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Автосинхронізація</label>
-                <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                  placeholder="https://crm-dominium.realtsoft.net" className="admin-input" />
+              </label>
+              <label className="admin-field">
+                <span>API Key</span>
+                <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })} className="admin-input" />
+              </label>
+              <label className="admin-field">
+                <span>Secret Key</span>
+                <input type="password" value={crmSettings.secret_key} onChange={e => setCrmSettings({ ...crmSettings, secret_key: e.target.value })} className="admin-input" />
+              </label>
+              <label className="admin-field admin-form-grid__full">
+                <span>Автосинхронізація</span>
+                <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })} className="admin-select">
                   {[{ v: 15, l: '15 хв' }, { v: 30, l: '30 хв' }, { v: 60, l: '1 год' }, { v: 360, l: '6 год' }, { v: 1440, l: '1 день' }].map(i => <option key={i.v} value={i.v}>{i.l}</option>)}
-                </select></div>
+                </select>
+              </label>
             </div>
           </div>
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-5 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <div className="settings-section__footer">
             <button onClick={() => save('crm', crmSettings)} disabled={saving}
-              className="px-8 py-3 bg-deepOcean text-white rounded-xl text-base font-semibold hover:bg-deepOcean/90 transition disabled:opacity-50 shadow-lg shadow-deepOcean/20">
-              {saving ? '⏳ Збереження...' : '💾 Зберегти CRM'}
+              className="admin-button admin-button--primary">
+              <i className={saving ? 'ri-loader-4-line admin-spin' : 'ri-save-line'}></i>
+              {saving ? 'Збереження...' : 'Зберегти CRM'}
             </button>
           </div>
         </div>
       )}
 
       {activeSection === 'telegram' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-5 space-y-3">
-              <h3 className="text-lg font-semibold text-deepOcean">Telegram Бот</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Токен</label>
-                  <input type="password" value={tgSettings.bot_token} onChange={e => setTgSettings({ ...tgSettings, bot_token: e.target.value })}
-                    placeholder="123456789:ABC..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Chat ID</label>
-                  <input type="text" value={tgSettings.chat_id} onChange={e => setTgSettings({ ...tgSettings, chat_id: e.target.value })}
-                    placeholder="-100..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-                <div className="flex items-end"><label className="flex items-center gap-2">
-                  <input type="checkbox" checked={tgSettings.enabled} onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })} className="w-5 h-5 accent-deepOcean" />
-                  <span className="text-sm font-medium text-gray-700">Увімкнути</span></label></div>
-              </div>
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>Telegram connection</h3>
+              <p>Підключення бота і каналу для автоматичних повідомлень.</p>
             </div>
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-5 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-              <button onClick={() => save('telegram', tgSettings)} disabled={saving}
-                className="px-8 py-3 bg-deepOcean text-white rounded-xl text-base font-semibold hover:bg-deepOcean/90 transition disabled:opacity-50 shadow-lg shadow-deepOcean/20">
-                {saving ? '⏳ Збереження...' : '💾 Зберегти Telegram'}
+            <span className={`settings-pill ${tgSettings.enabled ? 'settings-pill--success' : ''}`}>
+              {tgSettings.enabled ? 'Увімкнено' : 'Вимкнено'}
+            </span>
+          </div>
+          <div className="settings-section__body">
+            <div className="admin-form-grid">
+              <label className="admin-field admin-form-grid__full">
+                <span>Токен</span>
+                <input type="password" value={tgSettings.bot_token} onChange={e => setTgSettings({ ...tgSettings, bot_token: e.target.value })}
+                  placeholder="123456789:ABC..." className="admin-input" />
+              </label>
+              <label className="admin-field">
+                <span>Chat ID</span>
+                <input type="text" value={tgSettings.chat_id} onChange={e => setTgSettings({ ...tgSettings, chat_id: e.target.value })}
+                  placeholder="-100..." className="admin-input" />
+              </label>
+              <label className="settings-toggle">
+                <input type="checkbox" checked={tgSettings.enabled} onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })} />
+                <span>Увімкнути відправку</span>
+              </label>
+            </div>
+          </div>
+          <div className="settings-section__footer">
+            <button onClick={() => save('telegram', tgSettings)} disabled={saving}
+              className="admin-button admin-button--primary">
+              <i className={saving ? 'ri-loader-4-line admin-spin' : 'ri-save-line'}></i>
+              {saving ? 'Збереження...' : 'Зберегти Telegram'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'templates' && (
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>Telegram templates</h3>
+              <p>Окремі шаблони для подій CRM, що зберігаються через Telegram templates API.</p>
+            </div>
+            <button onClick={addTemplate} className="admin-button admin-button--secondary"><i className="ri-add-line"></i>Додати</button>
+          </div>
+          <div className="settings-section__body">
+            <div className="settings-template-list">
+              {templates.map((t, i) => <TemplateCard key={i} template={t} index={i} onChange={(d) => updateTemplate(i, d)} onRemove={() => removeTemplate(i)} />)}
+              {templates.length === 0 && (
+                <div className="admin-empty-state">
+                  <i className="ri-chat-settings-line" aria-hidden="true"></i>
+                  <p>Шаблонів ще немає</p>
+                  <span>Додайте перший шаблон, щоб налаштувати повідомлення для Telegram.</span>
+                  <button onClick={addTemplate} className="admin-button admin-button--secondary mt-4">Додати перший</button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="settings-section__footer settings-section__footer--split">
+            <span className="settings-muted">{templates.length} шаблонів, {activeTemplatesCount} активних</span>
+            <button onClick={() => save('templates', templates)} disabled={saving}
+              className="admin-button admin-button--primary">
+              <i className={saving ? 'ri-loader-4-line admin-spin' : 'ri-save-line'}></i>
+              {saving ? 'Збереження...' : 'Зберегти шаблони'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'logs' && (
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>Logs & history</h3>
+              <p>Історія синхронізації зберігається у ключі sync_logs.</p>
+            </div>
+            <div className="settings-section__actions">
+              <button onClick={loadLogs} disabled={logsLoading} className="admin-button admin-button--secondary">
+                <i className={`ri-refresh-line ${logsLoading ? 'admin-spin' : ''}`}></i>
+                Оновити логи
+              </button>
+              <button onClick={() => setShowLogs(true)} className="admin-button admin-button--primary">
+                <i className="ri-history-line"></i>
+                Відкрити журнал
               </button>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-deepOcean">Шаблони повідомлень</h3>
-                <button onClick={addTemplate} className="inline-flex items-center gap-1 px-3 py-1.5 bg-coolSage text-white rounded-lg text-sm hover:bg-coolSage/90 transition"><i className="ri-add-line"></i>Додати</button>
+          <div className="settings-section__body">
+            {logsLoading ? (
+              <div className="admin-empty-state">
+                <i className="ri-loader-4-line admin-spin" aria-hidden="true"></i>
+                <p>Завантаження логів...</p>
               </div>
-              <div className="space-y-3">
-                {templates.map((t, i) => <TemplateCard key={i} template={t} index={i} onChange={(d) => updateTemplate(i, d)} onRemove={() => removeTemplate(i)} />)}
-                {templates.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Шаблонів ще немає. <button onClick={addTemplate} className="text-deepOcean hover:underline">Додати перший</button></p>}
+            ) : logs.length === 0 ? (
+              <div className="admin-empty-state">
+                <i className="ri-history-line" aria-hidden="true"></i>
+                <p>Логів поки немає</p>
+                <span>Після синхронізацій тут зʼявляться останні записи історії.</span>
               </div>
-            </div>
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-5 py-4 flex justify-end items-center gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-              <span className="text-xs text-gray-400 mr-auto">{templates.length} шаблонів</span>
-              <button onClick={() => save('templates', templates)} disabled={saving}
-                className="px-8 py-3 bg-deepOcean text-white rounded-xl text-base font-semibold hover:bg-deepOcean/90 transition disabled:opacity-50 shadow-lg shadow-deepOcean/20">
-                {saving ? '⏳ Збереження...' : '💾 Зберегти шаблони'}
-              </button>
-            </div>
+            ) : (
+              <div className="settings-log-list">
+                {logs.slice(-6).reverse().map((log, i) => (
+                  <div key={`${log.time || 'log'}-${i}`} className="settings-log-row">
+                    <span className={`settings-log-row__status settings-log-row__status--${log.status || 'info'}`}></span>
+                    <div>
+                      <strong>{log.message}</strong>
+                      <p>{log.time || 'Час не вказано'}{log.created !== undefined && ` · +${log.created} ств.`}{log.updated !== undefined && ` · +${log.updated} онов.`}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -92,17 +92,35 @@ def apply_currency_display(properties, rates, currency_options, selected_currenc
 
     quantize_unit = Decimal("1")
     for property_obj in properties:
-        price_usd = (
-            Decimal(str(property_obj.price))
-            if property_obj.price is not None
-            else Decimal("0")
-        )
+        if property_obj.price is None:
+            property_obj.price_uah = None
+            property_obj.price_eur = None
+            property_obj.price_usd_display = None
+            property_obj.display_currency_code = selected_currency
+            property_obj.display_currency_symbol = currency_options[selected_currency][
+                "symbol"
+            ]
+            property_obj.display_price = None
+            property_obj.other_currency_values = []
+            continue
 
-        price_uah = (price_usd * usd_rate / uah_rate).quantize(
+        raw_price = Decimal(str(property_obj.price))
+        source_currency = str(
+            getattr(property_obj, "price_currency", "USD") or "USD"
+        ).upper()
+        source_rate = {
+            "USD": usd_rate,
+            "EUR": eur_rate,
+            "UAH": uah_rate,
+        }.get(source_currency, usd_rate)
+        price_uah_base = raw_price * source_rate
+        price_usd = price_uah_base / usd_rate if usd_rate else Decimal("0")
+
+        price_uah = (price_uah_base / uah_rate).quantize(
             quantize_unit, rounding=ROUND_HALF_UP
         )
         price_eur = (
-            (price_usd * usd_rate / eur_rate).quantize(
+            (price_uah_base / eur_rate).quantize(
                 quantize_unit, rounding=ROUND_HALF_UP
             )
             if eur_rate

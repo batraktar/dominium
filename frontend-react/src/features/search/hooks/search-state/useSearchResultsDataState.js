@@ -7,6 +7,7 @@ export default function useSearchResultsDataState() {
   const [totalPages, setTotalPages] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
+  const [exchangeRates, setExchangeRates] = useState({ USD: null, EUR: null })
 
   return {
     propertyTypes,
@@ -21,5 +22,7 @@ export default function useSearchResultsDataState() {
     setIsLoading,
     searchError,
     setSearchError,
+    exchangeRates,
+    setExchangeRates,
   }
 }

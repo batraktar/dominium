@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
 import L from 'leaflet'
-import { ensureLeafletMarkerIconsConfigured } from '../../../../shared/map/leafletMarkerIcons.js'
 import {
   OSM_FALLBACK_LAYER,
   buildMapPopupHtml,
@@ -9,6 +8,20 @@ import {
 const DEFAULT_LAT = 48.6208
 const DEFAULT_LON = 22.2879
 const DEFAULT_ZOOM = 8
+
+const PROPERTY_MARKER_ICON = L.divIcon({
+  className: 'dominium-map-marker-wrap',
+  html: `
+    <span class="dominium-map-marker" aria-hidden="true">
+      <svg viewBox="0 0 40 48" width="40" height="48" focusable="false">
+        <path d="M20 1C9.5 1 1 9.5 1 20c0 14.3 19 27 19 27s19-12.7 19-27C39 9.5 30.5 1 20 1Z" fill="#133e44" stroke="#fff" stroke-width="2"/>
+        <circle cx="20" cy="20" r="7" fill="#e7e0ce"/>
+      </svg>
+    </span>`,
+  iconSize: [40, 48],
+  iconAnchor: [20, 47],
+  popupAnchor: [0, -42],
+})
 
 function buildLayer(definition) {
   const options = {
@@ -29,8 +42,6 @@ export default function useInteractiveMapLeaflet({
   filteredProperties,
   setActivePropertyId,
 }) {
-  ensureLeafletMarkerIconsConfigured()
-
   const mapElementRef = useRef(null)
   const mapRef = useRef(null)
   const markerLayerRef = useRef(null)
@@ -167,7 +178,7 @@ export default function useInteractiveMapLeaflet({
 
     filteredProperties.forEach((item) => {
       try {
-        const marker = L.marker([item.lat, item.lon])
+        const marker = L.marker([item.lat, item.lon], { icon: PROPERTY_MARKER_ICON })
         marker.bindPopup(buildMapPopupHtml(item), { maxWidth: 320 })
         marker.on('click', () => setActivePropertyId(item.id))
         marker.addTo(markerLayer)

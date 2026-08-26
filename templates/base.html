@@ -108,7 +108,7 @@
   {% with register_query=request.GET.register login_query=request.GET.login %}
   {% with rm=auth_modals.register lm=auth_modals.login %}
   <body
-    class="bg-primary overflow-x-hidden"
+    class="bg-primary"
     {% if request.GET %}data-no-preloader="1"{% endif %}
     data-register-open="{% if register_query or rm.open %}true{% else %}false{% endif %}"
     data-login-open="{% if login_query or lm.open %}true{% else %}false{% endif %}"

@@ -43,6 +43,7 @@ function SearchPage({ userIsStaff = false, userIsAuthenticated = false }) {
     handleCurrencyChange,
     selectedCurrencyMeta,
     todayDate,
+    exchangeRates,
     results,
     isLoading,
     likedIds,
@@ -98,6 +99,7 @@ function SearchPage({ userIsStaff = false, userIsAuthenticated = false }) {
         handleCurrencyChange={handleCurrencyChange}
         selectedCurrencyMeta={selectedCurrencyMeta}
         todayDate={todayDate}
+        exchangeRates={exchangeRates}
       />
 
       <SearchResultsBlockSection

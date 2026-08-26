@@ -52,7 +52,7 @@ export default function useDominiumPageMetaEffect({
       isNotFoundRoute,
     })
 
-    document.body.classList.add('bg-primary', 'overflow-x-hidden')
+    document.body.classList.add('bg-primary')
     document.body.dataset.registerOpen = 'false'
     document.body.dataset.loginOpen = 'false'
     document.body.dataset.userIsStaff = userIsStaff ? '1' : '0'
@@ -62,7 +62,7 @@ export default function useDominiumPageMetaEffect({
     document.body.dataset.userPhone = userPhone
 
     return () => {
-      document.body.classList.remove('bg-primary', 'overflow-x-hidden')
+      document.body.classList.remove('bg-primary')
       delete document.body.dataset.registerOpen
       delete document.body.dataset.loginOpen
       delete document.body.dataset.userIsStaff

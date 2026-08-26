@@ -17,14 +17,14 @@ function SearchSortBar({
     <div id="property-sort-wrapper">
       <div className="bg-deepOcean py-3">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-3 md:mb-0">
+          <div className="flex flex-col lg:flex-row justify-between items-center">
+            <div className="flex items-center mb-3 lg:mb-0">
               <span className="font-ermilov text-lg md:text-xl text-creamBeige">
                 Знайдено {totalCount} об&apos;єктів
               </span>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-3 md:gap-5">
+            <div className="flex flex-col lg:flex-row items-center gap-3 lg:gap-5">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-creamBeige font-ermilov text-lg md:text-xl">Сортування</span>
                 <div className="relative" data-react-dropdown>
@@ -98,6 +98,8 @@ function SearchSortBar({
                   <button
                     type="button"
                     className="dropdown-trigger"
+                    aria-label="Вибрати валюту"
+                    aria-expanded={openDropdown === 'currency'}
                     onClick={(event) => {
                       event.stopPropagation()
                       onToggleDropdown?.('currency')
@@ -111,6 +113,7 @@ function SearchSortBar({
                       <button
                         key={option.code}
                         type="button"
+                        aria-label={`Показувати ціни у ${option.label}`}
                         className={`dropdown-item w-full text-left ${currency === option.code ? 'active' : ''}`}
                         onClick={() => onCurrencyChange?.(option.code)}
                       >

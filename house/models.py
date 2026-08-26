@@ -188,15 +188,9 @@ class Property(models.Model):
 
         # Генеруємо slug, якщо він ще не встановлений
         if not self.slug:
-            slug_generators = [
-                self.generate_semantic_slug,
-                self.generate_data_driven_slug,
-                self.generate_branded_slug,
-            ]
-            base_slug = random.choice(slug_generators)()
+            base_slug = self.generate_data_driven_slug()
             slug = base_slug
             n = 1
-            # Перевірка на унікальність slug у базі
             while Property.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug = f"{base_slug}-{n}"
                 n += 1
@@ -347,16 +341,8 @@ class PropertyImage(models.Model):
             self.sort_order = (max_order or 0) + 1
 
         if self.image and not self.image.name.endswith(".webp"):
-            original_path = self.image.path
-            # 2. конвертуємо, але формуємо ім’я зі «шляхом» через upload_to
-            filename = os.path.basename(self.image.name)  # це «ім’я.розширення»
+            filename = os.path.basename(self.image.name)
             self.image = self.convert_to_webp(self.image, filename)
-
-            if os.path.exists(original_path):
-                try:
-                    os.remove(original_path)
-                except Exception as e:
-                    print(f"⚠️ Помилка при видаленні {original_path}: {e}")
 
         super().save(*args, **kwargs)
 

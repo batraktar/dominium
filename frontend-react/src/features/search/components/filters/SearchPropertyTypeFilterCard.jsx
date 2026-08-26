@@ -41,7 +41,7 @@ function SearchPropertyTypeFilterCard({
             {propertyTypes.map((propertyType) => (
               <label
                 key={propertyType.id}
-                className="flex font-fixel text-deepOcean items-center cursor-pointer p-3 hover:bg-gray-50 rounded"
+                className="flex font-fixel text-black items-center cursor-pointer p-3 hover:bg-gray-50 rounded"
               >
                 <div className="custom-checkbox">
                   <input

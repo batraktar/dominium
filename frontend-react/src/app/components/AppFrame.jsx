@@ -31,15 +31,14 @@ function AppFrame({
 
       <div className="fade-in dominium-shell">
         <div id="scroll-container" className="dominium-scroll-container">
-          {!isSearchRoute ? (
-            <MainHeader
-              userIsStaff={userIsStaff}
-              userIsAuthenticated={userIsAuthenticated}
-              userDisplayName={userDisplayName}
-              onLogout={onLogout}
-              googleAuthUrl={googleAuthUrl}
-            />
-          ) : null}
+          <MainHeader
+            userIsStaff={userIsStaff}
+            userIsAuthenticated={userIsAuthenticated}
+            userDisplayName={userDisplayName}
+            onLogout={onLogout}
+            googleAuthUrl={googleAuthUrl}
+            className={isSearchRoute ? 'hidden lg:block' : ''}
+          />
 
           <main
             id="main-content"

@@ -51,6 +51,7 @@ export default function useSearchPageController({ userIsAuthenticated = false })
     setResults: resultsDataState.setResults,
     setTotalCount: resultsDataState.setTotalCount,
     setTotalPages: resultsDataState.setTotalPages,
+    setExchangeRates: resultsDataState.setExchangeRates,
     setPage: filterState.setPage,
   })
 

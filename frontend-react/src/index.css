@@ -19,7 +19,7 @@ body {
   --dominium-floating-offset: calc(var(--dominium-mobile-nav-height) + 16px);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   :root {
     --dominium-header-offset: 88px;
     --dominium-mobile-nav-height: 0px;
@@ -41,9 +41,26 @@ body {
 }
 
 .dominium-main--home,
-.dominium-main--search,
 .dominium-main--bare {
   padding-top: 0;
+}
+
+.dominium-main--search {
+  padding-top: 0;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --dominium-search-header-offset: 74px;
+  }
+
+  .dominium-main--search {
+    padding-top: var(--dominium-search-header-offset);
+  }
+
+  .search-header-bar {
+    top: var(--dominium-search-header-offset);
+  }
 }
 
 .dominium-main--with-header {

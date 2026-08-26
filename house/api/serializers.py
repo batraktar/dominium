@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -61,6 +62,23 @@ def serialize_image(image_obj, request=None) -> dict:
     }
 
 
+def format_property_address(property_obj) -> str:
+    address = str(getattr(property_obj, "address", "") or "").strip()
+    if not address:
+        return ""
+
+    title = str(getattr(property_obj, "title", "") or "")
+    locality_match = re.search(
+        r"(?:^|\s)[ув]\s+(?:м\.?|місті|с\.?|селі|смт\.?)\s*"
+        r"([А-ЯІЇЄҐ][а-яіїєґ'’-]+(?:\s+[А-ЯІЇЄҐ][а-яіїєґ'’-]+)?)",
+        title,
+    )
+    locality = locality_match.group(1).strip() if locality_match else ""
+    if not locality or locality.casefold() in address.casefold():
+        return address
+    return f"{locality}, {address}"
+
+
 def serialize_property(property_obj, request=None) -> dict:
     images = [serialize_image(image, request) for image in property_obj.images.all()]
     main_image_url = next(
@@ -69,8 +87,15 @@ def serialize_property(property_obj, request=None) -> dict:
     )
     price_amount = float(property_obj.price) if property_obj.price is not None else None
 
+    is_staff_request = bool(
+        request
+        and getattr(request, "user", None)
+        and request.user.is_authenticated
+        and request.user.is_staff
+    )
+
     client = None
-    if hasattr(property_obj, "client") and property_obj.client:
+    if is_staff_request and hasattr(property_obj, "client") and property_obj.client:
         c = property_obj.client
         client = {
             "id": c.id,
@@ -82,7 +107,7 @@ def serialize_property(property_obj, request=None) -> dict:
 
     crm_url = None
     ext = getattr(property_obj, "external_sources", None)
-    if ext:
+    if is_staff_request and ext:
         ext_rel = ext.filter(source="realtsoft").first()
         if ext_rel:
             crm_url = ext_rel.crm_url
@@ -93,6 +118,7 @@ def serialize_property(property_obj, request=None) -> dict:
         "slug": property_obj.slug,
         "description": property_obj.description,
         "address": property_obj.address,
+        "display_address": format_property_address(property_obj),
         "latitude": property_obj.latitude,
         "longitude": property_obj.longitude,
         "location": LocationSerializer(
@@ -102,6 +128,16 @@ def serialize_property(property_obj, request=None) -> dict:
         ).as_dict(),
         "price": price_amount,
         "price_info": PriceInfoSerializer(amount=price_amount).as_dict(),
+        "display_price": getattr(property_obj, "display_price", price_amount),
+        "display_currency_code": getattr(
+            property_obj, "display_currency_code", "USD"
+        ),
+        "display_currency_symbol": getattr(
+            property_obj, "display_currency_symbol", "$"
+        ),
+        "other_currency_values": getattr(
+            property_obj, "other_currency_values", []
+        ),
         "area": property_obj.area,
         "rooms": property_obj.rooms,
         "created_at": (
@@ -121,7 +157,7 @@ def serialize_property(property_obj, request=None) -> dict:
             if hasattr(property_obj, "get_absolute_url")
             else None
         ),
-        "client": client,
-        "crm_url": crm_url,
+        "client": client if is_staff_request else None,
+        "crm_url": crm_url if is_staff_request else None,
         "external_source": getattr(property_obj, "external_source", ""),
     }

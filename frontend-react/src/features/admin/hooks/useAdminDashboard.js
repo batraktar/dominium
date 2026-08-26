@@ -2,39 +2,50 @@ import { useState, useEffect, useCallback } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
 
-const STATS_ENDPOINT = '/api/properties/?page_size=1'
+const EMPTY_STATS = {
+  total: 0,
+  active: 0,
+  archived: 0,
+  featured: 0,
+  total_images: 0,
+  total_clients: 0,
+  avg_price: 0,
+  avg_area: 0,
+  monthly: [],
+  by_type: [],
+  by_deal: [],
+}
 
 function useAdminDashboard() {
   const [stats, setStats] = useState({
-    totalProperties: 0,
-    totalImages: 0,
-    activeProperties: 0,
-    archivedProperties: 0,
+    ...EMPTY_STATS,
     loading: true,
     error: null,
   })
 
   const loadStats = useCallback(async () => {
-    setStats(prev => ({ ...prev, loading: true, error: null }))
+    setStats((previous) => ({ ...previous, loading: true, error: null }))
+
     try {
-      const [activeRes, archivedRes] = await Promise.all([
-        apiClient.get(apiEndpoints.properties, { query: { page_size: 1, status: 'active' } }),
-        apiClient.get(apiEndpoints.properties, { query: { page_size: 1, status: 'archived' } }),
-      ])
+      const response = await apiClient.get(apiEndpoints.stats)
       setStats({
-        totalProperties: (activeRes.data?.count || 0) + (archivedRes.data?.count || 0),
-        activeProperties: activeRes.data?.count || 0,
-        archivedProperties: archivedRes.data?.count || 0,
-        totalImages: 0,
+        ...EMPTY_STATS,
+        ...(response.data || {}),
         loading: false,
         error: null,
       })
     } catch (error) {
-      setStats(prev => ({ ...prev, loading: false, error: error.message }))
+      setStats((previous) => ({
+        ...previous,
+        loading: false,
+        error: error?.message || 'Не вдалося завантажити статистику.',
+      }))
     }
   }, [])
 
-  useEffect(() => { loadStats() }, [loadStats])
+  useEffect(() => {
+    loadStats()
+  }, [loadStats])
 
   return { stats, refreshStats: loadStats }
 }

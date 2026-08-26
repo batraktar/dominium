@@ -50,6 +50,7 @@ function SearchTopControlsSection({
   handleCurrencyChange,
   selectedCurrencyMeta,
   todayDate,
+  exchangeRates,
 }) {
   return (
     <>
@@ -107,7 +108,11 @@ function SearchTopControlsSection({
         currencyOptions={CURRENCY_OPTIONS}
       />
 
-      <SearchCurrencyInfoCard selectedCurrencyMeta={selectedCurrencyMeta} todayDate={todayDate} />
+      <SearchCurrencyInfoCard
+        selectedCurrencyMeta={selectedCurrencyMeta}
+        todayDate={todayDate}
+        exchangeRates={exchangeRates}
+      />
     </>
   )
 }

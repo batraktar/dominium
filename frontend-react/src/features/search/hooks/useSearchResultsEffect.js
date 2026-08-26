@@ -19,6 +19,7 @@ export default function useSearchResultsEffect({
   setResults,
   setTotalCount,
   setTotalPages,
+  setExchangeRates,
   setPage,
 }) {
   useEffect(() => {
@@ -68,6 +69,10 @@ export default function useSearchResultsEffect({
         setResults(payloadResults)
         setTotalCount(Number(payload?.count || 0))
         setTotalPages(Math.max(Number(payload?.total_pages || 1), 1))
+        setExchangeRates({
+          USD: Number(payload?.exchange_rates?.USD) || null,
+          EUR: Number(payload?.exchange_rates?.EUR) || null,
+        })
 
         const apiPage = Number(payload?.page || page)
         if (Number.isFinite(apiPage) && apiPage > 0 && apiPage !== page) {
@@ -111,5 +116,6 @@ export default function useSearchResultsEffect({
     setSearchError,
     setTotalCount,
     setTotalPages,
+    setExchangeRates,
   ])
 }

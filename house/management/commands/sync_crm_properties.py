@@ -77,24 +77,7 @@ def _safe_decimal(value: Any) -> Decimal | None:
         return None
 
 
-def _resolve_type(name: str | None) -> PropertyType | None:
-    if not name or not name.strip():
-        return None
-    normalized = name.strip()
-    obj = PropertyType.objects.filter(name__iexact=normalized).first()
-    if obj:
-        return obj
-    return PropertyType.objects.create(name=normalized)
-
-
-def _resolve_deal(name: str | None) -> DealType | None:
-    if not name or not name.strip():
-        return None
-    normalized = name.strip()
-    obj = DealType.objects.filter(name__iexact=normalized).first()
-    if obj:
-        return obj
-    return DealType.objects.create(name=normalized)
+from house.utils.resolve import resolve_property_type as _resolve_type, resolve_deal_type as _resolve_deal
 
 
 def _download_image(url: str, timeout: int = 10) -> bytes | None:
@@ -281,7 +264,7 @@ def _sync_client(raw_item: dict, crm_client, stdout, dry_run: bool = False) -> "
         },
     )
 
-    if created or not client_obj.name:
+    if (created or not client_obj.name) and crm_client is not None:
         try:
             response = crm_client.call("client/index", {"id": str(client_crm_id)})
             clients = response if isinstance(response, list) else response.get("data") or []

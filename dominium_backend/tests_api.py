@@ -13,7 +13,7 @@ from django.urls import reverse
 from PIL import Image
 
 from accounts.models import CustomUser
-from house.models import DealType, Property, PropertyImage, PropertyType
+from house.models import AppSettings, DealType, Property, PropertyImage, PropertyType
 from dominium_backend.seo_regions import CITY_LANDING_CONFIG
 from dominium_backend.views.common import get_client_ip
 
@@ -962,6 +962,108 @@ class AdminImageUploadSecurityTest(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json().get("error"), "forbidden")
 
+    def test_non_staff_cannot_mutate_admin_image_endpoints(self):
+        image_buffer = BytesIO()
+        Image.new("RGB", (12, 12), color=(120, 120, 120)).save(
+            image_buffer, format="JPEG"
+        )
+        image_buffer.seek(0)
+        image = PropertyImage.objects.create(
+            property=self.property,
+            image=ContentFile(image_buffer.getvalue(), name="existing.jpg"),
+        )
+        non_staff = CustomUser.objects.create_user(
+            username="image_non_staff",
+            email="image-non-staff@example.com",
+            password="pass12345",
+        )
+        self.client.force_login(non_staff)
+
+        upload_response = self.client.post(self.images_url, data={})
+        self.assertEqual(upload_response.status_code, 403)
+        self.assertEqual(upload_response.json().get("error"), "forbidden")
+
+        patch_response = self.client.patch(
+            reverse("house_api:property_image_detail", args=[image.id]),
+            data=json.dumps({"is_main": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(patch_response.status_code, 403)
+        self.assertEqual(patch_response.json().get("error"), "forbidden")
+
+        reorder_response = self.client.post(
+            reverse("house_api:property_images_reorder", args=[self.property.id]),
+            data=json.dumps({"order": [image.id]}),
+            content_type="application/json",
+        )
+        self.assertEqual(reorder_response.status_code, 403)
+        self.assertEqual(reorder_response.json().get("error"), "forbidden")
+
+    def test_non_staff_cannot_write_admin_settings_endpoints(self):
+        non_staff = CustomUser.objects.create_user(
+            username="settings_non_staff",
+            email="settings-non-staff@example.com",
+            password="pass12345",
+        )
+        self.client.force_login(non_staff)
+
+        settings_response = self.client.post(
+            reverse("house_api:app_settings"),
+            data=json.dumps({"key": "crm", "value": {"enabled": True}}),
+            content_type="application/json",
+        )
+        self.assertEqual(settings_response.status_code, 403)
+        self.assertEqual(settings_response.json().get("error"), "forbidden")
+
+        templates_response = self.client.post(
+            reverse("house_api:telegram_templates"),
+            data=json.dumps({"action": "save", "templates": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(templates_response.status_code, 403)
+        self.assertEqual(templates_response.json().get("error"), "forbidden")
+
+    def test_admin_settings_and_clients_require_staff_for_reads(self):
+        anonymous = Client()
+
+        settings_response = anonymous.get(reverse("house_api:app_settings"))
+        clients_response = anonymous.get(reverse("house_api:clients_list"))
+
+        self.assertIn(settings_response.status_code, (401, 403))
+        self.assertIn(clients_response.status_code, (401, 403))
+
+    def test_staff_settings_read_redacts_secrets_and_blank_save_preserves_them(self):
+        AppSettings.set(
+            "crm",
+            {"url": "https://crm.example", "api_key": "key", "secret_key": "secret"},
+        )
+
+        read_response = self.staff_client.get(reverse("house_api:app_settings"))
+        crm = read_response.json()["result"]["crm"]
+        self.assertEqual(crm["api_key"], "")
+        self.assertEqual(crm["secret_key"], "")
+        self.assertTrue(crm["has_api_key"])
+        self.assertTrue(crm["has_secret_key"])
+
+        save_response = self.staff_client.post(
+            reverse("house_api:app_settings"),
+            data=json.dumps(
+                {
+                    "key": "crm",
+                    "value": {
+                        "url": "https://new.example",
+                        "api_key": "",
+                        "secret_key": "",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(save_response.status_code, 200)
+        saved = AppSettings.get("crm", {})
+        self.assertEqual(saved["api_key"], "key")
+        self.assertEqual(saved["secret_key"], "secret")
+
 
 class HighlightSettingsAuthorizationTest(TestCase):
     def setUp(self):
@@ -997,8 +1099,20 @@ class ApiAdminAccessTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
 
+        non_staff = CustomUser.objects.create_user(
+            username="non_staff_admin",
+            email="non-staff-admin@example.com",
+            password="pass12345",
+        )
+        self.client.force_login(non_staff)
+        resp_non_staff = self.client.get(url)
+        self.assertEqual(resp_non_staff.status_code, 404)
+
         staff = CustomUser.objects.create_user(
-            username="staff", password="pass12345", is_staff=True
+            username="staff",
+            email="staff-admin@example.com",
+            password="pass12345",
+            is_staff=True,
         )
         self.client.force_login(staff)
         resp_staff = self.client.get(url)

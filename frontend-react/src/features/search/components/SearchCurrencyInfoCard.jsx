@@ -1,4 +1,7 @@
-function SearchCurrencyInfoCard({ selectedCurrencyMeta, todayDate }) {
+function SearchCurrencyInfoCard({ selectedCurrencyMeta, todayDate, exchangeRates = {} }) {
+  const usdRate = exchangeRates.USD ? Number(exchangeRates.USD).toLocaleString('uk-UA') : '—'
+  const eurRate = exchangeRates.EUR ? Number(exchangeRates.EUR).toLocaleString('uk-UA') : '—'
+
   return (
     <section id="property-info" className="w-full max-w-[480px] sm:max-w-full mx-auto px-4 py-6">
       <div className="container mx-auto">
@@ -9,16 +12,16 @@ function SearchCurrencyInfoCard({ selectedCurrencyMeta, todayDate }) {
 
           <p className="text-sm text-deepOcean leading-snug hidden lg:block">
             Зараз ціни показані у {selectedCurrencyMeta.symbol} ({selectedCurrencyMeta.code}). Наведіть на
-            ціну, щоб побачити альтернативні валюти. Курси на {todayDate}: 1 USD = — грн, 1 EUR = — грн.
+            ціну, щоб побачити альтернативні валюти. Курси на {todayDate}: 1 USD = {usdRate} грн, 1 EUR = {eurRate} грн.
           </p>
 
           <p className="text-sm text-deepOcean leading-snug hidden md:block lg:hidden">
             Натисніть на ціну, щоб переглянути інші валюти. Поточна валюта: {selectedCurrencyMeta.symbol}{' '}
-            ({selectedCurrencyMeta.code}). Курси на {todayDate}: 1 USD = — грн, 1 EUR = — грн.
+            ({selectedCurrencyMeta.code}). Курси на {todayDate}: 1 USD = {usdRate} грн, 1 EUR = {eurRate} грн.
           </p>
 
           <p className="text-sm text-deepOcean leading-snug block md:hidden">
-            Тапніть по ціні для перегляду інших валют. Курси на {todayDate}: 1 USD = — грн, 1 EUR = — грн.
+            Тапніть по ціні для перегляду інших валют. Курси на {todayDate}: 1 USD = {usdRate} грн, 1 EUR = {eurRate} грн.
           </p>
         </div>
       </div>

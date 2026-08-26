@@ -4,6 +4,12 @@
   justify-content: space-between;
 }
 
+.price-converter:hover .currency-tooltip,
+.price-converter:focus-within .currency-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
 .filter-range .range-slider {
   -webkit-appearance: none;
   appearance: none;

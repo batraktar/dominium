@@ -53,6 +53,7 @@ export default function useSearchPageViewModel({
     handleCurrencyChange: actionHandlers.handleCurrencyChange,
     selectedCurrencyMeta: derivedState.selectedCurrencyMeta,
     todayDate,
+    exchangeRates: resultsDataState.exchangeRates,
     results: resultsDataState.results,
     isLoading: resultsDataState.isLoading,
     likedIds: uiState.likedIds,
