@@ -23,6 +23,7 @@ export const apiEndpoints = {
   logout: '/logout/',
   googleAuth: '/accounts/google/login/?process=login',
   appSettings: '/api/settings/',
+  realtsoftConnectionTest: '/api/settings/test/realtsoft/',
   telegramTemplates: '/api/telegram-templates/',
   propertyCities: '/api/property-cities/',
   clients: '/api/clients/',

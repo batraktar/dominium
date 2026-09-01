@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useAdminDashboard from '../hooks/useAdminDashboard.js'
 import AdminDashboard from '../components/AdminDashboard.jsx'
 import AdminPropertiesTable from '../components/AdminPropertiesTable.jsx'
@@ -16,6 +16,7 @@ function formatCount(value) {
 }
 
 function AdminNav({ activeTab, onTabChange, stats }) {
+  const activeButtonRef = useRef(null)
   const tabs = [
     {
       id: 'properties',
@@ -48,6 +49,15 @@ function AdminNav({ activeTab, onTabChange, stats }) {
     },
   ]
 
+  useEffect(() => {
+    const revealActiveTab = () => {
+      activeButtonRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' })
+    }
+    revealActiveTab()
+    window.addEventListener('resize', revealActiveTab)
+    return () => window.removeEventListener('resize', revealActiveTab)
+  }, [activeTab])
+
   return (
     <nav className="admin-tab-nav" aria-label="Розділи адмінки">
       {tabs.map((tab) => {
@@ -55,6 +65,7 @@ function AdminNav({ activeTab, onTabChange, stats }) {
 
         return (
           <button
+            ref={isActive ? activeButtonRef : null}
             key={tab.id}
             type="button"
             onClick={() => onTabChange(tab.id)}

@@ -304,8 +304,10 @@ function CityAutocomplete({ value, onChange }) {
 
 function SettingsTab() {
   const [activeSection, setActiveSection] = useState('general')
-  const [crmSettings, setCrmSettings] = useState({ url: '', api_key: '', secret_key: '', sync_interval: 30 })
+  const [crmSettings, setCrmSettings] = useState({ url: '', api_key: '', secret_key: '', enabled: false, sync_interval: 30 })
   const [tgSettings, setTgSettings] = useState({ bot_token: '', chat_id: '', enabled: false })
+  const [googleSettings, setGoogleSettings] = useState({ client_id: '', secret_key: '', has_secret_key: false, callback_url: '' })
+  const [systemSettings, setSystemSettings] = useState({})
   const [templates, setTemplates] = useState([])
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -340,6 +342,8 @@ function SettingsTab() {
       const d = s.data?.result || {}
       if (d.crm) setCrmSettings(p => ({ ...p, ...d.crm }))
       if (d.telegram) setTgSettings(p => ({ ...p, ...d.telegram }))
+      if (d.google) setGoogleSettings(p => ({ ...p, ...d.google }))
+      if (d.system) setSystemSettings(d.system)
       setTemplates(t.data?.results || [])
       setLogs(l.data?.result?.sync_logs || [])
     } catch (e) { setStatus({ type: 'error', message: e.message || 'Не вдалося завантажити налаштування' }) }
@@ -361,6 +365,8 @@ function SettingsTab() {
         const nextSettings = settingsResponse.data?.result || {}
         if (nextSettings.crm) setCrmSettings(p => ({ ...p, ...nextSettings.crm }))
         if (nextSettings.telegram) setTgSettings(p => ({ ...p, ...nextSettings.telegram }))
+        if (nextSettings.google) setGoogleSettings(p => ({ ...p, ...nextSettings.google }))
+        if (nextSettings.system) setSystemSettings(nextSettings.system)
       }
       setStatus({ type: 'success', message: 'Збережено' })
     } catch (e) { setStatus({ type: 'error', message: e.message || 'Не вдалося зберегти налаштування' }) }
@@ -370,8 +376,9 @@ function SettingsTab() {
   const testConnection = async () => {
     setTestingConnection(true); setConnectionResult(null); const s = Date.now()
     try {
-      const r = await apiClient.get(apiEndpoints.properties, { query: { page_size: 1 } })
-      setConnectionResult({ ok: true, msg: `API доступне. ${r.data?.count || 0} об'єктів.`, dur: `${Date.now() - s}ms` })
+      await apiClient.request(apiEndpoints.appSettings, { method: 'POST', json: { key: 'crm', value: crmSettings }, csrf: true })
+      const r = await apiClient.request(apiEndpoints.realtsoftConnectionTest, { method: 'POST', csrf: true })
+      setConnectionResult({ ok: true, msg: `Realtsoft відповідає. Отримано ${r.data?.result?.items_received || 0} об'єктів.`, dur: `${r.data?.result?.duration_ms || Date.now() - s}ms` })
     } catch (e) { setConnectionResult({ ok: false, msg: `Помилка: ${e.message}`, dur: `${Date.now() - s}ms` }) }
     finally { setTestingConnection(false) }
   }
@@ -384,6 +391,7 @@ function SettingsTab() {
   const settingsSections = [
     { id: 'general', label: 'Статус', icon: 'ri-dashboard-line' },
     { id: 'crm', label: 'CRM', icon: 'ri-cloud-line' },
+    { id: 'google', label: 'Google', icon: 'ri-google-line' },
     { id: 'telegram', label: 'Telegram', icon: 'ri-telegram-line' },
     { id: 'templates', label: 'Шаблони', icon: 'ri-chat-settings-line', count: templates.length },
     { id: 'logs', label: 'Історія', icon: 'ri-history-line', count: logs.length },
@@ -395,7 +403,7 @@ function SettingsTab() {
       <div className="settings-tab__header">
         <div>
           <h2 className="settings-tab__title"><i className="ri-settings-3-line"></i>Налаштування</h2>
-          <p className="settings-tab__subtitle">CRM, Telegram-сповіщення, шаблони повідомлень та історія синхронізації.</p>
+          <p className="settings-tab__subtitle">Realtsoft, Google, Telegram і стан production-конфігурації в одному місці.</p>
         </div>
         <button onClick={load} disabled={loading} className="admin-button admin-button--secondary">
           <i className={`ri-refresh-line ${loading ? 'admin-spin' : ''}`}></i>
@@ -413,9 +421,10 @@ function SettingsTab() {
         </div>
       )}
 
-      <div className="settings-tab__nav" aria-label="Розділи налаштувань">
+      <div className="settings-tab__nav" role="tablist" aria-label="Розділи налаштувань">
         {settingsSections.map(section => (
           <button key={section.id} onClick={() => setActiveSection(section.id)}
+            role="tab" aria-selected={activeSection === section.id}
             className={`settings-tab__nav-button ${activeSection === section.id ? 'is-active' : ''}`}>
             <span><i className={section.icon}></i>{section.label}</span>
             {section.count !== undefined && <small>{section.count}</small>}
@@ -446,6 +455,22 @@ function SettingsTab() {
                 <span>Telegram</span>
                 <strong>{tgSettings.enabled ? 'Увімкнено' : 'Вимкнено'}</strong>
                 <p>{tgSettings.chat_id ? 'Chat ID задано' : 'Chat ID не задано'}</p>
+              </div>
+            </div>
+            <div className="settings-status-card">
+              <i className="ri-google-line"></i>
+              <div>
+                <span>Google OAuth</span>
+                <strong>{googleSettings.client_id && googleSettings.has_secret_key ? 'Налаштовано' : 'Потрібні ключі'}</strong>
+                <p>Вхід через Google</p>
+              </div>
+            </div>
+            <div className="settings-status-card">
+              <i className="ri-server-line"></i>
+              <div>
+                <span>Production</span>
+                <strong>{systemSettings.production_mode ? 'Режим production' : 'Режим розробки'}</strong>
+                <p>{systemSettings.canonical_configured ? 'Canonical налаштовано' : 'Перевірте SEO canonical'}</p>
               </div>
             </div>
             <div className="settings-status-card">
@@ -494,6 +519,10 @@ function SettingsTab() {
                 <input type="url" value={crmSettings.url} onChange={e => setCrmSettings({ ...crmSettings, url: e.target.value })}
                   placeholder="https://crm-dominium.realtsoft.net" className="admin-input" />
               </label>
+              <label className="settings-toggle">
+                <input type="checkbox" checked={crmSettings.enabled} onChange={e => setCrmSettings({ ...crmSettings, enabled: e.target.checked })} />
+                <span>Увімкнути синхронізацію</span>
+              </label>
               <label className="admin-field">
                 <span>API Key</span>
                 <input type="text" value={crmSettings.api_key} onChange={e => setCrmSettings({ ...crmSettings, api_key: e.target.value })} className="admin-input" />
@@ -507,6 +536,7 @@ function SettingsTab() {
                 <select value={crmSettings.sync_interval} onChange={e => setCrmSettings({ ...crmSettings, sync_interval: Number(e.target.value) })} className="admin-select">
                   {[{ v: 15, l: '15 хв' }, { v: 30, l: '30 хв' }, { v: 60, l: '1 год' }, { v: 360, l: '6 год' }, { v: 1440, l: '1 день' }].map(i => <option key={i.v} value={i.v}>{i.l}</option>)}
                 </select>
+                <small>Встановіть такий самий інтервал для cron у панелі хостингу.</small>
               </label>
             </div>
           </div>
@@ -520,11 +550,50 @@ function SettingsTab() {
         </div>
       )}
 
+      {activeSection === 'google' && (
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>Google OAuth</h3>
+              <p>Ключі для входу через Google. Secret після збереження приховується.</p>
+            </div>
+            <span className={`settings-pill ${googleSettings.client_id && googleSettings.has_secret_key ? 'settings-pill--success' : ''}`}>
+              {googleSettings.client_id && googleSettings.has_secret_key ? 'Налаштовано' : 'Не завершено'}
+            </span>
+          </div>
+          <div className="settings-section__body">
+            <div className="admin-alert admin-alert--info">
+              <i className="ri-information-line" aria-hidden="true"></i>
+              <span>У Google Cloud додайте цей Authorized redirect URI: <code className="settings-callback-url">{googleSettings.callback_url || 'завантаження...'}</code></span>
+            </div>
+            <div className="admin-form-grid">
+              <label className="admin-field admin-form-grid__full">
+                <span>Google Client ID</span>
+                <input type="text" value={googleSettings.client_id} onChange={e => setGoogleSettings({ ...googleSettings, client_id: e.target.value })}
+                  placeholder="000000000000-xxxx.apps.googleusercontent.com" className="admin-input" autoComplete="off" />
+              </label>
+              <label className="admin-field admin-form-grid__full">
+                <span>Google Client Secret</span>
+                <input type="password" value={googleSettings.secret_key} onChange={e => setGoogleSettings({ ...googleSettings, secret_key: e.target.value })}
+                  placeholder={googleSettings.has_secret_key ? 'Secret уже збережено' : 'GOCSPX-...'} className="admin-input" autoComplete="new-password" />
+              </label>
+            </div>
+          </div>
+          <div className="settings-section__footer">
+            <button onClick={() => save('google', googleSettings)} disabled={saving}
+              className="admin-button admin-button--primary">
+              <i className={saving ? 'ri-loader-4-line admin-spin' : 'ri-save-line'}></i>
+              {saving ? 'Збереження...' : 'Зберегти Google'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {activeSection === 'telegram' && (
         <div className="settings-section">
           <div className="settings-section__header">
             <div>
-              <h3>Telegram connection</h3>
+              <h3>Підключення Telegram</h3>
               <p>Підключення бота і каналу для автоматичних повідомлень.</p>
             </div>
             <span className={`settings-pill ${tgSettings.enabled ? 'settings-pill--success' : ''}`}>
@@ -563,7 +632,7 @@ function SettingsTab() {
         <div className="settings-section">
           <div className="settings-section__header">
             <div>
-              <h3>Telegram templates</h3>
+              <h3>Шаблони Telegram</h3>
               <p>Окремі шаблони для подій CRM, що зберігаються через Telegram templates API.</p>
             </div>
             <button onClick={addTemplate} className="admin-button admin-button--secondary"><i className="ri-add-line"></i>Додати</button>
@@ -596,7 +665,7 @@ function SettingsTab() {
         <div className="settings-section">
           <div className="settings-section__header">
             <div>
-              <h3>Logs & history</h3>
+              <h3>Журнал та історія</h3>
               <p>Історія синхронізації зберігається у ключі sync_logs.</p>
             </div>
             <div className="settings-section__actions">

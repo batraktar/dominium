@@ -5,6 +5,11 @@ Dynamic settings loader that selects dev/prod configuration based on DJANGO_ENV.
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+from .env import load_env_file
+
+load_env_file(Path(__file__).resolve().parent.parent.parent / ".env")
 
 DJANGO_ENV = os.getenv("DJANGO_ENV", "dev").lower()
 

@@ -9,21 +9,12 @@ from pathlib import Path
 from typing import Iterable, List
 from urllib.parse import urlparse
 
+from .env import load_env_file
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
-def _load_env_file(path: Path) -> None:
-    """Populate os.environ from a simple KEY=VALUE .env file if present."""
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line or line.strip().startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip())
-
-
-_load_env_file(BASE_DIR / ".env")
+load_env_file(BASE_DIR / ".env")
 
 
 def env_list(
@@ -378,6 +369,8 @@ REALTSOFT_API_KEY = os.getenv("REALTSOFT_API_KEY", "").strip()
 REALTSOFT_SECRET_KEY = os.getenv("REALTSOFT_SECRET_KEY", "").strip()
 REALTSOFT_SYNC_ENABLED = env_bool("REALTSOFT_SYNC_ENABLED", False)
 REALTSOFT_DEFAULT_PER_PAGE = env_int("REALTSOFT_DEFAULT_PER_PAGE", 150) or 150
+REALTSOFT_TIMEOUT = env_int("REALTSOFT_TIMEOUT", REQUESTS_TIMEOUT) or REQUESTS_TIMEOUT
+REALTSOFT_VERIFY_SSL = env_bool("REALTSOFT_VERIFY_SSL", True)
 
 
 SANITIZE_ALLOWED_TAGS = env_list(

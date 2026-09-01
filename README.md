@@ -1,5 +1,7 @@
 # dominium-backend
 
+Налаштування зовнішніх інтеграцій на production: [docs/integrations-hosting.md](docs/integrations-hosting.md).
+
 Невеликий брокерський портал на Django з пошуком обʼєктів, імпортом презентацій,
 Google/Telegram авторизацією, збереженими пошуками та блоком “Топ 3” для головної.
 

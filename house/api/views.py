@@ -1,13 +1,16 @@
 import json
 import logging
 import os
+import time
 from decimal import Decimal, InvalidOperation
 
 import requests
+from allauth.socialaccount.models import SocialApp
 from django.conf import settings
 from django.core.cache import cache
 from django.core.paginator import EmptyPage, Paginator
 from django.db.models import Count, Q
+from django.contrib.sites.models import Site
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
@@ -55,6 +58,7 @@ from house.utils.network_security import (
 from house.utils.sanitization import sanitize_rich_text
 from house.utils.currency import get_exchange_rates
 from house.utils.html_parser import parse_property_html
+from house.services.realtsoft_client import RealtsoftAPIError, get_realtsoft_client
 from dominium_backend.seo_regions import collect_city_keywords, collect_region_keywords
 from dominium_backend.views.common import get_client_ip
 
@@ -1114,6 +1118,13 @@ def app_settings_view(request):
         return guard_response
 
     if request.method == "GET":
+        requested_key = request.GET.get("key", "").strip()
+        if requested_key == "sync_logs":
+            logs = AppSettings.get("sync_logs", [])
+            return JsonResponse(
+                {"result": {"sync_logs": logs if isinstance(logs, list) else []}}
+            )
+
         keys = ["crm", "telegram"]
         result = {}
         for key in keys:
@@ -1121,11 +1132,41 @@ def app_settings_view(request):
             if not isinstance(value, dict):
                 value = {}
             sanitized = dict(value)
+            if key == "crm":
+                sanitized.setdefault("url", settings.REALTSOFT_CRM_URL)
+                sanitized.setdefault("enabled", settings.REALTSOFT_SYNC_ENABLED)
+                sanitized.setdefault("sync_interval", 30)
+                sanitized.setdefault("api_key", settings.REALTSOFT_API_KEY)
+                sanitized.setdefault("secret_key", settings.REALTSOFT_SECRET_KEY)
             for secret_field in ("api_key", "secret_key", "bot_token"):
                 if secret_field in sanitized:
                     sanitized[f"has_{secret_field}"] = bool(sanitized[secret_field])
                     sanitized[secret_field] = ""
             result[key] = sanitized
+
+        google_app = (
+            SocialApp.objects.filter(provider="google", sites=settings.SITE_ID)
+            .order_by("id")
+            .first()
+        )
+        result["google"] = {
+            "client_id": google_app.client_id if google_app else "",
+            "secret_key": "",
+            "has_secret_key": bool(google_app and google_app.secret),
+            "callback_url": request.build_absolute_uri(
+                "/accounts/google/login/callback/"
+            ),
+        }
+        result["system"] = {
+            "production_mode": not settings.DEBUG,
+            "allowed_hosts_configured": bool(settings.ALLOWED_HOSTS),
+            "canonical_configured": bool(
+                settings.SEO_CANONICAL_HOST and settings.SEO_CANONICAL_SCHEME
+            ),
+            "email_configured": bool(
+                settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD
+            ),
+        }
         return JsonResponse({"result": result})
 
     payload = _parse_json(request)
@@ -1137,21 +1178,84 @@ def app_settings_view(request):
     if not key or value is None:
         return JsonResponse({"error": "Поля 'key' та 'value' обов'язкові."}, status=400)
 
-    if isinstance(value, dict):
-        existing = AppSettings.get(key, {})
-        if isinstance(existing, dict):
-            value = dict(value)
-            for secret_field in ("api_key", "secret_key", "bot_token"):
-                if secret_field in existing and not value.get(secret_field):
-                    value[secret_field] = existing[secret_field]
+    if key not in {"crm", "telegram", "google"} or not isinstance(value, dict):
+        return JsonResponse({"error": "Непідтримуваний розділ налаштувань."}, status=400)
+
+    if key == "google":
+        client_id = str(value.get("client_id") or "").strip()
+        secret_key = str(value.get("secret_key") or "").strip()
+        google_app = (
+            SocialApp.objects.filter(provider="google", sites=settings.SITE_ID)
+            .order_by("id")
+            .first()
+        )
+        if not client_id and google_app is None:
+            return JsonResponse({"error": "Google Client ID обов'язковий."}, status=400)
+        if google_app is None:
+            google_app = SocialApp.objects.create(
+                provider="google",
+                name="Google OAuth",
+                client_id=client_id,
+                secret=secret_key,
+            )
+            google_app.sites.add(Site.objects.get_current())
+        else:
+            google_app.client_id = client_id or google_app.client_id
+            if secret_key:
+                google_app.secret = secret_key
+            google_app.save(update_fields=["client_id", "secret"])
+        return JsonResponse({"status": "ok", "key": key})
+
+    existing = AppSettings.get(key, {})
+    if isinstance(existing, dict):
+        value = dict(value)
+        for secret_field in ("api_key", "secret_key", "bot_token"):
+            if secret_field in existing and not value.get(secret_field):
+                value[secret_field] = existing[secret_field]
 
     AppSettings.set(key, value)
     return JsonResponse({"status": "ok", "key": key})
 
 
+@require_http_methods(["POST"])
+def realtsoft_connection_test_view(request):
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
+
+    started_at = time.monotonic()
+    try:
+        client = get_realtsoft_client()
+        response = client.search_estate(page=1, per_page=1)
+    except RealtsoftAPIError as exc:
+        return JsonResponse(
+            {"error": str(exc), "status_code": exc.status_code},
+            status=502,
+        )
+
+    items = (
+        response
+        if isinstance(response, list)
+        else response.get("data") or response.get("items") or []
+    )
+    return JsonResponse(
+        {
+            "result": {
+                "ok": True,
+                "items_received": len(items),
+                "duration_ms": round((time.monotonic() - started_at) * 1000),
+            }
+        }
+    )
+
+
 @require_http_methods(["GET", "POST"])
 def telegram_templates_view(request):
     from house.models import TelegramNotificationTemplate
+
+    guard_response = _ensure_staff_only(request)
+    if guard_response:
+        return guard_response
 
     if request.method == "GET":
         templates = TelegramNotificationTemplate.objects.all().order_by("sort_order", "name")

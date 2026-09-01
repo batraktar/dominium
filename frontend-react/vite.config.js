@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const backendTarget = env.VITE_BACKEND_URL || 'http://localhost:8000'
 
   return {
+    base: '/static/',
     plugins: [react()],
     build: {
       manifest: true,

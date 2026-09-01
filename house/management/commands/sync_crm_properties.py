@@ -24,6 +24,7 @@ from house.models import (
 from house.services.realtsoft_client import (
     RealtsoftAPIError,
     get_realtsoft_client,
+    is_realtsoft_sync_enabled,
 )
 from house.utils.sanitization import sanitize_rich_text
 
@@ -312,7 +313,7 @@ class Command(BaseCommand):
         per_page = min(options["per_page"], 150)
         max_pages = options["max_pages"]
 
-        if not getattr(settings, "REALTSOFT_SYNC_ENABLED", False) and not dry_run:
+        if not is_realtsoft_sync_enabled() and not dry_run:
             self.stderr.write(self.style.WARNING("REALTSOFT_SYNC_ENABLED=0. Sync зупинено."))
             return
 
@@ -337,9 +338,7 @@ class Command(BaseCommand):
             try:
                 response = client.search_estate(page=page, per_page=per_page)
             except RealtsoftAPIError as exc:
-                self.stderr.write(self.style.ERROR(f"Помилка API на сторінці {page}: {exc}"))
-                error_count += 1
-                break
+                raise CommandError(f"Помилка API на сторінці {page}: {exc}") from exc
 
             items = response if isinstance(response, list) else response.get("data") or response.get("items") or []
 

@@ -1152,6 +1152,15 @@
   font-weight: 700;
 }
 
+.settings-callback-url {
+  display: block;
+  margin-top: 4px;
+  color: inherit;
+  font-family: inherit;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .settings-log-row {
   display: flex;
   align-items: flex-start;
