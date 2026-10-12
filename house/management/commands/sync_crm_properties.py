@@ -9,7 +9,7 @@ import requests
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 from PIL import Image as PILImage
 from io import BytesIO
 
@@ -41,10 +41,21 @@ REALTY_TYPE_MAP = {
     "14": "Об'єкт сфери харчування",
     "15": "Об'єкт сфери обслуговування",
     "16": "Інший об'єкт",
+    "19": "Комерційна нерухомість",
     "20": "Земля під інд. будівництво",
     "21": "Земля під сад, город",
     "22": "Земля сільгосппризначення",
     "23": "Земля комерційного призначення",
+}
+
+COMMERCIAL_REALTY_TYPE_IDS = {"10", "11", "12", "13", "14", "15", "16", "19", "23"}
+
+CITY_NAME_MAP = {
+    "2891": "Мукачево",
+    "2943": "Ужгород",
+    "2970": "Горінчово",
+    "2976": "Хуст",
+    "43914": "Іза",
 }
 
 DEAL_TYPE_MAP = {
@@ -126,6 +137,27 @@ def _extract_crm_images(item: dict) -> list[str]:
             images.append(preview)
     
     return images
+
+
+def _should_import(item: dict) -> bool:
+    deal_id = str(item.get("deal") or "")
+    realty_type_id = str(item.get("realty_type") or "")
+    return deal_id == "1" or (
+        deal_id == "2" and realty_type_id in COMMERCIAL_REALTY_TYPE_IDS
+    )
+
+
+def _prepare_images(crm_id: int, image_urls: list[str]) -> list[ContentFile]:
+    prepared = []
+    for idx, url in enumerate(image_urls[:20]):
+        image_bytes = _download_image(url, timeout=10)
+        if not image_bytes:
+            continue
+        webp_content = _convert_to_webp(image_bytes, f"crm_{crm_id}_{idx}")
+        if webp_content:
+            prepared.append(webp_content)
+            break
+    return prepared
 
 
 def _text_to_html(text: str) -> str:
@@ -230,9 +262,13 @@ def _safe_float(value) -> float | None:
 
 def _build_address_parts(item: dict) -> list[str]:
     parts = []
+    city = CITY_NAME_MAP.get(str(item.get("city_id") or ""), "")
     street = str(item.get("street_name") or "").strip()
     house_num = str(item.get("house_num") or "").strip()
     apartment = str(item.get("apartment") or "").strip()
+
+    if city:
+        parts.append(city)
 
     if street:
         addr = street
@@ -307,11 +343,36 @@ class Command(BaseCommand):
             default=0,
             help="Макс. кількість сторінок (0 = без обмежень).",
         )
+        parser.add_argument(
+            "--new-only",
+            action="store_true",
+            help="Імпортувати лише нові об'єкти й зупинитися на відомих CRM ID.",
+        )
 
     def handle(self, *args, **options):
+        lock_id = 731946281
+        lock_acquired = False
+        if connection.vendor == "postgresql":
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_try_advisory_lock(%s)", [lock_id])
+                lock_acquired = cursor.fetchone()[0]
+
+        if connection.vendor == "postgresql" and not lock_acquired:
+            self.stdout.write(self.style.WARNING("Realtsoft sync вже виконується. Повторний запуск пропущено."))
+            return
+
+        try:
+            return self._run_sync(*args, **options)
+        finally:
+            if lock_acquired:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT pg_advisory_unlock(%s)", [lock_id])
+
+    def _run_sync(self, *args, **options):
         dry_run = options["dry_run"]
         per_page = min(options["per_page"], 150)
         max_pages = options["max_pages"]
+        new_only = options["new_only"]
 
         if not is_realtsoft_sync_enabled() and not dry_run:
             self.stderr.write(self.style.WARNING("REALTSOFT_SYNC_ENABLED=0. Sync зупинено."))
@@ -324,10 +385,26 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.HTTP_INFO("Починаю sync з Realtsoft CRM..."))
 
+        known_through_id = 0
+        if new_only:
+            known_through_id = (
+                ExternalProperty.objects.filter(source="realtsoft")
+                .order_by("-crm_property_id")
+                .values_list("crm_property_id", flat=True)
+                .first()
+                or 0
+            )
+            if not known_through_id:
+                self.stdout.write(self.style.WARNING(
+                    "--new-only пропущено: спочатку потрібен базовий повний імпорт."
+                ))
+                return
+
         created_count = 0
         updated_count = 0
         unchanged_count = 0
         error_count = 0
+        skipped_count = 0
         page = 1
         total_fetched = 0
 
@@ -345,11 +422,21 @@ class Command(BaseCommand):
             if not items:
                 break
 
+            item_ids = [_safe_int(item.get("id")) for item in items]
+            known_ids = [crm_id for crm_id in item_ids if crm_id]
+            if new_only and known_ids and all(
+                crm_id <= known_through_id for crm_id in known_ids
+            ):
+                self.stdout.write(f"  Сторінка {page}: усі ID вже відомі, перевірку завершено")
+                break
+
             self.stdout.write(f"  Сторінка {page}: {len(items)} об'єктів")
 
             for item in items:
                 crm_id = item.get("id")
                 if crm_id is None:
+                    continue
+                if new_only and _safe_int(crm_id) <= known_through_id:
                     continue
 
                 try:
@@ -360,6 +447,8 @@ class Command(BaseCommand):
                         updated_count += 1
                     elif result == "unchanged":
                         unchanged_count += 1
+                    elif result == "skipped":
+                        skipped_count += 1
                 except Exception as exc:
                     error_count += 1
                     self.stderr.write(
@@ -377,7 +466,8 @@ class Command(BaseCommand):
         summary = (
             f"\nSync завершено: отримано {total_fetched}, "
             f"створено {created_count}, оновлено {updated_count}, "
-            f"без змін {unchanged_count}, помилок {error_count}"
+            f"без змін {unchanged_count}, пропущено {skipped_count}, "
+            f"помилок {error_count}"
         )
 
         if dry_run:
@@ -387,6 +477,10 @@ class Command(BaseCommand):
 
     def _sync_single_item(self, client, item: dict, dry_run: bool) -> str:
         crm_id = int(item["id"])
+
+        if not _should_import(item) or not _extract_crm_images(item):
+            return "skipped"
+
         mapped = _map_crm_item_to_property(item)
 
         existing_ext = (
@@ -399,17 +493,22 @@ class Command(BaseCommand):
             return self._update_existing(existing_ext, mapped, item, dry_run)
         else:
             crm_url = f"{client.url}/estate/{crm_id}"
-            return self._create_new(crm_id, mapped, item, dry_run, crm_url)
+            return self._create_new(client, crm_id, mapped, item, dry_run, crm_url)
 
-    def _create_new(self, crm_id: int, mapped: dict, raw_item: dict, dry_run: bool, crm_url: str = "") -> str:
+    def _create_new(self, crm_client, crm_id: int, mapped: dict, raw_item: dict, dry_run: bool, crm_url: str = "") -> str:
         if dry_run:
             self.stdout.write(f"  [DRY RUN] Створю: CRM#{crm_id} — {mapped['title'][:60]}")
             return "created"
 
+        prepared_images = _prepare_images(crm_id, mapped["images"])
+        if not prepared_images:
+            self.stdout.write(self.style.WARNING(f"  Пропущено CRM#{crm_id}: немає доступного фото"))
+            return "skipped"
+
         with transaction.atomic():
             property_type = _resolve_type(mapped["property_type_name"])
             deal_type = _resolve_deal(mapped["deal_type_name"])
-            client = _sync_client(raw_item, client, self.stdout, dry_run)
+            client = _sync_client(raw_item, crm_client, self.stdout, dry_run)
 
             property_obj = Property(
                 title=mapped["title"],
@@ -438,7 +537,13 @@ class Command(BaseCommand):
                 source="realtsoft",
             )
 
-            self._sync_images(property_obj, mapped["images"], dry_run)
+            for idx, webp_content in enumerate(prepared_images):
+                PropertyImage.objects.create(
+                    property=property_obj,
+                    image=webp_content,
+                    is_main=idx == 0,
+                    sort_order=idx + 1,
+                )
 
         self.stdout.write(f"  Створено: CRM#{crm_id} — {mapped['title'][:60]}")
         return "created"
@@ -496,9 +601,7 @@ class Command(BaseCommand):
         ext.save(update_fields=["raw_data", "sync_status", "last_synced"])
 
         has_images = PropertyImage.objects.filter(property=property_obj).exists()
-        needs_images = not has_images or PropertyImage.objects.filter(property=property_obj).count() < len(mapped.get("images", []))
-        
-        if needs_images:
+        if not has_images:
             self._sync_images(property_obj, mapped["images"], dry_run=False)
 
         if changed:
@@ -538,6 +641,7 @@ class Command(BaseCommand):
                 sort_order=existing_count + idx + 1,
             )
             downloaded += 1
+            break
 
         if downloaded:
             self.stdout.write(f"    Завантажено {downloaded} зображень")

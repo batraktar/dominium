@@ -1,13 +1,19 @@
 import json
-from io import BytesIO
+from io import BytesIO, StringIO
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
+from django.core.management import call_command
 from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from PIL import Image, ImageDraw
 
 from accounts.models import CustomUser
+from house.management.commands.sync_crm_properties import (
+    Command as RealtsoftSyncCommand,
+    _build_address_parts,
+    _should_import,
+)
 from house.models import DealType, Property, PropertyImage, PropertyType
 from house.services.importer import import_property_from_url
 from house.services.search import apply_currency_display
@@ -576,3 +582,71 @@ class PropertyModelGeoBehaviorTest(TestCase):
         )
         self.assertIsNone(property_obj.latitude)
         self.assertIsNone(property_obj.longitude)
+
+
+class RealtsoftSyncTest(TestCase):
+    def test_imports_sales_and_only_commercial_rentals(self):
+        self.assertTrue(_should_import({"deal": 1, "realty_type": 1}))
+        self.assertTrue(_should_import({"deal": 2, "realty_type": 10}))
+        self.assertFalse(_should_import({"deal": 2, "realty_type": 1}))
+        self.assertFalse(_should_import({"deal": 3, "realty_type": 10}))
+
+    def test_address_uses_crm_city_before_street(self):
+        self.assertEqual(
+            _build_address_parts(
+                {"city_id": 2943, "street_name": "Занковецька", "house_num": "71"}
+            ),
+            ["Ужгород", "Занковецька, 71"],
+        )
+
+    @patch(
+        "house.management.commands.sync_crm_properties._download_image",
+        return_value=None,
+    )
+    def test_new_property_is_not_created_when_no_photo_can_be_downloaded(self, _download):
+        mapped = {
+            "title": "Об'єкт без доступного фото",
+            "description": "",
+            "address": "Ужгород",
+            "price": 100,
+            "area": 10,
+            "rooms": 1,
+            "latitude": None,
+            "longitude": None,
+            "property_type_name": "Квартира",
+            "deal_type_name": "Продаж",
+            "price_currency": "USD",
+            "images": ["https://cdn.example.invalid/photo.jpg"],
+        }
+
+        result = RealtsoftSyncCommand()._create_new(
+            Mock(url="https://crm.example.invalid"),
+            123,
+            mapped,
+            {"id": 123},
+            False,
+        )
+
+        self.assertEqual(result, "skipped")
+        self.assertFalse(Property.objects.exists())
+
+
+class RealtsoftDailyReportTest(TestCase):
+    @override_settings(TELEGRAM_BOT_TOKEN="test-token")
+    @patch("house.management.commands.report_crm_daily.requests.Session")
+    def test_daily_report_is_sent_to_each_configured_chat(self, session_factory):
+        response = Mock()
+        response.json.return_value = {"ok": True}
+        client = Mock()
+        client.post.return_value = response
+        http_context = MagicMock()
+        http_context.__enter__.return_value = client
+        session_factory.return_value = http_context
+
+        with patch.dict("os.environ", {"TELEGRAM_REPORT_CHAT_IDS": "11,22"}):
+            call_command("report_crm_daily", stdout=StringIO())
+
+        sent_chat_ids = [
+            call.kwargs["json"]["chat_id"] for call in client.post.call_args_list
+        ]
+        self.assertEqual(sent_chat_ids, [11, 22])
