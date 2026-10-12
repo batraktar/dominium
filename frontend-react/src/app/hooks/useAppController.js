@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useAuthActions from '../../features/auth/hooks/useAuthActions.js'
 import useConsultationForm from '../../features/home/hooks/useConsultationForm.js'
 import useHomeFeaturedProperties from '../../features/home/hooks/useHomeFeaturedProperties.js'
@@ -25,11 +25,39 @@ export default function useAppController() {
     isNotFoundRoute,
   } = getRouteFlags(currentPathname)
 
-  const [userIsStaff] = useState(() => readBodyBoolDataset('userIsStaff'))
-  const [userIsAuthenticated] = useState(() => readBodyBoolDataset('userIsAuthenticated'))
-  const [userDisplayName] = useState(() => readBodyStringDataset('userDisplayName'))
-  const [userEmail] = useState(() => readBodyStringDataset('userEmail'))
-  const [userPhone] = useState(() => readBodyStringDataset('userPhone'))
+  const [userIsStaff, setUserIsStaff] = useState(() => readBodyBoolDataset('userIsStaff'))
+  const [userIsAuthenticated, setUserIsAuthenticated] = useState(() => readBodyBoolDataset('userIsAuthenticated'))
+  const [userDisplayName, setUserDisplayName] = useState(() => readBodyStringDataset('userDisplayName'))
+  const [userEmail, setUserEmail] = useState(() => readBodyStringDataset('userEmail'))
+  const [userPhone, setUserPhone] = useState(() => readBodyStringDataset('userPhone'))
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    fetch(apiEndpoints.authSession, {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Auth session request failed: ${response.status}`)
+        return response.json()
+      })
+      .then((session) => {
+        setUserIsAuthenticated(Boolean(session.is_authenticated))
+        setUserIsStaff(Boolean(session.is_staff))
+        setUserDisplayName(session.display_name || '')
+        setUserEmail(session.email || '')
+        setUserPhone(session.phone || '')
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          console.error('Could not load authentication session', error)
+        }
+      })
+
+    return () => controller.abort()
+  }, [])
 
   const featuredProperties = useHomeFeaturedProperties({
     enabled: isHomeRoute,

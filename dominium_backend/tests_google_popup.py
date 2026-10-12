@@ -5,6 +5,51 @@ from django.urls import reverse
 from allauth.socialaccount.models import SocialApp
 
 
+class AuthSessionViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="session-user",
+            email="session@example.com",
+            password="StrongPass123!",
+            full_name="Session User",
+            phone_number="+380501234567",
+        )
+
+    def test_anonymous_session_is_uncached_and_contains_no_user_data(self):
+        response = self.client.get(reverse("auth_session"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertIn("Cookie", response["Vary"])
+        self.assertEqual(
+            response.json(),
+            {
+                "is_authenticated": False,
+                "is_staff": False,
+                "display_name": "",
+                "email": "",
+                "phone": "",
+            },
+        )
+
+    def test_authenticated_session_returns_user_for_static_spa(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("auth_session"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "is_authenticated": True,
+                "is_staff": False,
+                "display_name": "Session User",
+                "email": "session@example.com",
+                "phone": "+380501234567",
+            },
+        )
+
+
 class GooglePopupCompleteViewTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(

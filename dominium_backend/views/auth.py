@@ -46,6 +46,25 @@ def _normalize_popup_state(raw_state: str | None) -> str:
 
 @require_GET
 @never_cache
+def auth_session(request):
+    user = request.user
+    is_authenticated = bool(user.is_authenticated)
+    response = JsonResponse(
+        {
+            "is_authenticated": is_authenticated,
+            "is_staff": bool(is_authenticated and user.is_staff),
+            "display_name": user.display_name if is_authenticated else "",
+            "email": user.email if is_authenticated else "",
+            "phone": user.phone_number if is_authenticated else "",
+        }
+    )
+    response["Cache-Control"] = "no-store"
+    response["Vary"] = "Cookie"
+    return response
+
+
+@require_GET
+@never_cache
 def google_popup_start(request):
     next_path = _normalize_next_path(request.GET.get("next"), default="/")
     opener_origin = _normalize_origin(request.GET.get("parent_origin"))

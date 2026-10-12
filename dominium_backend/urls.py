@@ -64,6 +64,7 @@ urlpatterns = [
         public_views.interactive_map_test_data,
         name="interactive_map_test_data",
     ),
+    path("api/auth/session/", auth_views.auth_session, name="auth_session"),
     path("api/", include("house.api.urls")),
     path(
         "accounts/google-popup-start/",

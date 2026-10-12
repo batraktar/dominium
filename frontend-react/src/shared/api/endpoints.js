@@ -1,4 +1,5 @@
 export const apiEndpoints = {
+  authSession: '/api/auth/session/',
   csrf: '/api/csrf/',
   properties: '/api/properties/',
   propertyItem: (propertyId) => `/api/properties/${encodeURIComponent(propertyId)}/`,
