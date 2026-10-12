@@ -1,4 +1,13 @@
 .git
+.env
+.env.*
+!.env.example
+!.env.docker.example
+backups/
+dominium-vm/
+node_modules/
+frontend-react/node_modules/
+.debug-journal.md
 __pycache__/
 *.pyc
 venv
