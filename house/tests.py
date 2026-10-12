@@ -1,8 +1,10 @@
 import json
 from io import BytesIO, StringIO
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
+from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
@@ -12,9 +14,10 @@ from accounts.models import CustomUser
 from house.management.commands.sync_crm_properties import (
     Command as RealtsoftSyncCommand,
     _build_address_parts,
+    _prepare_images,
     _should_import,
 )
-from house.models import DealType, Property, PropertyImage, PropertyType
+from house.models import DealType, ExternalProperty, Property, PropertyImage, PropertyType
 from house.services.importer import import_property_from_url
 from house.services.search import apply_currency_display
 from house.utils.html_parser import parse_property_html
@@ -585,6 +588,13 @@ class PropertyModelGeoBehaviorTest(TestCase):
 
 
 class RealtsoftSyncTest(TestCase):
+    def setUp(self):
+        media_dir = TemporaryDirectory()
+        self.addCleanup(media_dir.cleanup)
+        media_settings = override_settings(MEDIA_ROOT=media_dir.name)
+        media_settings.enable()
+        self.addCleanup(media_settings.disable)
+
     def test_imports_sales_and_only_commercial_rentals(self):
         self.assertTrue(_should_import({"deal": 1, "realty_type": 1}))
         self.assertTrue(_should_import({"deal": 2, "realty_type": 10}))
@@ -598,6 +608,107 @@ class RealtsoftSyncTest(TestCase):
             ),
             ["Ужгород", "Занковецька, 71"],
         )
+
+    @patch(
+        "house.management.commands.sync_crm_properties._download_image",
+        return_value=b"image",
+    )
+    @patch("house.management.commands.sync_crm_properties._convert_to_webp")
+    def test_prepares_all_available_crm_images(self, convert_image, download_image):
+        convert_image.side_effect = lambda _data, name: ContentFile(
+            b"webp", name=f"{name}.webp"
+        )
+        urls = [
+            "https://cdn.example/1.jpg",
+            "https://cdn.example/2.jpg",
+            "https://cdn.example/3.jpg",
+        ]
+
+        prepared = _prepare_images(123, urls)
+
+        self.assertEqual(len(prepared), 3)
+        self.assertEqual(download_image.call_count, 3)
+        self.assertEqual(
+            [image.name for image in prepared],
+            ["crm_123_0.webp", "crm_123_1.webp", "crm_123_2.webp"],
+        )
+
+    @patch(
+        "house.management.commands.sync_crm_properties._download_image",
+        return_value=b"image",
+    )
+    @patch("house.management.commands.sync_crm_properties._convert_to_webp")
+    def test_existing_property_gets_missing_images_without_redownloading_existing_ones(
+        self, convert_image, download_image
+    ):
+        property_type = PropertyType.objects.create(name="Квартира", slug="flat")
+        deal_type = DealType.objects.create(name="Продаж")
+        property_obj = Property.objects.create(
+            title="Фото тест",
+            address="Ужгород",
+            price=100,
+            area=50,
+            rooms=2,
+            property_type=property_type,
+            deal_type=deal_type,
+            external_source="realtsoft",
+            external_id="123",
+        )
+        # Старі синхронізації іменували фото локальним ID об'єкта.
+        PropertyImage.objects.create(
+            property=property_obj,
+            image=f"property_images/crm_{property_obj.id}_0.webp",
+            is_main=True,
+            sort_order=1,
+        )
+        external = ExternalProperty.objects.create(
+            crm_property_id=123,
+            property=property_obj,
+            source="realtsoft",
+        )
+        convert_image.side_effect = lambda _data, name: ContentFile(
+            b"webp", name=f"{name}.webp"
+        )
+        mapped = {
+            "title": property_obj.title,
+            "description": property_obj.description,
+            "address": property_obj.address,
+            "price": property_obj.price,
+            "area": property_obj.area,
+            "rooms": property_obj.rooms,
+            "latitude": property_obj.latitude,
+            "longitude": property_obj.longitude,
+            "price_currency": property_obj.price_currency,
+            "property_type_name": property_type.name,
+            "deal_type_name": deal_type.name,
+            "images": [
+                "https://cdn.example/1.jpg",
+                "https://cdn.example/2.jpg",
+                "https://cdn.example/3.jpg",
+            ],
+        }
+
+        command = RealtsoftSyncCommand()
+        self.assertEqual(command._update_existing(external, mapped, {"id": 123}, False), "unchanged")
+
+        self.assertEqual(
+            list(
+                PropertyImage.objects.filter(property=property_obj)
+                .order_by("sort_order")
+                .values_list("sort_order", flat=True)
+            ),
+            [1, 2, 3],
+        )
+        self.assertEqual(download_image.call_count, 2)
+        self.assertEqual(
+            [call.args[0] for call in download_image.call_args_list],
+            mapped["images"][1:],
+        )
+
+        download_image.reset_mock()
+        self.assertEqual(command._update_existing(external, mapped, {"id": 123}, False), "unchanged")
+        self.assertEqual(download_image.call_count, 0)
+        self.assertEqual(PropertyImage.objects.filter(property=property_obj).count(), 3)
 
     @patch(
         "house.management.commands.sync_crm_properties._download_image",

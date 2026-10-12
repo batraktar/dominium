@@ -156,7 +156,6 @@ def _prepare_images(crm_id: int, image_urls: list[str]) -> list[ContentFile]:
         webp_content = _convert_to_webp(image_bytes, f"crm_{crm_id}_{idx}")
         if webp_content:
             prepared.append(webp_content)
-            break
     return prepared
 
 
@@ -600,9 +599,7 @@ class Command(BaseCommand):
         ext.sync_status = "synced"
         ext.save(update_fields=["raw_data", "sync_status", "last_synced"])
 
-        has_images = PropertyImage.objects.filter(property=property_obj).exists()
-        if not has_images:
-            self._sync_images(property_obj, mapped["images"], dry_run=False)
+        self._sync_images(property_obj, mapped["images"], dry_run=False)
 
         if changed:
             self.stdout.write(f"  Оновлено: CRM#{ext.crm_property_id} — {mapped['title'][:60]}")
@@ -617,31 +614,45 @@ class Command(BaseCommand):
         existing_images = set(
             PropertyImage.objects.filter(property=property_obj).values_list("image", flat=True)
         )
-
-        existing_count = len(existing_images)
+        existing_names = {
+            image.rsplit("/", 1)[-1]
+            for image in existing_images
+        }
+        crm_id = property_obj.external_id or str(property_obj.id)
 
         downloaded = 0
         for idx, url in enumerate(image_urls[:20]):
+            expected_prefixes = (
+                f"crm_{crm_id}_{idx}",
+                f"crm_{property_obj.id}_{idx}",
+            )
+            if any(
+                name == f"{prefix}.webp" or name.startswith(f"{prefix}_")
+                for name in existing_names
+                for prefix in expected_prefixes
+            ):
+                continue
+
             image_bytes = _download_image(url, timeout=10)
             if not image_bytes:
                 continue
 
-            webp_content = _convert_to_webp(image_bytes, f"crm_{property_obj.id}_{idx}")
+            webp_content = _convert_to_webp(image_bytes, f"crm_{crm_id}_{idx}")
             if not webp_content:
                 continue
 
-            if webp_content.name in existing_images:
+            if webp_content.name in existing_names:
                 continue
 
-            is_main = idx == 0 and existing_count == 0
+            is_main = idx == 0
             PropertyImage.objects.create(
                 property=property_obj,
                 image=webp_content,
                 is_main=is_main,
-                sort_order=existing_count + idx + 1,
+                sort_order=idx + 1,
             )
+            existing_names.add(webp_content.name)
             downloaded += 1
-            break
 
         if downloaded:
             self.stdout.write(f"    Завантажено {downloaded} зображень")
