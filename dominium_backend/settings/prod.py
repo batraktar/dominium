@@ -38,7 +38,7 @@ ACCOUNT_EMAIL_VERIFICATION = os.getenv("DJANGO_ACCOUNT_EMAIL_VERIFICATION", "man
 ACCOUNT_EMAIL_REQUIRED = env_bool("DJANGO_ACCOUNT_EMAIL_REQUIRED", True)
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 SOCIALACCOUNT_LOGIN_ON_GET = env_bool("DJANGO_SOCIALACCOUNT_LOGIN_ON_GET", False)
-SOCIALACCOUNT_AUTO_SIGNUP = env_bool("DJANGO_SOCIALACCOUNT_AUTO_SIGNUP", False)
+SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # Use console email backend only if explicitly requested in production.
 if EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":

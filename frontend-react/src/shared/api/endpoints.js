@@ -21,7 +21,7 @@ export const apiEndpoints = {
   consultation: '/consultation/',
   login: '/login/',
   logout: '/logout/',
-  googleAuth: '/accounts/google/login/?process=login',
+  googleAuth: '/accounts/google-popup-start/',
   appSettings: '/api/settings/',
   realtsoftConnectionTest: '/api/settings/test/realtsoft/',
   telegramTemplates: '/api/telegram-templates/',

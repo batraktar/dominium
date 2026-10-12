@@ -313,6 +313,17 @@ SOCIALACCOUNT_PROVIDERS = {
         "AUTH_PARAMS": {"access_type": "offline"},
     }
 }
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    # Use environment credentials as a fallback when no Google SocialApp exists
+    # in Django admin. A visible database SocialApp takes precedence.
+    SOCIALACCOUNT_PROVIDERS["google"]["APPS"] = [
+        {
+            "client_id": GOOGLE_CLIENT_ID,
+            "secret": GOOGLE_CLIENT_SECRET,
+            "key": "",
+            "settings": {"hidden": True},
+        }
+    ]
 
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -412,6 +423,9 @@ X_PERMITTED_CROSS_DOMAIN_POLICIES = os.getenv(
     "DJANGO_X_PERMITTED_CROSS_DOMAIN_POLICIES", "none"
 ).strip()
 ORIGIN_AGENT_CLUSTER = os.getenv("DJANGO_ORIGIN_AGENT_CLUSTER", "?1").strip()
+SECURE_CROSS_ORIGIN_OPENER_POLICY = os.getenv(
+    "DJANGO_CROSS_ORIGIN_OPENER_POLICY", "same-origin-allow-popups"
+).strip()
 
 CONTENT_SECURITY_POLICY = os.getenv(
     "DJANGO_CONTENT_SECURITY_POLICY",
@@ -424,7 +438,7 @@ CONTENT_SECURITY_POLICY = os.getenv(
     "frame-src 'none'; "
     "object-src 'none'; "
     "base-uri 'self'; "
-    "form-action 'self'; "
+    "form-action 'self' https://accounts.google.com; "
     "frame-ancestors 'self';",
 )
 CSP_STRICT_REPORT_ONLY = env_bool("DJANGO_CSP_STRICT_REPORT_ONLY", True)

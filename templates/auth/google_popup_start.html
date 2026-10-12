@@ -1,0 +1,56 @@
+{% load socialaccount %}
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>DOMINIUM - Вхід через Google</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        box-sizing: border-box;
+        background: #133e44;
+        color: #133e44;
+        font-family: FixelText, Arial, sans-serif;
+      }
+      main {
+        width: min(100%, 380px);
+        padding: 28px;
+        border-radius: 16px;
+        background: #fff;
+        text-align: center;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, .2);
+      }
+      p { margin: 10px 0 0; color: #758f8e; line-height: 1.5; }
+      button {
+        margin-top: 22px;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 20px;
+        background: #133e44;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <strong>Підключаємо Google…</strong>
+      <p>Після входу це вікно закриється автоматично.</p>
+      <form method="post" action="{% provider_login_url 'google' process='login' next=callback_url %}">
+        {% csrf_token %}
+        <button type="submit">Продовжити через Google</button>
+      </form>
+    </main>
+    <script nonce="{{ request.csp_nonce }}">
+      document.querySelector('form').requestSubmit();
+    </script>
+  </body>
+</html>

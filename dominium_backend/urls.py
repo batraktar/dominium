@@ -65,12 +65,17 @@ urlpatterns = [
         name="interactive_map_test_data",
     ),
     path("api/", include("house.api.urls")),
-    path("accounts/", include("allauth.urls")),
     path(
-        "auth/popup-complete/",
+        "accounts/google-popup-start/",
+        auth_views.google_popup_start,
+        name="google_popup_start",
+    ),
+    path(
+        "accounts/google-popup-complete/",
         auth_views.google_popup_complete,
         name="google_popup_complete",
     ),
+    path("accounts/", include("allauth.urls")),
     path(
         "property/<slug:slug>/",
         spa_views.property_detail_spa,

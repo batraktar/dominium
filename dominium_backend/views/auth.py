@@ -1,10 +1,11 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 
 from accounts.models import Favorite
@@ -44,6 +45,36 @@ def _normalize_popup_state(raw_state: str | None) -> str:
 
 
 @require_GET
+@never_cache
+def google_popup_start(request):
+    next_path = _normalize_next_path(request.GET.get("next"), default="/")
+    opener_origin = _normalize_origin(request.GET.get("parent_origin"))
+    popup_state = _normalize_popup_state(request.GET.get("popup_state"))
+    if popup_state and not opener_origin:
+        opener_origin = _normalize_origin(request.build_absolute_uri("/"))
+
+    callback_url = next_path
+    if popup_state:
+        completion_path = reverse("google_popup_complete")
+        callback_query = urlencode(
+            {
+                "next": next_path,
+                "parent_origin": opener_origin,
+                "popup_state": popup_state,
+            }
+        )
+        callback_url = f"{completion_path}?{callback_query}"
+    response = render(
+        request,
+        "auth/google_popup_start.html",
+        {"callback_url": callback_url},
+    )
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@require_GET
+@never_cache
 def google_popup_complete(request):
     next_path = _normalize_next_path(request.GET.get("next"), default="/")
     opener_origin = _normalize_origin(request.GET.get("parent_origin"))
@@ -56,6 +87,7 @@ def google_popup_complete(request):
     }
     response = render(request, "auth/google_popup_complete.html", context)
     response["X-Robots-Tag"] = "noindex, nofollow"
+    response["Cache-Control"] = "no-store"
     return response
 
 

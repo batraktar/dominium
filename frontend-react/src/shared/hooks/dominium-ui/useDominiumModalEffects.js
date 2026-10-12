@@ -13,7 +13,7 @@ export default function useDominiumModalEffects({
     const timeouts = []
     let googleAuthPopup = null
     let googleAuthMonitor = null
-    let googleAuthReloaded = false
+    let googleAuthExpiry = null
     let googleAuthState = ''
 
     const setLoginNextValue = (rawNext) => {
@@ -74,16 +74,14 @@ export default function useDominiumModalEffects({
 
     const buildGoogleAuthUrl = (rawAuthUrl, popupState = '') => {
       const fallbackPath = normalizeNextPath(getCurrentPathWithQuery(), '/')
-      let popupCompletePath = `/auth/popup-complete/?next=${encodeURIComponent(fallbackPath)}&parent_origin=${encodeURIComponent(window.location.origin)}`
-      if (popupState) {
-        popupCompletePath += `&popup_state=${encodeURIComponent(popupState)}`
-      }
       const source = String(rawAuthUrl || googleAuthUrl || '').trim()
       if (!source) return ''
 
       try {
         const url = new URL(source, window.location.origin)
-        url.searchParams.set('next', popupCompletePath)
+        url.searchParams.set('next', fallbackPath)
+        url.searchParams.set('parent_origin', window.location.origin)
+        url.searchParams.set('popup_state', popupState)
         return url.toString()
       } catch {
         return source
@@ -97,7 +95,16 @@ export default function useDominiumModalEffects({
       }
     }
 
+    const clearGoogleAuthExpiry = () => {
+      if (googleAuthExpiry) {
+        window.clearTimeout(googleAuthExpiry)
+        googleAuthExpiry = null
+      }
+    }
+
     const closeGooglePopup = () => {
+      clearGoogleMonitor()
+      clearGoogleAuthExpiry()
       if (googleAuthPopup && !googleAuthPopup.closed) {
         googleAuthPopup.close()
       }
@@ -106,6 +113,7 @@ export default function useDominiumModalEffects({
     }
 
     const openGooglePopup = (authUrl) => {
+      clearGoogleAuthExpiry()
       const popupState = createPopupState()
       googleAuthState = popupState
       const resolvedAuthUrl = buildGoogleAuthUrl(authUrl, popupState)
@@ -122,11 +130,13 @@ export default function useDominiumModalEffects({
 
       const popup = window.open(resolvedAuthUrl, 'dominium-google-auth', features)
       googleAuthPopup = popup
-      googleAuthReloaded = false
       clearGoogleMonitor()
 
       if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-        window.location.href = resolvedAuthUrl
+        const fallbackUrl = new URL(resolvedAuthUrl)
+        fallbackUrl.searchParams.delete('parent_origin')
+        fallbackUrl.searchParams.delete('popup_state')
+        window.location.assign(fallbackUrl.toString())
         return
       }
 
@@ -134,9 +144,11 @@ export default function useDominiumModalEffects({
       googleAuthMonitor = window.setInterval(() => {
         if (!popup.closed) return
         clearGoogleMonitor()
-        if (!googleAuthReloaded) {
-          window.location.reload()
-        }
+        googleAuthPopup = null
+        googleAuthExpiry = window.setTimeout(() => {
+          googleAuthState = ''
+          googleAuthExpiry = null
+        }, 5 * 60 * 1000)
       }, 400)
     }
 
@@ -184,25 +196,18 @@ export default function useDominiumModalEffects({
     window.addEventListener('dominium:auth-required', onAuthRequired)
     cleanups.push(() => window.removeEventListener('dominium:auth-required', onAuthRequired))
 
-    const onAuthPopupMessage = (event) => {
-      if (!googleAuthPopup || event.source !== googleAuthPopup) return
-      const payload = event.data
+    const handleGoogleAuthResult = (payload) => {
       if (
         payload &&
         typeof payload === 'object' &&
-        payload.state &&
-        googleAuthState &&
         payload.state !== googleAuthState
       ) {
         return
       }
-      const isSuccess =
-        payload === 'dominium-auth-success' ||
-        (payload && typeof payload === 'object' && payload.type === 'dominium-auth-success')
+      const isSuccess = payload && typeof payload === 'object' && payload.type === 'dominium-auth-success'
       const isFailure = payload && typeof payload === 'object' && payload.type === 'dominium-auth-failed'
 
       if (isFailure) {
-        googleAuthReloaded = true
         const nextFromPayload = payload && typeof payload === 'object' ? payload.next : ''
         const nextPath = normalizeNextPath(nextFromPayload, getCurrentPathWithQuery())
         closeGooglePopup()
@@ -214,7 +219,6 @@ export default function useDominiumModalEffects({
 
       const nextFromPayload = payload && typeof payload === 'object' ? payload.next : ''
       const nextPath = normalizeNextPath(nextFromPayload, getCurrentPathWithQuery())
-      googleAuthReloaded = true
       closeModal('login')
       closeModal('register')
       closeGooglePopup()
@@ -224,8 +228,30 @@ export default function useDominiumModalEffects({
         window.location.reload()
       }
     }
+
+    const onAuthPopupMessage = (event) => {
+      if (
+        !googleAuthPopup ||
+        event.source !== googleAuthPopup ||
+        event.origin !== window.location.origin
+      ) return
+      handleGoogleAuthResult(event.data)
+    }
+
+    const onAuthPopupStorage = (event) => {
+      if (!googleAuthState || event.key !== `dominium:google-auth:${googleAuthState}`) return
+      try {
+        handleGoogleAuthResult(JSON.parse(event.newValue || 'null'))
+        window.localStorage.removeItem(event.key)
+      } catch {
+        setLoginError('Не вдалося завершити вхід через Google. Спробуйте ще раз.')
+      }
+    }
+
     window.addEventListener('message', onAuthPopupMessage)
     cleanups.push(() => window.removeEventListener('message', onAuthPopupMessage))
+    window.addEventListener('storage', onAuthPopupStorage)
+    cleanups.push(() => window.removeEventListener('storage', onAuthPopupStorage))
 
     if (!authQueryHandledRef.current) {
       const searchParams = new URLSearchParams(window.location.search)

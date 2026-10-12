@@ -50,9 +50,9 @@
               if (referrerOrigin) return referrerOrigin;
             }
           } catch (_) {
-            return "*";
+            return "";
           }
-          return "*";
+          return "";
         };
 
         const notifyParent = () => {
@@ -64,31 +64,44 @@
 
           if (popupState) {
             payload.state = popupState;
+          } else {
+            return false;
           }
 
           const targetOrigin = resolveTargetOrigin();
+          if (!targetOrigin) return false;
           try {
             window.opener.postMessage(payload, targetOrigin);
             return true;
           } catch (_) {
-            try {
-              window.opener.postMessage(payload, "*");
-              return true;
-            } catch (__){
-              return false;
-            }
+            return false;
+          }
+        };
+
+        const notifySameOriginWindow = () => {
+          if (!popupState) return false;
+          try {
+            const storageKey = `dominium:google-auth:${popupState}`;
+            localStorage.setItem(storageKey, JSON.stringify({
+              type: authSuccess ? "dominium-auth-success" : "dominium-auth-failed",
+              next: nextPath,
+              state: popupState,
+            }));
+            return true;
+          } catch (_) {
+            return false;
           }
         };
 
         const parentNotified = notifyParent();
-        const hasOpener = Boolean(window.opener && window.opener !== window);
+        const sameOriginWindowNotified = notifySameOriginWindow();
 
-        if (hasOpener) {
+        if (parentNotified || sameOriginWindowNotified) {
           window.setTimeout(() => window.close(), 120);
           window.setTimeout(() => window.close(), 350);
         }
 
-        if (!hasOpener || !parentNotified) {
+        if (!parentNotified && !sameOriginWindowNotified) {
           if (authSuccess) {
             window.location.replace(nextPath);
             return;
