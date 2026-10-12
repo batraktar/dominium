@@ -123,6 +123,11 @@ make dev-frontend
 
 ## Продакшн
 
+Для окремого React SPA, яке віддає зовнішній Nginx з кореня сайту, збирай frontend
+командою `cd frontend-react && npm run build:production`: вона створює URL `/assets/...`
+і використовує публічний `/favicon.svg`. Звичайний `npm run build` залишено для Django-
+інтеграції через `/static/`.
+
 ```bash
 export DJANGO_ENV=prod
 export DJANGO_SECRET_KEY="..."
