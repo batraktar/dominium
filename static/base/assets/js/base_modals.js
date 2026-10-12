@@ -141,14 +141,11 @@
       if (!source) return "";
 
       const fallbackPath = normalizeNextPath(getCurrentPathWithQuery(), "/");
-      let popupCompletePath = `/auth/popup-complete/?next=${encodeURIComponent(fallbackPath)}&parent_origin=${encodeURIComponent(window.location.origin)}`;
-      if (popupState) {
-        popupCompletePath += `&popup_state=${encodeURIComponent(popupState)}`;
-      }
-
       try {
         const url = new URL(source, window.location.origin);
-        url.searchParams.set("next", popupCompletePath);
+        url.searchParams.set("next", fallbackPath);
+        url.searchParams.set("parent_origin", window.location.origin);
+        url.searchParams.set("popup_state", popupState);
         return url.toString();
       } catch (_) {
         return source;
@@ -205,14 +202,16 @@
     }
 
     window.addEventListener("message", (event) => {
-      if (!googleAuthPopup || event.source !== googleAuthPopup) return;
+      if (
+        !googleAuthPopup ||
+        event.source !== googleAuthPopup ||
+        event.origin !== window.location.origin
+      ) return;
 
       const payload = event.data;
       if (
         payload &&
         typeof payload === "object" &&
-        payload.state &&
-        googleAuthState &&
         payload.state !== googleAuthState
       ) {
         return;

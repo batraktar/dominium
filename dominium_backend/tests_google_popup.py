@@ -118,3 +118,13 @@ class GooglePopupStartViewTests(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn("next=%2Fsearch%2F%3Fdeal%3Dsale", content)
         self.assertNotIn("google-popup-complete", content)
+
+    def test_homepage_google_buttons_use_popup_start_bridge(self):
+        response = self.client.get(reverse("start_page"))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        self.assertGreaterEqual(
+            content.count('data-auth-url="/accounts/google-popup-start/"'), 3
+        )
+        self.assertNotIn("/auth/popup-complete/", content)

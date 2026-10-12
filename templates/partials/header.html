@@ -48,7 +48,7 @@
           <button
             type="button"
             data-google-auth
-            data-auth-url="{% provider_login_url 'google' process='login' %}"
+            data-auth-url="{% url 'google_popup_start' %}"
             class="ml-2 text-sm text-primary border border-primary px-4 py-1.5 rounded-button hover:bg-primary hover:text-white transition"
           >
             Зареєструватися

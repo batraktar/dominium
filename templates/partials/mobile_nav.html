@@ -29,7 +29,7 @@
         <span class="text-xs mt-1">Вийти</span>
       </button>
     {% else %}
-      <button type="button" data-google-auth data-auth-url="{% provider_login_url 'google' process='login' %}" class="flex flex-col items-center text-deepOcean hover:text-coolSage">
+      <button type="button" data-google-auth data-auth-url="{% url 'google_popup_start' %}" class="flex flex-col items-center text-deepOcean hover:text-coolSage">
         <i class="ri-user-add-line ri-lg text-deepOcean"></i>
         <span class="text-xs mt-1">Реєстрація</span>
       </button>
