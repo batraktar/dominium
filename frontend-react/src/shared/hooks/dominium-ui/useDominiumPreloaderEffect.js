@@ -12,7 +12,6 @@ export default function useDominiumPreloaderEffect() {
       preloader.classList.add('opacity-0', 'pointer-events-none')
       const removeTimeout = window.setTimeout(() => {
         preloader.remove()
-        document.body.classList.remove('overflow-hidden')
       }, 700)
       timeouts.push(removeTimeout)
     }

@@ -460,12 +460,10 @@ html {
 }
 
 #scroll-container {
-    height: 100vh;
-    overflow-y: auto;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: auto;
+    min-height: 100vh;
+    height: auto;
+    overflow-x: clip;
+    overscroll-behavior: auto;
     padding-bottom: 120px;
 }
 

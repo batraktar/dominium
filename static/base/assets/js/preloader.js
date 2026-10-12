@@ -3,14 +3,12 @@
     if (!preloader) return;
     if (immediate) {
       preloader.remove();
-      document.body.classList.remove("overflow-hidden");
       return;
     }
 
     preloader.classList.add("opacity-0", "pointer-events-none");
     window.setTimeout(() => {
       preloader.remove();
-      document.body.classList.remove("overflow-hidden");
     }, 700);
   }
 
