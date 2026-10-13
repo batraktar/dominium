@@ -33,9 +33,17 @@ function PropertyContactForm({
           placeholder="Номер телефону"
           value={contactPhone}
           onChange={onContactPhoneChange}
+          inputMode="tel"
+          maxLength={20}
+          pattern="\+?[0-9\s\(\)\-]{9,20}"
+          title="Введіть номер довжиною 9–20 символів, наприклад +380 67 123 45 67."
+          aria-describedby="contact-phone-hint"
           className="w-full px-4 py-2 border border-gray-200 rounded focus:outline-none focus:border-primary placeholder:text-coolSage placeholder:font-fixel"
           required
         />
+        <p id="contact-phone-hint" className="mt-1 text-xs text-gray-600">
+          Формат: +380 67 123 45 67 (до 20 символів).
+        </p>
       </div>
       <div>
         <input
