@@ -249,6 +249,11 @@ class SearchPageSmokeTest(TestCase):
         self.assertNotIn("gclid=abc", content)
         self.assertIn("index, follow", response.headers.get("X-Robots-Tag", ""))
 
+    def test_home_references_cache_busted_logout_script(self):
+        response = self.client.get(reverse("start_page"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("base_modals.js?v=20261013-logout", response.content.decode())
+
     def test_interactive_map_test_data_endpoint_returns_points(self):
         property_type = PropertyType.objects.create(
             name="Квартира", slug="map-flat-data"
