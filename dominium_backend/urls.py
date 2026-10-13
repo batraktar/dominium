@@ -66,6 +66,11 @@ urlpatterns = [
     ),
     path("api/auth/session/", auth_views.auth_session, name="auth_session"),
     path("api/like/<int:property_id>/", auth_views.toggle_like, name="toggle_like_api"),
+    path(
+        "api/consultation/",
+        public_views.consultation_view,
+        name="consultation_api",
+    ),
     path("api/", include("house.api.urls")),
     path(
         "accounts/google-popup-start/",

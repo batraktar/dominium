@@ -53,6 +53,12 @@ class AuthApiProxyRoutesTest(TestCase):
     CONSULTATION_RATE_WINDOW=60,
 )
 class ConsultationEndpointTest(TestCase):
+    def test_consultation_api_alias_reaches_post_handler(self):
+        response = Client().post("/api/consultation/", data={})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json().get("status"), "error")
+
     @patch("dominium_backend.views.public.requests.post")
     def test_consultation_ok_and_rate_limit(self, mock_post):
         mock_response = Mock()
@@ -68,12 +74,12 @@ class ConsultationEndpointTest(TestCase):
             "property": "https://example.com/property/1",
         }
 
-        ok_response = client.post(reverse("consultation"), data=payload)
+        ok_response = client.post(reverse("consultation_api"), data=payload)
         self.assertEqual(ok_response.status_code, 200)
         self.assertEqual(ok_response.json().get("status"), "ok")
         mock_post.assert_called_once()
 
-        rate_limited = client.post(reverse("consultation"), data=payload)
+        rate_limited = client.post(reverse("consultation_api"), data=payload)
         self.assertEqual(rate_limited.status_code, 429)
         self.assertIn("надто часто", rate_limited.json().get("message", ""))
 

@@ -64,7 +64,7 @@ function HomeContactSection({
           </div>
           <form
             method="post"
-            action="/consultation/"
+            action="/api/consultation/"
             onSubmit={onContactSubmit}
             className="rounded-lg bg-coolSage shadow-lg p-5 sm:p-6 md:p-8 w-full min-w-0"
           >

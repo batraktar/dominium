@@ -19,7 +19,7 @@ export const apiEndpoints = {
   likeProperty: (propertyId) => `/api/like/${propertyId}/`,
   toggleFeatured: (propertyId) => `/properties/${propertyId}/toggle-featured/`,
   interactiveMapData: '/test/map/interactive/data/',
-  consultation: '/consultation/',
+  consultation: '/api/consultation/',
   login: '/api/auth/login/',
   logout: '/api/auth/logout/',
   googleAuth: '/accounts/google/login/',
