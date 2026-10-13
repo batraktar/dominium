@@ -173,3 +173,17 @@ class GooglePopupStartViewTests(TestCase):
             content.count('data-auth-url="/accounts/google-popup-start/"'), 3
         )
         self.assertNotIn("/auth/popup-complete/", content)
+
+    def test_google_login_confirmation_uses_dominium_popup_template(self):
+        with self.settings(SOCIALACCOUNT_LOGIN_ON_GET=False):
+            response = self.client.get(
+                "/accounts/google/login/",
+                {"process": "login", "next": "/search/"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8")
+        self.assertIn("Вхід через Google", content)
+        self.assertIn("DOMINIUM", content)
+        self.assertIn("background: radial-gradient", content)
+        self.assertIn('name="csrfmiddlewaretoken"', content)

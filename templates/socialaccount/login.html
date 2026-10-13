@@ -1,0 +1,73 @@
+{% extends "socialaccount/base_entrance.html" %}
+{% load static i18n allauth %}
+
+{% block head_title %}Вхід через Google — DOMINIUM{% endblock %}
+
+{% block extra_head %}
+  <meta name="robots" content="noindex,nofollow" />
+  <style>
+    :root { color-scheme: light; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      box-sizing: border-box;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, #1c555a, #102d32 72%);
+      color: #173f43;
+      font: 16px/1.5 FixelText, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body > div { display: none; }
+    main {
+      width: min(100%, 420px);
+      box-sizing: border-box;
+      padding: 32px;
+      border: 1px solid rgba(19, 62, 68, .1);
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .24);
+      text-align: center;
+    }
+    main img { width: 190px; height: auto; margin: 0 auto 24px; }
+    main h1 { margin: 0 0 10px; font-size: 24px; line-height: 1.2; }
+    main p { margin: 0; color: #667e7f; }
+    main form { margin-top: 24px; }
+    main button {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 9px;
+      background: #133e44;
+      color: #fff;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    main button:hover { background: #1b555c; }
+    main button:focus-visible { outline: 3px solid #9bb8b4; outline-offset: 3px; }
+    @media (max-width: 480px) { main { padding: 26px 22px; } }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <main>
+    <img src="{% static 'base/assets/img/Logoblack.png' %}" alt="DOMINIUM" />
+    {% if process == "connect" %}
+      <h1>Підключення Google</h1>
+      <p>Підтвердьте підключення облікового запису Google до DOMINIUM.</p>
+    {% else %}
+      <h1>Вхід через Google</h1>
+      <p>Підтвердьте продовження входу до DOMINIUM через Google.</p>
+    {% endif %}
+    {% element form method="post" no_visible_fields=True %}
+      {% slot actions %}
+        {% csrf_token %}
+        {% element button type="submit" %}
+          {% trans "Continue" %}
+        {% endelement %}
+      {% endslot %}
+    {% endelement %}
+  </main>
+{% endblock %}
