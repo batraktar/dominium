@@ -149,7 +149,7 @@ def _should_import(item: dict) -> bool:
 
 def _prepare_images(crm_id: int, image_urls: list[str]) -> list[ContentFile]:
     prepared = []
-    for idx, url in enumerate(image_urls[:20]):
+    for idx, url in enumerate(image_urls):
         image_bytes = _download_image(url, timeout=10)
         if not image_bytes:
             continue
@@ -621,7 +621,7 @@ class Command(BaseCommand):
         crm_id = property_obj.external_id or str(property_obj.id)
 
         downloaded = 0
-        for idx, url in enumerate(image_urls[:20]):
+        for idx, url in enumerate(image_urls):
             expected_prefixes = (
                 f"crm_{crm_id}_{idx}",
                 f"crm_{property_obj.id}_{idx}",

@@ -618,19 +618,15 @@ class RealtsoftSyncTest(TestCase):
         convert_image.side_effect = lambda _data, name: ContentFile(
             b"webp", name=f"{name}.webp"
         )
-        urls = [
-            "https://cdn.example/1.jpg",
-            "https://cdn.example/2.jpg",
-            "https://cdn.example/3.jpg",
-        ]
+        urls = [f"https://cdn.example/{index}.jpg" for index in range(1, 22)]
 
         prepared = _prepare_images(123, urls)
 
-        self.assertEqual(len(prepared), 3)
-        self.assertEqual(download_image.call_count, 3)
+        self.assertEqual(len(prepared), 21)
+        self.assertEqual(download_image.call_count, 21)
         self.assertEqual(
             [image.name for image in prepared],
-            ["crm_123_0.webp", "crm_123_1.webp", "crm_123_2.webp"],
+            [f"crm_123_{index}.webp" for index in range(21)],
         )
 
     @patch(
@@ -681,11 +677,7 @@ class RealtsoftSyncTest(TestCase):
             "price_currency": property_obj.price_currency,
             "property_type_name": property_type.name,
             "deal_type_name": deal_type.name,
-            "images": [
-                "https://cdn.example/1.jpg",
-                "https://cdn.example/2.jpg",
-                "https://cdn.example/3.jpg",
-            ],
+            "images": [f"https://cdn.example/{index}.jpg" for index in range(1, 22)],
         }
 
         command = RealtsoftSyncCommand()
@@ -697,9 +689,9 @@ class RealtsoftSyncTest(TestCase):
                 .order_by("sort_order")
                 .values_list("sort_order", flat=True)
             ),
-            [1, 2, 3],
+            list(range(1, 22)),
         )
-        self.assertEqual(download_image.call_count, 2)
+        self.assertEqual(download_image.call_count, 20)
         self.assertEqual(
             [call.args[0] for call in download_image.call_args_list],
             mapped["images"][1:],
@@ -708,7 +700,7 @@ class RealtsoftSyncTest(TestCase):
         download_image.reset_mock()
         self.assertEqual(command._update_existing(external, mapped, {"id": 123}, False), "unchanged")
         self.assertEqual(download_image.call_count, 0)
-        self.assertEqual(PropertyImage.objects.filter(property=property_obj).count(), 3)
+        self.assertEqual(PropertyImage.objects.filter(property=property_obj).count(), 21)
 
     @patch(
         "house.management.commands.sync_crm_properties._download_image",
