@@ -11,6 +11,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path("api/auth/login/", login_view, name="api_login"),
+    path("api/auth/logout/", logout_view, name="api_logout"),
     path("register/telegram/", register_via_telegram, name="register_via_telegram"),
     path("register/email/", register_email, name="register_email"),
     path("activate/<uidb64>/<token>/", activate, name="activate"),

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
 
 import apiClient from '../src/shared/api/client.js'
+import { apiEndpoints } from '../src/shared/api/endpoints.js'
 import { ensureCsrfToken } from '../src/shared/utils/csrf.js'
 
 const originalDocument = globalThis.document
@@ -39,17 +40,20 @@ test('uses Django-rendered token when React token is blank and cookie is HttpOnl
 
 test('sends the Django-rendered CSRF token with logout POST', async () => {
   let requestHeaders
+  let requestedUrl
   globalThis.document = {
     getElementById: (id) => ({ value: id === 'django-csrf-token' ? 'masked-django-token' : '' }),
     cookie: '',
   }
   globalThis.window = { setTimeout, clearTimeout }
-  globalThis.fetch = async (_url, options) => {
+  globalThis.fetch = async (url, options) => {
+    requestedUrl = String(url)
     requestHeaders = new Headers(options.headers)
     return new Response('', { status: 200 })
   }
 
-  await apiClient.post('/logout/', { parseAs: 'raw', withJsonAccept: false })
+  await apiClient.post(apiEndpoints.logout, { parseAs: 'raw', withJsonAccept: false })
 
+  assert.equal(requestedUrl, '/api/auth/logout/')
   assert.equal(requestHeaders.get('X-CSRFToken'), 'masked-django-token')
 })

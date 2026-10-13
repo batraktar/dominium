@@ -18,6 +18,33 @@ from dominium_backend.seo_regions import CITY_LANDING_CONFIG
 from dominium_backend.views.common import get_client_ip
 
 
+class AuthApiProxyRoutesTest(TestCase):
+    def test_logout_api_requires_csrf_and_clears_authenticated_session(self):
+        user = CustomUser.objects.create_user(
+            username="logout-api-user",
+            email="logout-api@example.invalid",
+            password="unused-password",
+        )
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(user)
+
+        token_response = client.get(reverse("house_api:csrf_token"))
+        self.assertEqual(token_response.status_code, 200)
+        csrf_token = token_response.json()["csrfToken"]
+
+        rejected = client.post(reverse("api_logout"), HTTP_ACCEPT="application/json")
+        self.assertEqual(rejected.status_code, 403)
+
+        response = client.post(
+            reverse("api_logout"),
+            HTTP_ACCEPT="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+        self.assertFalse(client.get(reverse("auth_session")).json()["is_authenticated"])
+
+
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
     TELEGRAM_BOT_TOKEN="dummy-token",
