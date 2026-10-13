@@ -6,6 +6,7 @@ COPY frontend-react/package.json frontend-react/package-lock.json ./
 RUN npm ci
 
 COPY frontend-react/ ./
+COPY static/ /static/
 RUN npm run build \
     && test -s dist/.vite/manifest.json
 
