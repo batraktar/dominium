@@ -137,6 +137,23 @@ class PropertyActionsTest(TestCase):
         self.assertEqual(resp_unlike.status_code, 200)
         self.assertEqual(resp_unlike.json().get("status"), "unliked")
 
+    def test_like_toggle_returns_json_401_for_anonymous_api_requests(self):
+        response = self.client.post(reverse("toggle_like", args=[self.property.id]))
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Authentication credentials were not provided."},
+        )
+
+    def test_like_toggle_rejects_non_post_requests(self):
+        user = CustomUser.objects.create_user(username="u3", password="pass12345")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("toggle_like", args=[self.property.id]))
+
+        self.assertEqual(response.status_code, 405)
+
     def test_toggle_featured_requires_staff(self):
         staff = CustomUser.objects.create_user(
             username="staff", password="pass12345", is_staff=True
@@ -1260,6 +1277,27 @@ class SpaRuntimeSwitchAuditTest(TestCase):
         response = self.client.get(reverse("property_api_admin"))
         content = self._assert_react_spa_shell(response)
         self.assertNotIn("base/assets/js/property_api_admin.js", content)
+
+    @patch(
+        "dominium_backend.views.spa.resolve_react_assets",
+        return_value={
+            "mode": "prod",
+            "entry": "index.html",
+            "dev_server": "",
+            "js": "assets/admin-entry.js",
+            "css": ["assets/admin.css"],
+            "imports": ["assets/vendor.js"],
+        },
+    )
+    def test_react_spa_shell_uses_the_public_assets_mount(self, _mock_assets):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("property_api_admin"))
+        content = self._assert_react_spa_shell(response)
+
+        self.assertIn('href="/assets/admin.css"', content)
+        self.assertIn('href="/assets/vendor.js"', content)
+        self.assertIn('src="/assets/admin-entry.js"', content)
+        self.assertNotIn('src="/static/assets/admin-entry.js"', content)
 
     def test_home_route_remains_legacy_runtime(self):
         response = self.client.get(reverse("start_page"))

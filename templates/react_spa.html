@@ -59,12 +59,12 @@
       <script nonce="{{ request.csp_nonce }}" type="module" src="{{ react_assets.dev_server }}/{{ react_assets.entry }}"></script>
     {% elif react_assets.mode == 'prod' %}
       {% for css_path in react_assets.css %}
-        <link rel="stylesheet" href="{% static css_path %}" />
+        <link rel="stylesheet" href="/{{ css_path }}" />
       {% endfor %}
       {% for preload_path in react_assets.imports %}
-        <link rel="modulepreload" href="{% static preload_path %}" />
+        <link rel="modulepreload" href="/{{ preload_path }}" />
       {% endfor %}
-      <script nonce="{{ request.csp_nonce }}" type="module" src="{% static react_assets.js %}"></script>
+      <script nonce="{{ request.csp_nonce }}" type="module" src="/{{ react_assets.js }}"></script>
     {% endif %}
   </head>
   {% with register_query=request.GET.register login_query=request.GET.login %}

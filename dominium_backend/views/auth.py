@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from accounts.models import Favorite
 from house.api.serializers import serialize_property
@@ -142,8 +142,14 @@ def liked_properties_view(request):
     return render(request, "likes.html", {"properties": properties})
 
 
-@login_required
+@require_POST
 def toggle_like(request, property_id):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"detail": "Authentication credentials were not provided."},
+            status=401,
+        )
+
     property_obj = get_object_or_404(Property, id=property_id)
     favorite, created = Favorite.objects.get_or_create(
         user=request.user, property=property_obj

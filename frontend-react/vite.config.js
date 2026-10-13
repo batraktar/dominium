@@ -7,7 +7,9 @@ export default defineConfig(({ mode }) => {
   const backendTarget = env.VITE_BACKEND_URL || 'http://localhost:8000'
 
   return {
-    base: '/static/',
+    // The same built assets are served directly from /assets/ by the public
+    // Nginx site and by the Django SPA shell. Keep both entry points aligned.
+    base: '/',
     plugins: [react()],
     build: {
       manifest: true,
