@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from allauth.socialaccount.models import SocialApp
 
@@ -166,6 +166,21 @@ class GooglePopupStartViewTests(TestCase):
         self.assertIn("parent_origin%3Dhttps%253A%252F%252Fdominium.com.ua", content)
         self.assertIn("popup_state%3Dstate123", content)
         self.assertIn("requestSubmit()", content)
+
+    def test_allauth_post_starts_google_flow_directly(self):
+        with self.settings(SOCIALACCOUNT_LOGIN_ON_GET=False):
+            client = Client(enforce_csrf_checks=True)
+            csrf_response = client.get(reverse("house_api:csrf_token"))
+            response = client.post(
+                "/accounts/google/login/?process=login&next=%2Fsearch%2F",
+                {"csrfmiddlewaretoken": csrf_response.json()["csrfToken"]},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response["Location"].startswith("https://accounts.google.com/"),
+            response.get("Location", "No provider redirect returned"),
+        )
 
     def test_missing_popup_state_uses_normal_full_page_callback(self):
         response = self.client.get(
