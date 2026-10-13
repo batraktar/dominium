@@ -133,6 +133,20 @@ class GooglePopupStartViewTests(TestCase):
         )
         app.sites.add(Site.objects.get_current())
 
+    def test_previous_popup_urls_remain_compatible(self):
+        start = self.client.get("/auth/google-popup-start/", {"next": "/search/"})
+        complete = self.client.get(
+            "/auth/popup-complete/",
+            {
+                "next": "/search/",
+                "parent_origin": "https://dominium.com.ua",
+                "popup_state": "state123",
+            },
+        )
+
+        self.assertEqual(start.status_code, 200)
+        self.assertEqual(complete.status_code, 200)
+
     def test_renders_post_bridge_with_csrf_and_callback_state(self):
         response = self.client.get(
             reverse("google_popup_start"),

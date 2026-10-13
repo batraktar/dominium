@@ -76,6 +76,18 @@ urlpatterns = [
         auth_views.google_popup_complete,
         name="google_popup_complete",
     ),
+    # Keep the previous production paths alive while browsers and cached bundles
+    # may still reference them; the frontend uses the canonical accounts paths.
+    path(
+        "auth/google-popup-start/",
+        auth_views.google_popup_start,
+        name="google_popup_start_legacy",
+    ),
+    path(
+        "auth/popup-complete/",
+        auth_views.google_popup_complete,
+        name="google_popup_complete_legacy",
+    ),
     path("accounts/", include("allauth.urls")),
     path(
         "property/<slug:slug>/",
