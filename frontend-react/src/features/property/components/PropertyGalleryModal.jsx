@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom'
+
 function PropertyGalleryModal({
   property,
   galleryImages = [],
@@ -7,19 +9,23 @@ function PropertyGalleryModal({
   onModalOpenChange,
   onModalImageIndexChange,
 }) {
-  return (
+  return createPortal(
     <div
-      id="galleryModal"
-      className="fixed inset-0 bg-black bg-opacity-90 z-50 flex flex-col items-center justify-center p-0 overflow-auto"
+      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col items-center justify-center overflow-hidden bg-black/90 p-3 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Галерея фотографій"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onModalOpenChange?.(false)
+      }}
       onClick={(event) => {
-        if (event.target.id === 'galleryModal') onModalOpenChange?.(false)
+        if (event.target === event.currentTarget) onModalOpenChange?.(false)
       }}
     >
-      <div className="modal-content w-full h-full m-0 p-0 flex items-center justify-center">
+      <div className="relative flex min-h-0 w-full flex-1 items-center justify-center">
         <img
-          id="modalImage"
           src={activeModalImage?.url || fallbackImageUrl}
-          className="w-full h-auto object-contain"
+          className="block h-auto w-auto max-h-full max-w-full object-contain"
           alt={`${property.title} — фото галереї`}
         />
         {modalImageIndex > 0 ? (
@@ -54,25 +60,30 @@ function PropertyGalleryModal({
         </button>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-        <div className="flex space-x-4 overflow-x-auto p-2">
-          <div className="flex space-x-2">
-            {galleryImages.map((image, index) => (
+      <div className="z-10 flex w-full max-w-full shrink-0 justify-center">
+        <div className="flex max-w-full gap-2 overflow-x-auto px-2 py-2">
+          {galleryImages.map((image, index) => (
+            <button
+              key={`thumb-${image.id}`}
+              type="button"
+              aria-label={`Показати фото ${index + 1}`}
+              aria-current={index === modalImageIndex ? 'true' : undefined}
+              className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg transition-opacity sm:h-16 sm:w-16 ${index === modalImageIndex ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
+              onClick={() => onModalImageIndexChange?.(index)}
+            >
               <img
-                key={`thumb-${image.id}`}
                 src={image.url}
                 loading="lazy"
                 decoding="async"
-                className="thumbnail-img lazy-image"
-                alt={`${property.title} — мініатюра ${index + 1}`}
-                style={{ opacity: index === modalImageIndex ? 1 : 0.5 }}
-                onClick={() => onModalImageIndexChange?.(index)}
+                className="h-full w-full object-cover"
+                alt=""
               />
-            ))}
-          </div>
+            </button>
+          ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
