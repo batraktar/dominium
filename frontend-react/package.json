@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:production": "vite build --base /",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview"
   },
   "dependencies": {

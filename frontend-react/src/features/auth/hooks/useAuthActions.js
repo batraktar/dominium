@@ -68,8 +68,9 @@ function useAuthActions() {
       }
 
       window.location.reload()
-    } catch {
-      window.location.reload()
+    } catch (error) {
+      console.error('Could not log out', error)
+      window.alert(error?.message || 'Не вдалося вийти. Спробуйте ще раз.')
     }
   }
 

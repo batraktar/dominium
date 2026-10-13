@@ -68,6 +68,8 @@
 
   function getCsrfTokenValue() {
     const tokenInput =
+      document.getElementById("csrf-token") ||
+      document.getElementById("django-csrf-token") ||
       document.getElementById("form-csrf-token") ||
       document.querySelector("input[name='csrfmiddlewaretoken']");
     return tokenInput?.value || getCookie("csrftoken") || "";
@@ -84,11 +86,15 @@
         try {
           const response = await fetch(url, {
             method: "POST",
+            credentials: "same-origin",
             headers: {
               "X-CSRFToken": getCsrfTokenValue(),
               "X-Requested-With": "XMLHttpRequest",
             },
           });
+          if (!response.ok) {
+            throw new Error(`Logout failed with status ${response.status}`);
+          }
           if (response.redirected) {
             window.location.href = response.url;
             return;
@@ -96,7 +102,7 @@
           window.location.reload();
         } catch (error) {
           console.error("Logout failed", error);
-          window.location.reload();
+          window.alert("Не вдалося вийти. Сторінка залишилася в обліковому записі. Спробуйте ще раз.");
         }
       });
     });

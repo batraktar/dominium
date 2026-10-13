@@ -4,6 +4,11 @@ export function getCsrfTokenFromDom() {
   const tokenFromInput = document.getElementById('csrf-token')?.value
   if (tokenFromInput) return tokenFromInput
 
+  // The React shell's input is intentionally blank; Django renders the actual
+  // masked token next to the root so POST requests work with HttpOnly cookies.
+  const tokenFromDjango = document.getElementById('django-csrf-token')?.value
+  if (tokenFromDjango) return tokenFromDjango
+
   const cookies = document.cookie ? document.cookie.split(';') : []
   for (const rawCookie of cookies) {
     const cookie = rawCookie.trim()
