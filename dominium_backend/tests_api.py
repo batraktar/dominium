@@ -137,6 +137,17 @@ class PropertyActionsTest(TestCase):
         self.assertEqual(resp_unlike.status_code, 200)
         self.assertEqual(resp_unlike.json().get("status"), "unliked")
 
+    def test_like_toggle_api_alias_is_available_through_api_prefix(self):
+        user = CustomUser.objects.create_user(username="u_api", password="pass12345")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("toggle_like_api", args=[self.property.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json().get("status"), "liked")
+
     def test_like_toggle_returns_json_401_for_anonymous_api_requests(self):
         response = self.client.post(reverse("toggle_like", args=[self.property.id]))
 

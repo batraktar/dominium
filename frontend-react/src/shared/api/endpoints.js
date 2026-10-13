@@ -16,7 +16,7 @@ export const apiEndpoints = {
   propertyImagesReorder: (propertyId) =>
     `/api/properties/${encodeURIComponent(propertyId)}/images/order/`,
   likedProperties: '/api/liked-properties/',
-  likeProperty: (propertyId) => `/like/${propertyId}/`,
+  likeProperty: (propertyId) => `/api/like/${propertyId}/`,
   toggleFeatured: (propertyId) => `/properties/${propertyId}/toggle-featured/`,
   interactiveMapData: '/test/map/interactive/data/',
   consultation: '/consultation/',
