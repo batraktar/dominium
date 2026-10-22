@@ -6,6 +6,7 @@ import PropertyEditModal from '../components/PropertyEditModal.jsx'
 import HighlightTab from '../components/HighlightTab.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import ClientsTab from '../components/ClientsTab.jsx'
+import ArticlesTab from '../components/ArticlesTab.jsx'
 import './admin-api-admin.css'
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('uk-UA')
@@ -41,6 +42,11 @@ function AdminNav({ activeTab, onTabChange, stats }) {
       label: 'Топ',
       icon: 'ri-star-smile-line',
       count: stats.featured,
+    },
+    {
+      id: 'articles',
+      label: 'Статті',
+      icon: 'ri-article-line',
     },
     {
       id: 'settings',
@@ -235,6 +241,8 @@ function AdminApiAdminPage() {
           {activeTab === 'clients' && <ClientsTab />}
 
           {activeTab === 'highlight' && <HighlightTab />}
+
+          {activeTab === 'articles' && <ArticlesTab />}
 
           {activeTab === 'settings' && <SettingsTab />}
         </div>

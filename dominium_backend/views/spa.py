@@ -7,12 +7,13 @@ from pathlib import Path
 
 from django.conf import settings
 from django.http import Http404, HttpResponseNotFound
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import strip_tags
 
-from house.models import Property
+from house.models import Article, Property
+from house.utils.sanitization import sanitize_rich_text
 from dominium_backend.seo_regions import (
     DEFAULT_INDEX_ROBOTS,
     get_city_config,
@@ -226,7 +227,7 @@ def _build_property_structured_payload(
     og_image: str,
 ) -> list[dict]:
     description_text = (
-        strip_tags(property_obj.description or "").strip()
+        strip_tags(sanitize_rich_text(property_obj.description or "")).strip()
         or f"{property_obj.title} — {property_obj.address}".strip(" —")
     )
     breadcrumb_items = [
@@ -600,6 +601,32 @@ def property_api_admin_spa(request):
         meta_title="API Admin - DOMINIUM",
         meta_description="Адміністративна SPA-сторінка керування обʼєктами через API DOMINIUM.",
         meta_robots="noindex, nofollow",
+    )
+
+
+def article_list_spa(request):
+    return _render_react_spa(
+        request,
+        meta_title="Статті про нерухомість - DOMINIUM",
+        meta_description="Корисні матеріали DOMINIUM про купівлю, продаж та оренду нерухомості.",
+    )
+
+
+def article_detail_spa(request, slug):
+    article = get_object_or_404(Article, slug=slug, is_published=True)
+    canonical_url = build_absolute_uri(request, article.get_absolute_url(), canonical=True)
+    cover_url = ""
+    if article.cover_image:
+        cover_url = build_absolute_uri(request, article.cover_image.url, canonical=True)
+    return _render_react_spa(
+        request,
+        meta_title=article.seo_title or f"{article.title} - DOMINIUM",
+        meta_description=(article.seo_description or article.summary)[:320],
+        canonical_url=canonical_url,
+        og_type="article",
+        og_title=article.seo_title or article.title,
+        og_image=cover_url or None,
+        meta_published_time=article.published_at.isoformat() if article.published_at else "",
     )
 
 

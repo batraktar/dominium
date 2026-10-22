@@ -8,12 +8,14 @@ from django.urls import include, path
 from django.views.generic import RedirectView
 
 from dominium_backend.sitemaps import (
+    ArticleSitemap,
     CityLandingSitemap,
     PropertySitemap,
     RegionLandingSitemap,
     StaticViewSitemap,
 )
 from dominium_backend.views import admin as admin_views
+from dominium_backend.views import articles as article_views
 from dominium_backend.views import auth as auth_views
 from dominium_backend.views.common import build_canonical_uri
 from dominium_backend.views import public as public_views
@@ -26,6 +28,7 @@ sitemaps = {
     "properties": PropertySitemap(),
     "regions": RegionLandingSitemap(),
     "cities": CityLandingSitemap(),
+    "articles": ArticleSitemap(),
 }
 
 urlpatterns = [
@@ -54,6 +57,24 @@ urlpatterns = [
     path("signup/", spa_views.signup_spa, name="landing"),
     path("api/demo/", spa_views.property_api_demo_spa, name="property_api_demo"),
     path("api/admin/", spa_views.property_api_admin_spa, name="property_api_admin"),
+    path("articles/", spa_views.article_list_spa, name="article_list"),
+    path("articles/<slug:slug>/", spa_views.article_detail_spa, name="article_detail"),
+    path("api/articles/", article_views.article_list_api, name="article_list_api"),
+    path(
+        "api/articles/<slug:slug>/",
+        article_views.article_detail_api,
+        name="article_detail_api",
+    ),
+    path(
+        "api/admin/articles/",
+        article_views.article_admin_collection,
+        name="article_admin_collection",
+    ),
+    path(
+        "api/admin/articles/<int:article_id>/",
+        article_views.article_admin_item,
+        name="article_admin_item",
+    ),
     path(
         "test/map/interactive/",
         spa_views.interactive_map_test_spa,

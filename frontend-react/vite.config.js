@@ -19,6 +19,10 @@ export default defineConfig(({ mode }) => {
         allow: ['..'],
       },
       proxy: {
+        '/api/admin/articles': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
         '^/api/(?!(demo|admin)(?:/|$)).*': {
           target: backendTarget,
           changeOrigin: true,

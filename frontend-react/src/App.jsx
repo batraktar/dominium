@@ -16,6 +16,8 @@ function App() {
     isMapTestRoute,
     isApiDemoRoute,
     isApiAdminRoute,
+    isArticlesRoute,
+    isArticleDetailRoute,
     isNotFoundRoute,
     userIsStaff,
     userIsAuthenticated,
@@ -61,6 +63,8 @@ function App() {
           isMapTestRoute={isMapTestRoute}
           isApiDemoRoute={isApiDemoRoute}
           isApiAdminRoute={isApiAdminRoute}
+          isArticlesRoute={isArticlesRoute}
+          isArticleDetailRoute={isArticleDetailRoute}
           isNotFoundRoute={isNotFoundRoute}
           userIsStaff={userIsStaff}
           userIsAuthenticated={userIsAuthenticated}

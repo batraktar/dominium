@@ -29,4 +29,8 @@ export const apiEndpoints = {
   propertyCities: '/api/property-cities/',
   clients: '/api/clients/',
   stats: '/api/stats/',
+  articles: '/api/articles/',
+  articleDetail: (slug) => `/api/articles/${encodeURIComponent(slug)}/`,
+  adminArticles: '/api/admin/articles/',
+  adminArticleItem: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/`,
 }

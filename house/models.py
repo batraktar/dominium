@@ -7,6 +7,7 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.text import slugify
 from PIL import Image
@@ -413,3 +414,33 @@ class TelegramNotificationTemplate(models.Model):
         ordering = ["sort_order", "name"]
         verbose_name = "Шаблон повідомлення"
         verbose_name_plural = "Шаблони повідомлень"
+
+
+class Article(models.Model):
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True)
+    summary = models.CharField(max_length=500)
+    body = models.TextField()
+    cover_image = models.ImageField(upload_to="article_covers/", blank=True)
+    seo_title = models.CharField(max_length=200, blank=True)
+    seo_description = models.CharField(max_length=320, blank=True)
+    is_published = models.BooleanField(default=False, db_index=True)
+    published_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-published_at", "-updated_at"]
+
+    def save(self, *args, **kwargs):
+        if self.is_published and self.published_at is None:
+            self.published_at = timezone.now()
+        elif not self.is_published:
+            self.published_at = None
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("article_detail", kwargs={"slug": self.slug})
+
+    def __str__(self):
+        return self.title

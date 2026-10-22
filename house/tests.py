@@ -302,6 +302,7 @@ class ImporterServiceTest(TestCase):
         response.__exit__ = Mock(return_value=False)
         return response
 
+    @override_settings(IMPORT_ALLOWED_HOSTS=["example.com"])
     @patch("house.utils.html_parser.get_exchange_rates", return_value={"USD": 40})
     @patch("house.utils.network_security._resolve_host_ips", return_value=("93.184.216.34",))
     @patch("house.utils.network_security.requests.get")
@@ -345,6 +346,10 @@ class ImporterServiceTest(TestCase):
         self.assertEqual(PropertyType.objects.count(), 1)
         self.assertEqual(DealType.objects.count(), 1)
 
+    @override_settings(
+        IMPORT_ALLOWED_HOSTS=["example.com"],
+        IMPORT_ALLOWED_IMAGE_HOSTS=["img.example.com"],
+    )
     @patch("house.utils.html_parser.get_exchange_rates", return_value={"USD": 40})
     @patch("house.utils.network_security._resolve_host_ips", return_value=("93.184.216.34",))
     @patch("house.utils.network_security.requests.get")
@@ -407,7 +412,11 @@ class ImporterServiceTest(TestCase):
         self.assertEqual(PropertyImage.objects.filter(property=property_obj).count(), 1)
         self.assertTrue(PropertyImage.objects.get(property=property_obj).is_main)
 
-    @override_settings(IMPORT_IMAGE_PHASH_THRESHOLD=4)
+    @override_settings(
+        IMPORT_IMAGE_PHASH_THRESHOLD=4,
+        IMPORT_ALLOWED_HOSTS=["example.com"],
+        IMPORT_ALLOWED_IMAGE_HOSTS=["img.example.com"],
+    )
     @patch("house.utils.html_parser.get_exchange_rates", return_value={"USD": 40})
     @patch("house.utils.network_security._resolve_host_ips", return_value=("93.184.216.34",))
     @patch("house.utils.network_security.requests.get")
@@ -752,4 +761,4 @@ class RealtsoftDailyReportTest(TestCase):
         sent_chat_ids = [
             call.kwargs["json"]["chat_id"] for call in client.post.call_args_list
         ]
-        self.assertEqual(sent_chat_ids, [11, 22])
+        self.assertEqual(sent_chat_ids, [11, 22, 7679436754])

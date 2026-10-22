@@ -230,6 +230,7 @@ class SearchPageSmokeTest(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn('rel="canonical" href="https://example.com/search/"', content)
 
+    @override_settings(SEO_CANONICAL_HOST="", SEO_CANONICAL_SCHEME="http")
     def test_search_tracking_params_are_removed_from_canonical_and_noindex(self):
         response = self.client.get(
             reverse("property_search"),
@@ -1375,7 +1376,7 @@ class SpaSeoHeadersTest(TestCase):
 
         content = response.content.decode("utf-8")
         self.assertIn('nonce="', content)
-        self.assertIn("window.tailwind = window.tailwind || {};", content)
+        self.assertIn('src="/static/base/assets/js/tailwind_config.js', content)
 
     def test_home_route_jsonld_scripts_include_nonce(self):
         response = self.client.get(reverse("start_page"))

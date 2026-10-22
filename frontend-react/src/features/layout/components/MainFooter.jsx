@@ -18,6 +18,8 @@ function MainFooter() {
 
         <p className="text-white font-fixel">Ваш простір починається тут</p>
 
+        <a href="/articles/" className="inline-block font-fixel text-white hover:text-accent transition">Статті</a>
+
         <div className="flex justify-center space-x-6">
           <a
             href="https://www.facebook.com/61573653220530/"

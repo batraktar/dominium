@@ -7,6 +7,8 @@ import InteractiveMapPage from '../../features/map-test/pages/InteractiveMapPage
 import PropertyDetailPage from '../../features/property/pages/PropertyDetailPage.jsx'
 import SearchPage from '../../features/search/pages/SearchPage.jsx'
 import NotFoundPage from '../../features/system/pages/NotFoundPage.jsx'
+import ArticlesPage from '../../features/articles/pages/ArticlesPage.jsx'
+import ArticleDetailPage from '../../features/articles/pages/ArticleDetailPage.jsx'
 
 function AppMainContent({
   isHomeRoute = false,
@@ -17,6 +19,8 @@ function AppMainContent({
   isMapTestRoute = false,
   isApiDemoRoute = false,
   isApiAdminRoute = false,
+  isArticlesRoute = false,
+  isArticleDetailRoute = false,
   isNotFoundRoute = false,
   userIsStaff = false,
   userIsAuthenticated = false,
@@ -64,6 +68,10 @@ function AppMainContent({
   if (isApiAdminRoute) {
     return <AdminApiAdminPage />
   }
+
+  if (isArticlesRoute) return <ArticlesPage />
+
+  if (isArticleDetailRoute) return <ArticleDetailPage />
 
   if (isNotFoundRoute) {
     return <NotFoundPage />

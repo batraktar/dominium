@@ -427,8 +427,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = os.getenv(
     "DJANGO_CROSS_ORIGIN_OPENER_POLICY", "same-origin-allow-popups"
 ).strip()
 
-CONTENT_SECURITY_POLICY = os.getenv(
-    "DJANGO_CONTENT_SECURITY_POLICY",
+DEFAULT_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; "
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
@@ -439,7 +438,11 @@ CONTENT_SECURITY_POLICY = os.getenv(
     "object-src 'none'; "
     "base-uri 'self'; "
     "form-action 'self' https://accounts.google.com; "
-    "frame-ancestors 'self';",
+    "frame-ancestors 'self';"
+)
+CONTENT_SECURITY_POLICY = (
+    os.getenv("DJANGO_CONTENT_SECURITY_POLICY", "").strip()
+    or DEFAULT_CONTENT_SECURITY_POLICY
 )
 CSP_STRICT_REPORT_ONLY = env_bool("DJANGO_CSP_STRICT_REPORT_ONLY", True)
 CSP_REPORT_URI = os.getenv("DJANGO_CSP_REPORT_URI", "/_csp/report/").strip()

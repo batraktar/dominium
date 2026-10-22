@@ -56,6 +56,7 @@ export function buildPropertyDocumentTitle(property) {
 export function buildPropertyGalleryImages(property) {
   if (!property) return []
 
+  const seenUrls = new Set()
   const fromImages = Array.isArray(property.images)
     ? property.images
         .map((image) => ({
@@ -63,7 +64,11 @@ export function buildPropertyGalleryImages(property) {
           url: toPropertyMediaPath(image.url),
           isMain: Boolean(image.is_main),
         }))
-        .filter((image) => Boolean(image.url))
+        .filter((image) => {
+          if (!image.url || seenUrls.has(image.url)) return false
+          seenUrls.add(image.url)
+          return true
+        })
     : []
 
   const mainImageUrl = toPropertyMediaPath(property.main_image?.url || '')

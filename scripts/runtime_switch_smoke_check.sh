@@ -74,6 +74,30 @@ check_spa_route() {
   done
 }
 
+check_bundle_asset() {
+  local page="$1"
+  local pattern="$2"
+  local expected_type="$3"
+  local label="$4"
+  local asset_path
+  asset_path=$(grep -Eo "$pattern" "$page" | head -1 || true)
+  if [[ -z "$asset_path" ]]; then
+    msg_fail "$label is referenced"
+    return
+  fi
+  msg_ok "$label is referenced"
+
+  local asset_file="$tmp_dir/$(basename "$asset_path")"
+  local code
+  code=$(fetch "$asset_path" "$asset_file")
+  [[ "$code" == "200" ]] && msg_ok "$label returns 200" || msg_fail "$label returns $code"
+  if tr -d '\r' < "$asset_file.headers" | grep -Eqi "^Content-Type: ${expected_type}"; then
+    msg_ok "$label has ${expected_type} MIME"
+  else
+    msg_fail "$label has ${expected_type} MIME"
+  fi
+}
+
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -88,6 +112,9 @@ check_spa_route \
   "base/assets/js/search/api.js" \
   "base/assets/js/search/ui.js" \
   "base/assets/js/search/index.js"
+
+check_bundle_asset "$tmp_dir/search.html" '(/static)?/assets/[^" ]+\.js' 'text/javascript|application/javascript' "React JavaScript asset"
+check_bundle_asset "$tmp_dir/search.html" '(/static)?/assets/[^" ]+\.css' 'text/css' "React CSS asset"
 
 check_spa_route \
   "/likes/" \
@@ -110,6 +137,8 @@ check_spa_route \
   "/signup/?method=email" \
   "signup" \
   "base/assets/js/social_signup_bridge.js"
+
+check_spa_route "/articles/" "articles"
 
 check_spa_route \
   "$REGION_PATH" \

@@ -22,6 +22,8 @@ export default function useAppController() {
     isMapTestRoute,
     isApiDemoRoute,
     isApiAdminRoute,
+    isArticlesRoute,
+    isArticleDetailRoute,
     isNotFoundRoute,
   } = getRouteFlags(currentPathname)
 
@@ -84,6 +86,8 @@ export default function useAppController() {
     isMapTestRoute,
     isApiDemoRoute,
     isApiAdminRoute,
+    isArticlesRoute,
+    isArticleDetailRoute,
     isNotFoundRoute,
     userIsStaff,
     userIsAuthenticated,
@@ -105,6 +109,8 @@ export default function useAppController() {
     isMapTestRoute,
     isApiDemoRoute,
     isApiAdminRoute,
+    isArticlesRoute,
+    isArticleDetailRoute,
     isNotFoundRoute,
     userIsStaff,
     userIsAuthenticated,

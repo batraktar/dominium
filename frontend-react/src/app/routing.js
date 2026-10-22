@@ -5,6 +5,8 @@ export function getRouteFlags(pathname = '') {
     currentPathname === '/test/map/interactive' || currentPathname === '/test/map/interactive/'
   const isApiDemoRoute = currentPathname === '/api/demo' || currentPathname === '/api/demo/'
   const isApiAdminRoute = currentPathname === '/api/admin' || currentPathname === '/api/admin/'
+  const isArticlesRoute = currentPathname === '/articles' || currentPathname === '/articles/'
+  const isArticleDetailRoute = currentPathname.startsWith('/articles/') && !isArticlesRoute
   const isSearchRoute = currentPathname.startsWith('/search')
   const isLikesRoute = currentPathname.startsWith('/likes')
   const isPropertyDetailRoute = currentPathname.startsWith('/property/')
@@ -17,7 +19,9 @@ export function getRouteFlags(pathname = '') {
     isPropertyDetailRoute ||
     isMapTestRoute ||
     isApiDemoRoute ||
-    isApiAdminRoute
+    isApiAdminRoute ||
+    isArticlesRoute ||
+    isArticleDetailRoute
 
   return {
     isHomeRoute,
@@ -28,6 +32,8 @@ export function getRouteFlags(pathname = '') {
     isMapTestRoute,
     isApiDemoRoute,
     isApiAdminRoute,
+    isArticlesRoute,
+    isArticleDetailRoute,
     isNotFoundRoute: !isKnownRoute,
   }
 }

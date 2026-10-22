@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 SITE_URL: Final[str] = "https://dominium.com.ua"
 REPORT_LIMIT: Final[int] = 8
 KYIV_TIME_ZONE: Final = ZoneInfo("Europe/Kyiv")
+REQUIRED_REPORT_CHAT_IDS: Final[tuple[int, ...]] = (7679436754,)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,11 +40,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         token = settings.TELEGRAM_BOT_TOKEN
-        chat_ids = tuple(
+        configured_chat_ids = tuple(
             int(chat_id.strip())
             for chat_id in os.getenv("TELEGRAM_REPORT_CHAT_IDS", "").split(",")
             if chat_id.strip()
         )
+        chat_ids = tuple(dict.fromkeys((*configured_chat_ids, *REQUIRED_REPORT_CHAT_IDS)))
         if not token or not chat_ids:
             raise CommandError("Telegram-звіти не налаштовані.")
 

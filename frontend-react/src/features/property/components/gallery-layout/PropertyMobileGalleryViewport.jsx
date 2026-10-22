@@ -9,7 +9,7 @@ function PropertyMobileGalleryViewport({
   onModalImageIndexChange,
 }) {
   return (
-    <div className="relative w-full h-full" id="gallery">
+    <div className="relative w-full h-full bg-slate-100" id="gallery">
       <img
         src={activeMobileImage?.url || fallbackImageUrl}
         loading="eager"
@@ -18,7 +18,7 @@ function PropertyMobileGalleryViewport({
         width="1200"
         height="900"
         sizes="100vw"
-        className="w-full h-full object-cover cursor-pointer"
+        className="w-full h-full object-contain cursor-pointer"
         alt={`${property.title} — фото`}
         onClick={() => {
           onModalImageIndexChange?.(mobileImageIndex)

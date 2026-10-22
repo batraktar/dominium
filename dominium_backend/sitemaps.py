@@ -5,7 +5,7 @@ from datetime import datetime
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from house.models import Property
+from house.models import Article, Property
 from dominium_backend.seo_regions import (
     CITY_LANDING_CONFIG,
     REGION_LANDING_CONFIG,
@@ -17,7 +17,7 @@ class StaticViewSitemap(Sitemap):
     changefreq = "weekly"
 
     def items(self):
-        return ["start_page", "property_search"]
+        return ["start_page", "property_search", "article_list"]
 
     def location(self, item):
         return reverse(item)
@@ -60,3 +60,14 @@ class CityLandingSitemap(Sitemap):
 
     def location(self, item: str) -> str:
         return reverse("city_landing", kwargs={"city_slug": item})
+
+
+class ArticleSitemap(Sitemap):
+    priority = 0.7
+    changefreq = "monthly"
+
+    def items(self):
+        return Article.objects.filter(is_published=True)
+
+    def lastmod(self, obj):
+        return obj.updated_at
