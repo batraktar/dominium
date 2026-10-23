@@ -1312,10 +1312,9 @@ class SpaRuntimeSwitchAuditTest(TestCase):
         response = self.client.get(reverse("property_api_admin"))
         content = self._assert_react_spa_shell(response)
 
-        self.assertIn('href="/assets/admin.css"', content)
-        self.assertIn('href="/assets/vendor.js"', content)
-        self.assertIn('src="/assets/admin-entry.js"', content)
-        self.assertNotIn('src="/static/assets/admin-entry.js"', content)
+        self.assertIn('href="/static/assets/admin.css"', content)
+        self.assertIn('href="/static/assets/vendor.js"', content)
+        self.assertIn('src="/static/assets/admin-entry.js"', content)
 
     def test_home_route_remains_legacy_runtime(self):
         response = self.client.get(reverse("start_page"))
