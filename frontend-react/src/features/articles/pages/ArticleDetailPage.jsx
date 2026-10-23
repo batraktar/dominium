@@ -26,6 +26,7 @@ function ArticleDetailPage() {
       <p className="mb-8 text-xl text-slate-600">{article.summary}</p>
       {article.cover_image_url ? <img src={article.cover_image_url} alt={article.title} className="mb-10 max-h-[620px] w-full rounded-xl object-contain bg-slate-50" /> : null}
       <div className="whitespace-pre-wrap text-lg leading-8">{article.body}</div>
+      {article.images?.length ? <section className="mt-12 grid gap-6 md:grid-cols-2" aria-label="Фотографії статті">{article.images.map((image) => <figure key={image.id} className="overflow-hidden rounded-xl bg-slate-50"><img src={image.url} alt={image.alt_text || article.title} className="h-auto max-h-[620px] w-full object-contain" loading="lazy" />{image.caption ? <figcaption className="p-3 text-sm text-slate-600">{image.caption}</figcaption> : null}</figure>)}</section> : null}
     </article>
   )
 }

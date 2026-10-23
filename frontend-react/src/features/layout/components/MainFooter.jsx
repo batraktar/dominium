@@ -1,6 +1,7 @@
 import logoDominium from '../../../../../static/base/assets/img/Logo_dominium.png'
+import { shouldShowArticlesFooterLink } from '../model/footerModel.js'
 
-function MainFooter() {
+function MainFooter({ userIsStaff = false }) {
   return (
     <footer className="bg-coolSage py-6 text-center">
       <div className="container mx-auto px-4 space-y-4">
@@ -18,7 +19,7 @@ function MainFooter() {
 
         <p className="text-white font-fixel">Ваш простір починається тут</p>
 
-        <a href="/articles/" className="inline-block font-fixel text-white hover:text-accent transition">Статті</a>
+        {shouldShowArticlesFooterLink(userIsStaff) ? <a href="/articles/" className="inline-block font-fixel text-white hover:text-accent transition">Статті</a> : null}
 
         <div className="flex justify-center space-x-6">
           <a

@@ -58,7 +58,7 @@ function AppFrame({
             {children}
           </main>
 
-          <MainFooter />
+          <MainFooter userIsStaff={userIsStaff} />
 
           <div
             id="toast"
