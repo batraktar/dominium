@@ -37,6 +37,10 @@ test('normalizes common ChatGPT wrappers without weakening JSON validation', () 
   assert.deepEqual(parseArticleImport('```json\n{"title":"Назва"}\n```'), { title: 'Назва' })
   assert.deepEqual(parseArticleImport('{"title":"Назва"}"'), { title: 'Назва' })
   assert.deepEqual(parseArticleImport('{"url":"https\\://example.com/photo.jpg"}'), { url: 'https://example.com/photo.jpg' })
+  assert.deepEqual(
+    parseArticleImport('{"url":"https:\\/\\/www\\.loc\\.gov\\/pictures\\/item\\/ca095"}'),
+    { url: 'https://www.loc.gov/pictures/item/ca095' },
+  )
   assert.deepEqual(parseArticleImport('Ось JSON:\n{"title":"Назва\nДругий рядок",}\nГотово.'), { title: 'Назва\nДругий рядок' })
   assert.deepEqual(parseArticleImport('{"title":"Назва",}'), { title: 'Назва' })
   assert.throws(() => parseArticleImport('{"title": "Незакритий текст}'), /лапки та коми/i)

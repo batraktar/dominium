@@ -41,10 +41,18 @@ export function parseArticleImport(value) {
   let normalized = ''
   let inString = false
   let escaped = false
-  for (const character of text) {
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index]
     if (inString && character === '\n') { normalized += '\\n'; escaped = false; continue }
     if (inString && character === '\r') { normalized += '\\r'; escaped = false; continue }
     if (inString && character === '\t') { normalized += '\\t'; escaped = false; continue }
+    if (inString && character === '\\') {
+      const next = text[index + 1]
+      // AI responses sometimes use regex/Markdown-style escaping in URLs
+      // (for example `www\.loc.gov`). JSON accepts only a small fixed set of
+      // escapes; remove a backslash that cannot be valid JSON syntax.
+      if (next && !'["\\/bfnrtu]'.includes(next)) continue
+    }
     normalized += character
     if (character === '"' && !escaped) inString = !inString
     if (character === '\\' && !escaped) escaped = true
