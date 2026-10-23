@@ -7,7 +7,11 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from allauth.socialaccount.models import SocialApp
 
-from accounts.services.google_identity import GoogleIdentity, GoogleIdentityError
+from accounts.services.google_identity import (
+    GoogleIdentity,
+    GoogleIdentityError,
+    get_google_client_id,
+)
 
 
 class AuthSessionViewTests(TestCase):
@@ -18,6 +22,28 @@ class AuthSessionViewTests(TestCase):
             password="StrongPass123!",
             full_name="Session User",
             phone_number="+380501234567",
+        )
+    @override_settings(GOOGLE_CLIENT_ID="your-google-id")
+    def test_placeholder_falls_back_to_allauth_social_app(self):
+        site = Site.objects.get_current()
+        app = SocialApp.objects.create(
+            provider="google",
+            name="Google",
+            client_id="real-client.apps.googleusercontent.com",
+            secret="secret",
+        )
+        app.sites.add(site)
+
+        self.assertEqual(
+            get_google_client_id(),
+            "real-client.apps.googleusercontent.com",
+        )
+
+    @override_settings(GOOGLE_CLIENT_ID="configured.apps.googleusercontent.com")
+    def test_valid_environment_client_id_has_priority(self):
+        self.assertEqual(
+            get_google_client_id(),
+            "configured.apps.googleusercontent.com",
         )
 
     def test_anonymous_session_is_uncached_and_contains_no_user_data(self):

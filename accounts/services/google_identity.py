@@ -16,8 +16,19 @@ class GoogleIdentity:
     full_name: str = ""
 
 
-def verify_google_identity(credential: str) -> GoogleIdentity:
+def get_google_client_id() -> str:
     client_id = str(getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
+    if client_id and client_id != "your-google-id":
+        return client_id
+
+    from allauth.socialaccount.models import SocialApp
+
+    app = SocialApp.objects.filter(provider="google").order_by("pk").first()
+    return str(app.client_id or "").strip() if app else ""
+
+
+def verify_google_identity(credential: str) -> GoogleIdentity:
+    client_id = get_google_client_id()
     token = str(credential or "").strip()
     if not client_id or not token:
         raise GoogleIdentityError("Google identity is not configured or missing.")

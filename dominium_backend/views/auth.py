@@ -18,7 +18,11 @@ from django.views.decorators.http import require_GET, require_POST
 from accounts.models import Favorite
 from house.api.serializers import serialize_property
 from house.models import Property
-from accounts.services.google_identity import GoogleIdentityError, verify_google_identity
+from accounts.services.google_identity import (
+    GoogleIdentityError,
+    get_google_client_id,
+    verify_google_identity,
+)
 from dominium_backend.views.common import get_client_ip
 
 
@@ -77,7 +81,7 @@ def auth_session(request):
 @require_GET
 @never_cache
 def google_identity_config(request):
-    client_id = str(getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
+    client_id = get_google_client_id()
     response = JsonResponse({"enabled": bool(client_id), "client_id": client_id})
     response["Cache-Control"] = "no-store"
     return response
