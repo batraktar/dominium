@@ -113,8 +113,8 @@ check_spa_route \
   "base/assets/js/search/ui.js" \
   "base/assets/js/search/index.js"
 
-check_bundle_asset "$tmp_dir/search.html" '/assets/index-[^" ]+\.js' 'text/javascript|application/javascript' "React JavaScript asset"
-check_bundle_asset "$tmp_dir/search.html" '/assets/index-[^" ]+\.css' 'text/css' "React CSS asset"
+check_bundle_asset "$tmp_dir/search.html" '/static/assets/index-[^" ]+\.js' 'text/javascript|application/javascript' "React JavaScript asset"
+check_bundle_asset "$tmp_dir/search.html" '/static/assets/index-[^" ]+\.css' 'text/css' "React CSS asset"
 
 check_spa_route \
   "/likes/" \
