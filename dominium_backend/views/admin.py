@@ -6,8 +6,30 @@ from django.shortcuts import get_object_or_404, render
 
 from house.models import Property
 from dominium_backend.views.common import get_client_ip
+from dominium_backend.services.search_console import (
+    SearchConsoleNotConfigured,
+    get_search_performance,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def search_console_performance(request):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return HttpResponseNotFound()
+    try:
+        period = int(request.GET.get("period", "28"))
+    except (TypeError, ValueError):
+        period = 0
+    if period not in {7, 28, 90}:
+        return JsonResponse({"error": "unsupported_period"}, status=400)
+    try:
+        return JsonResponse(get_search_performance(period))
+    except SearchConsoleNotConfigured:
+        return JsonResponse({"status": "not_configured"})
+    except Exception:
+        logger.warning("Search Console request failed")
+        return JsonResponse({"status": "unavailable"}, status=502)
 
 
 def property_api_admin(request):

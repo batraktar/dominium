@@ -35,4 +35,5 @@ export const apiEndpoints = {
   articleDetail: (slug) => `/api/articles/${encodeURIComponent(slug)}/`,
   adminArticles: '/api/admin/articles/',
   adminArticleItem: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/`,
+  adminSearchConsole: '/api/admin/search-console/',
 }

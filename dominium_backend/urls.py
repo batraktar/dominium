@@ -76,6 +76,11 @@ urlpatterns = [
         name="article_admin_item",
     ),
     path(
+        "api/admin/search-console/",
+        admin_views.search_console_performance,
+        name="search_console_performance",
+    ),
+    path(
         "test/map/interactive/",
         spa_views.interactive_map_test_spa,
         name="interactive_map_test",
