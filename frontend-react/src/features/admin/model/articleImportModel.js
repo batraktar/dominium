@@ -7,9 +7,15 @@ export const ARTICLE_CHATGPT_PROMPT = `Створи SEO-статтю украї�
   "summary": "Короткий опис до 500 символів",
   "body": "Повний корисний текст статті з абзацами, розділеними символом нового рядка",
   "seo_title": "SEO title до 200 символів",
-  "seo_description": "SEO description до 320 символів"
+  "seo_description": "SEO description до 320 символів",
+  "cover_image_url": "https://example.com/direct-cover.jpg",
+  "images": [
+    {"url": "https://example.com/direct-photo.jpg", "alt_text": "Точний опис фото", "caption": "Короткий підпис"}
+  ]
 }
-Slug — унікальний, латиницею, малими літерами, лише a-z, 0-9 і дефіси. Не додавай is_published: імпорт завжди створює чернетку.`
+Slug — унікальний, латиницею, малими літерами, лише a-z, 0-9 і дефіси.
+Для cover_image_url та images використовуй лише реальні прямі HTTPS-посилання на JPG, PNG, WebP або GIF, які відкривають саме файл зображення, а не HTML-сторінку. Не вигадуй URL. Обирай тематичні фото з джерел, де дозволене повторне використання, і додавай змістовний alt_text. Якщо перевірених прямих посилань немає — залиш cover_image_url порожнім, а images порожнім списком.
+Не додавай is_published: імпорт завжди створює чернетку.`
 
 export function parseArticleImport(value) {
   let text = String(value || '').replace(/^\uFEFF/, '').trim()

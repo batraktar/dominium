@@ -13,6 +13,10 @@ test('article prompt requests the strict safe JSON schema', () => {
   }
   assert.match(ARTICLE_CHATGPT_PROMPT, /без HTML/i)
   assert.match(ARTICLE_CHATGPT_PROMPT, /без markdown/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /"cover_image_url"/)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /"images"/)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /прямі HTTPS-посилання/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /Не вигадуй URL/i)
 })
 
 test('parses a JSON article and rejects invalid roots', () => {

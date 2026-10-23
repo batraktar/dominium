@@ -1,5 +1,6 @@
 import json
 from io import BytesIO
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -203,6 +204,56 @@ class ArticlePublicationTests(TestCase):
             reverse("article_import"), data=json.dumps(payload), content_type="application/json"
         )
         self.assertEqual(duplicate.status_code, 400)
+
+    @patch("dominium_backend.views.articles.ensure_safe_import_url", side_effect=lambda url, **_: url)
+    @patch("dominium_backend.views.articles.fetch_remote_content")
+    def test_json_import_downloads_cover_and_gallery_images(self, fetch, _safe_url):
+        self.client.force_login(self.staff)
+        image = self._image("source.png")
+        fetch.return_value = (image.read(), "image/png", "https://images.example/photo.png")
+        payload = {
+            "title": "Стаття з фото",
+            "slug": "article-with-remote-images",
+            "summary": "Коротко",
+            "body": "Текст",
+            "cover_image_url": "https://images.example/cover.png",
+            "images": [{
+                "url": "https://images.example/photo.png",
+                "alt_text": "Будинок у місті",
+                "caption": "Ілюстрація",
+            }],
+        }
+
+        preview = self.client.post(
+            reverse("article_import_preview"), data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(preview.status_code, 200, preview.content)
+        self.assertEqual(fetch.call_count, 0)
+
+        saved = self.client.post(
+            reverse("article_import"), data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(saved.status_code, 201, saved.content)
+        article = Article.objects.get(slug="article-with-remote-images")
+        self.assertTrue(article.cover_image.name.endswith(".png"))
+        self.assertEqual(article.images.count(), 1)
+        self.assertEqual(article.images.get().alt_text, "Будинок у місті")
+        self.assertEqual(fetch.call_count, 2)
+
+    def test_json_import_rejects_insecure_or_malformed_image_links(self):
+        self.client.force_login(self.staff)
+        base = {"title": "Назва", "slug": "image-link-test", "summary": "Опис", "body": "Текст"}
+        for media in (
+            {"cover_image_url": "http://example.com/cover.jpg"},
+            {"images": [{"url": "https://example.com/a.jpg", "unexpected": "value"}]},
+            {"images": "https://example.com/a.jpg"},
+        ):
+            response = self.client.post(
+                reverse("article_import_preview"),
+                data=json.dumps({**base, **media}),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 400, response.content)
 
     def test_json_import_rejects_html_unknown_fields_and_oversized_payload(self):
         self.client.force_login(self.staff)

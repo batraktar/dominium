@@ -1,8 +1,12 @@
 import json
 import os
 import re
+from io import BytesIO
+from urllib.parse import urlparse
 
+import requests
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse, JsonResponse
@@ -11,10 +15,18 @@ from django.views.decorators.http import require_GET, require_http_methods
 from PIL import Image, UnidentifiedImageError
 
 from house.models import Article, ArticleImage
+from house.utils.network_security import (
+    ImportContentTypeError,
+    ImportPayloadTooLargeError,
+    UnsafeImportURLError,
+    ensure_safe_import_url,
+    fetch_remote_content,
+)
 
 
 IMPORT_FIELDS = {
-    "title", "slug", "summary", "body", "seo_title", "seo_description", "is_published"
+    "title", "slug", "summary", "body", "seo_title", "seo_description",
+    "is_published", "cover_image_url", "images",
 }
 HTML_PATTERN = re.compile(r"<\s*/?\s*[a-zA-Z][^>]*>")
 
@@ -89,19 +101,58 @@ def _validate_image(upload):
     return None
 
 
+def _validate_import_media(data):
+    errors = {}
+    cover_url = str(data.get("cover_image_url") or "").strip()
+    raw_images = data.get("images", [])
+    if not isinstance(raw_images, list):
+        return None, {"images": "Поле images має бути списком."}
+    if len(raw_images) > settings.ARTICLE_IMPORT_MAX_IMAGES:
+        return None, {"images": f"Дозволено не більше {settings.ARTICLE_IMPORT_MAX_IMAGES} фото."}
+
+    media = {"cover_image_url": cover_url, "images": []}
+    candidates = [("cover_image_url", cover_url)] if cover_url else []
+    for index, item in enumerate(raw_images):
+        if not isinstance(item, dict) or set(item) - {"url", "alt_text", "caption"}:
+            errors["images"] = f"Фото #{index + 1} має некоректну структуру."
+            continue
+        url = str(item.get("url") or "").strip()
+        media["images"].append({
+            "url": url,
+            "alt_text": str(item.get("alt_text") or "").strip()[:200],
+            "caption": str(item.get("caption") or "").strip()[:500],
+        })
+        candidates.append((f"images[{index}].url", url))
+
+    for field, url in candidates:
+        if not url:
+            errors[field] = "Додайте пряме HTTPS-посилання на зображення."
+            continue
+        if urlparse(url).scheme.lower() != "https":
+            errors[field] = "Дозволені лише HTTPS-посилання."
+            continue
+        try:
+            ensure_safe_import_url(url, url_kind="image")
+        except UnsafeImportURLError:
+            errors[field] = "Посилання веде на недозволену або локальну адресу."
+    return media, errors
+
+
 def _import_payload(request):
     if request.content_type != "application/json":
-        return None, JsonResponse({"errors": {"body": "Очікується JSON."}}, status=400)
+        return None, None, JsonResponse({"errors": {"body": "Очікується JSON."}}, status=400)
     if len(request.body) > settings.ARTICLE_IMPORT_MAX_BYTES:
-        return None, JsonResponse({"error": "payload_too_large"}, status=413)
+        return None, None, JsonResponse({"error": "payload_too_large"}, status=413)
     data = _request_data(request)
     if not isinstance(data, dict):
-        return None, JsonResponse({"errors": {"body": "Некоректний JSON."}}, status=400)
+        return None, None, JsonResponse({"errors": {"body": "Некоректний JSON."}}, status=400)
     unknown = sorted(set(data) - IMPORT_FIELDS)
     if unknown:
-        return None, JsonResponse({"errors": {"fields": "Невідомі поля: " + ", ".join(unknown)}}, status=400)
+        return None, None, JsonResponse({"errors": {"fields": "Невідомі поля: " + ", ".join(unknown)}}, status=400)
     article = Article(is_published=False)
     errors = _apply(article, data)
+    media, media_errors = _validate_import_media(data)
+    errors.update(media_errors)
     article.is_published = False
     article.published_at = None
     for field in ("title", "summary", "body", "seo_title", "seo_description"):
@@ -115,8 +166,47 @@ def _import_payload(request):
     if Article.objects.filter(slug=article.slug).exists():
         errors["slug"] = "Такий slug уже існує."
     if errors:
-        return None, JsonResponse({"errors": errors}, status=400)
-    return article, None
+        return None, None, JsonResponse({"errors": errors}, status=400)
+    return article, media, None
+
+
+def _download_import_image(url, filename_prefix):
+    raw, content_type, final_url = fetch_remote_content(
+        url,
+        timeout=settings.ARTICLE_IMPORT_IMAGE_TIMEOUT,
+        max_bytes=settings.ADMIN_IMAGE_MAX_BYTES,
+        allowed_content_types=("image/jpeg", "image/png", "image/webp", "image/gif"),
+        accept_header="image/jpeg,image/png,image/webp,image/gif",
+        url_kind="image",
+    )
+    with Image.open(BytesIO(raw)) as image:
+        image.verify()
+        image_format = (image.format or "").lower()
+    extension = {"jpeg": ".jpg", "png": ".png", "webp": ".webp", "gif": ".gif"}.get(image_format)
+    if not extension:
+        raise UnidentifiedImageError("Unsupported image format")
+    upload = ContentFile(raw, name=f"{filename_prefix}{extension}")
+    upload.content_type = content_type.split(";", 1)[0]
+    validation_error = _validate_image(upload)
+    if validation_error:
+        raise UnidentifiedImageError(validation_error)
+    return upload, final_url
+
+
+def _download_import_media(media):
+    downloaded = {"cover": None, "images": []}
+    try:
+        if media["cover_image_url"]:
+            downloaded["cover"], _ = _download_import_image(media["cover_image_url"], "cover")
+        for index, item in enumerate(media["images"]):
+            upload, _ = _download_import_image(item["url"], f"image-{index + 1}")
+            downloaded["images"].append((upload, item))
+    except (
+        requests.RequestException, UnsafeImportURLError, ImportPayloadTooLargeError,
+        ImportContentTypeError, UnidentifiedImageError, OSError, ValueError,
+    ):
+        return None, "Не вдалося безпечно завантажити одне із зображень. Перевірте прямі HTTPS-посилання."
+    return downloaded, None
 
 
 def _apply(article, data, *, partial=False):
@@ -226,13 +316,14 @@ def article_admin_item(request, article_id):
 def article_import_preview(request):
     if not _staff_required(request):
         return JsonResponse({"error": "forbidden"}, status=403)
-    article, error = _import_payload(request)
+    article, media, error = _import_payload(request)
     if error:
         return error
     return JsonResponse({"result": {
         "title": article.title, "slug": article.slug, "summary": article.summary,
         "body": article.body, "seo_title": article.seo_title,
         "seo_description": article.seo_description, "is_published": False,
+        "cover_image_url": media["cover_image_url"], "images": media["images"],
     }})
 
 
@@ -240,13 +331,26 @@ def article_import_preview(request):
 def article_import(request):
     if not _staff_required(request):
         return JsonResponse({"error": "forbidden"}, status=403)
-    article, error = _import_payload(request)
+    article, media, error = _import_payload(request)
     if error:
         return error
+    downloaded, download_error = _download_import_media(media)
+    if download_error:
+        return JsonResponse({"errors": {"images": download_error}}, status=400)
     with transaction.atomic():
+        if downloaded["cover"]:
+            article.cover_image = downloaded["cover"]
         errors = _save(article)
         if errors:
             return JsonResponse({"errors": errors}, status=400)
+        for index, (upload, item) in enumerate(downloaded["images"]):
+            ArticleImage.objects.create(
+                article=article,
+                image=upload,
+                alt_text=item["alt_text"],
+                caption=item["caption"],
+                sort_order=index,
+            )
     return JsonResponse({"result": _serialize(article, request)}, status=201)
 
 
