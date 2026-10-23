@@ -168,6 +168,17 @@ async function request(path, options = {}) {
         throw toUiErrorFromResponse(response, data)
       }
 
+      // Attribute key actions to the article that started this tab's visit.
+      // Dynamic import avoids coupling the shared API layer to article UI.
+      if (method === 'POST' && (/^\/api\/like\/\d+\/$/.test(path) || path === '/api/consultation/')) {
+        import('../../features/articles/services/articleAnalytics.js').then(({ trackArticleEvent }) => {
+          const match = path.match(/^\/api\/like\/(\d+)\/$/)
+          trackArticleEvent(path === '/api/consultation/' ? 'consultation' : 'favorite', {
+            propertyId: match ? Number(match[1]) : null,
+          })
+        }).catch(() => undefined)
+      }
+
       return {
         data,
         status: response.status,

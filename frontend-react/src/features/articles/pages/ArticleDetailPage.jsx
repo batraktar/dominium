@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { articleContentFlow } from '../model/articleContentModel.js'
 import { getPublishedArticle } from '../services/articleApi.js'
+import { beginArticleAttribution, trackArticleEvent } from '../services/articleAnalytics.js'
 
 function ArticleDetailPage() {
   const slug = decodeURIComponent(window.location.pathname.match(/^\/articles\/([^/]+)\/?$/)?.[1] || '')
@@ -11,7 +12,7 @@ function ArticleDetailPage() {
   useEffect(() => {
     const controller = new AbortController()
     getPublishedArticle(slug, { signal: controller.signal })
-      .then(setArticle)
+      .then((result) => { setArticle(result); beginArticleAttribution(result) })
       .catch((loadError) => {
         if (loadError?.name !== 'AbortError') setError(loadError?.message || 'Статтю не знайдено.')
       })
@@ -22,7 +23,12 @@ function ArticleDetailPage() {
   if (!article) return <section className="container mx-auto px-4 py-12"><p>Завантаження…</p></section>
 
   return (
-    <article className="container mx-auto max-w-4xl px-4 py-12 text-deepOcean">
+    <article className="container mx-auto max-w-4xl px-4 py-12 text-deepOcean" onClick={(event) => {
+      const link = event.target.closest?.('a[href]')
+      if (link && new URL(link.href, window.location.origin).origin === window.location.origin) {
+        trackArticleEvent('internal_click', { targetPath: new URL(link.href, window.location.origin).pathname })
+      }
+    }}>
       <a href="/articles/" className="mb-6 inline-block text-accent">← Усі статті</a>
       <h1 className="mb-4 text-4xl font-semibold md:text-5xl">{article.title}</h1>
       <p className="mb-8 text-xl text-slate-600">{article.summary}</p>
@@ -37,6 +43,11 @@ function ArticleDetailPage() {
         if (block.type === 'list') return <ul key={index}>{block.items.map((item) => <li key={item}>{item}</li>)}</ul>
         return <p key={index}>{block.value}</p>
       })}</div>
+      <nav className="article-next-actions" aria-label="Що зробити далі">
+        <h2>Шукаєте нерухомість?</h2>
+        <p>Перегляньте актуальні об’єкти або залиште заявку — команда DOMINIUM допоможе з вибором.</p>
+        <div><a href="/search/">Переглянути об’єкти</a><a href="/#contact">Отримати консультацію</a></div>
+      </nav>
       {selectedImage ? <div className="article-lightbox" role="dialog" aria-modal="true" aria-label="Перегляд фото" onClick={() => setSelectedImage(null)}><button type="button" className="article-lightbox__close" onClick={() => setSelectedImage(null)} aria-label="Закрити">×</button><figure onClick={(event) => event.stopPropagation()}><img src={selectedImage.url} alt={selectedImage.alt_text || article.title} />{selectedImage.caption ? <figcaption>{selectedImage.caption}</figcaption> : null}</figure></div> : null}
     </article>
   )

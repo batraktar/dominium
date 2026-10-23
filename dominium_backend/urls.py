@@ -60,6 +60,7 @@ urlpatterns = [
     path("articles/", spa_views.article_list_spa, name="article_list"),
     path("articles/<slug:slug>/", spa_views.article_detail_spa, name="article_detail"),
     path("api/articles/", article_views.article_list_api, name="article_list_api"),
+    path("api/articles/events/", article_views.article_event, name="article_event"),
     path(
         "api/articles/<slug:slug>/",
         article_views.article_detail_api,
@@ -70,6 +71,7 @@ urlpatterns = [
         article_views.article_admin_collection,
         name="article_admin_collection",
     ),
+    path("api/admin/articles/analytics/", article_views.article_analytics, name="article_analytics"),
     path(
         "api/admin/articles/<int:article_id>/",
         article_views.article_admin_item,

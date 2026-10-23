@@ -1,5 +1,6 @@
-export const ARTICLE_CHATGPT_PROMPT = `Створи SEO-статтю українською мовою для сайту агентства нерухомості DOMINIUM.
+export const ARTICLE_CHATGPT_PROMPT = String.raw`Створи SEO-статтю українською мовою для сайту агентства нерухомості DOMINIUM.
 Поверни лише чистий JSON без markdown-блоку, коментарів і HTML. Текст має бути звичайним без HTML-тегів.
+Перед відповіддю перевір, що JSON парситься: усі переноси всередині рядків кодуй як \n, подвійні лапки всередині тексту екрануй зворотною скісною рискою, не залишай коми перед } або ].
 Використай точно цю структуру й не додавай інших полів:
 {
   "title": "Назва до 200 символів",
@@ -27,6 +28,30 @@ export function parseArticleImport(value) {
   if (fenced) text = fenced[1].trim()
   text = text.replaceAll('https\\://', 'https://')
 
+  // Keep only the JSON object when a chat response contains a short intro or
+  // closing sentence around it.
+  const firstBrace = text.indexOf('{')
+  const lastBrace = text.lastIndexOf('}')
+  if (firstBrace >= 0 && lastBrace > firstBrace) text = text.slice(firstBrace, lastBrace + 1)
+
+  // Pasted AI responses sometimes contain literal line breaks/tabs inside a
+  // quoted JSON value. They are valid article text, but invalid JSON until
+  // escaped. Do this only while inside a string so the object structure stays
+  // strict and server-side validation remains authoritative.
+  let normalized = ''
+  let inString = false
+  let escaped = false
+  for (const character of text) {
+    if (inString && character === '\n') { normalized += '\\n'; escaped = false; continue }
+    if (inString && character === '\r') { normalized += '\\r'; escaped = false; continue }
+    if (inString && character === '\t') { normalized += '\\t'; escaped = false; continue }
+    normalized += character
+    if (character === '"' && !escaped) inString = !inString
+    if (character === '\\' && !escaped) escaped = true
+    else escaped = false
+  }
+  text = normalized.replace(/,\s*([}\]])/g, '$1')
+
   // ChatGPT occasionally appends a single quote after an otherwise complete
   // JSON object (`}"`). Ignore only that narrow, unambiguous wrapper typo.
   if (text.startsWith('{')) {
@@ -42,7 +67,10 @@ export function parseArticleImport(value) {
   } catch (error) {
     const position = String(error?.message || '').match(/position\s+(\d+)/i)?.[1]
     const hint = position ? ` біля символу ${Number(position) + 1}` : ''
-    throw new Error(`JSON має некоректний формат${hint}. Перевірте лапки та коми.`)
+    const context = position
+      ? text.slice(Math.max(0, Number(position) - 28), Number(position) + 28).replace(/\s+/g, ' ')
+      : ''
+    throw new Error(`JSON має некоректний формат${hint}.${context ? ` Фрагмент: «${context}».` : ''} Перевірте лапки та коми.`)
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('Очікується один JSON-об’єкт статті.')

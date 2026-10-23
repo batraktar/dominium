@@ -33,6 +33,8 @@ export const apiEndpoints = {
   stats: '/api/stats/',
   articles: '/api/articles/',
   articleDetail: (slug) => `/api/articles/${encodeURIComponent(slug)}/`,
+  articleAnalytics: '/api/articles/events/',
+  adminArticleAnalytics: '/api/admin/articles/analytics/',
   adminArticles: '/api/admin/articles/',
   adminArticleItem: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/`,
   adminArticleImportPreview: '/api/admin/articles/import-preview/',

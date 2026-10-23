@@ -18,6 +18,7 @@ test('article prompt requests the strict safe JSON schema', () => {
   assert.match(ARTICLE_CHATGPT_PROMPT, /"images"/)
   assert.match(ARTICLE_CHATGPT_PROMPT, /прямі HTTPS-посилання/i)
   assert.match(ARTICLE_CHATGPT_PROMPT, /Не вигадуй URL/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /перевір, що JSON парситься/i)
 })
 
 test('builds a ChatGPT URL with the current article prompt', () => {
@@ -36,10 +37,9 @@ test('normalizes common ChatGPT wrappers without weakening JSON validation', () 
   assert.deepEqual(parseArticleImport('```json\n{"title":"Назва"}\n```'), { title: 'Назва' })
   assert.deepEqual(parseArticleImport('{"title":"Назва"}"'), { title: 'Назва' })
   assert.deepEqual(parseArticleImport('{"url":"https\\://example.com/photo.jpg"}'), { url: 'https://example.com/photo.jpg' })
-  assert.throws(
-    () => parseArticleImport('{"title":"Назва",}'),
-    /лапки та коми/i,
-  )
+  assert.deepEqual(parseArticleImport('Ось JSON:\n{"title":"Назва\nДругий рядок",}\nГотово.'), { title: 'Назва\nДругий рядок' })
+  assert.deepEqual(parseArticleImport('{"title":"Назва",}'), { title: 'Назва' })
+  assert.throws(() => parseArticleImport('{"title": "Незакритий текст}'), /лапки та коми/i)
 })
 
 test('footer article discovery is visible only to staff', () => {

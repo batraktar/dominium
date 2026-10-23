@@ -474,3 +474,29 @@ class ArticleImage(models.Model):
 
     def __str__(self):
         return f"{self.article}: {self.alt_text or self.image.name}"
+
+
+class ArticleEvent(models.Model):
+    EVENT_TYPES = [
+        ("view", "Перегляд статті"),
+        ("internal_click", "Перехід зі статті"),
+        ("site_page_view", "Наступна сторінка"),
+        ("favorite", "Додавання в обране"),
+        ("consultation", "Заявка"),
+    ]
+
+    article = models.ForeignKey(Article, related_name="events", on_delete=models.CASCADE)
+    session_id = models.CharField(max_length=64, db_index=True)
+    event_type = models.CharField(max_length=24, choices=EVENT_TYPES, db_index=True)
+    target_path = models.CharField(max_length=500, blank=True)
+    property_id = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["article", "created_at"], name="house_artic_article_05563c_idx")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["article", "session_id", "event_type", "target_path", "property_id"],
+                name="unique_article_journey_event",
+            )
+        ]

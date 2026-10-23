@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 from PIL import Image
 
-from house.models import Article, ArticleImage
+from house.models import Article, ArticleEvent, ArticleImage
 
 
 class ArticlePublicationTests(TestCase):
@@ -100,6 +100,35 @@ class ArticlePublicationTests(TestCase):
         self.client.force_login(user)
         non_staff = self.client.get(reverse("article_admin_collection"))
         self.assertEqual(non_staff.status_code, 403)
+
+    def test_article_journey_events_are_deduplicated_and_staff_can_report_them(self):
+        payload = {
+            "article_id": self.published.id,
+            "session_id": "11111111-1111-4111-8111-111111111111",
+            "event_type": "view",
+            "target_path": f"/articles/{self.published.slug}/",
+        }
+        first = self.client.post(reverse("article_event"), json.dumps(payload), content_type="application/json")
+        duplicate = self.client.post(reverse("article_event"), json.dumps(payload), content_type="application/json")
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertEqual(ArticleEvent.objects.count(), 1)
+
+        self.client.force_login(self.staff)
+        report = self.client.get(reverse("article_analytics"), {"period": 28})
+        self.assertEqual(report.status_code, 200)
+        row = next(item for item in report.json()["results"] if item["id"] == self.published.id)
+        self.assertEqual(row["views"], 1)
+        self.assertEqual(row["visitors"], 1)
+
+    def test_article_analytics_is_staff_only_and_events_require_published_article(self):
+        self.assertEqual(self.client.get(reverse("article_analytics")).status_code, 403)
+        response = self.client.post(reverse("article_event"), json.dumps({
+            "article_id": self.draft.id,
+            "session_id": "22222222-2222-4222-8222-222222222222",
+            "event_type": "view",
+        }), content_type="application/json")
+        self.assertEqual(response.status_code, 404)
 
     def test_drafts_do_not_leak_into_sitemap_and_public_pages_have_correct_robots(self):
         sitemap = self.client.get(reverse("sitemap"))

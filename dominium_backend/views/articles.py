@@ -1,20 +1,24 @@
 import json
 import os
 import re
+from datetime import timedelta
 from io import BytesIO
 from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_http_methods
+from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
 
-from house.models import Article, ArticleImage
+from house.models import Article, ArticleEvent, ArticleImage
 from house.utils.network_security import (
     ImportContentTypeError,
     ImportPayloadTooLargeError,
@@ -260,6 +264,73 @@ def article_list_api(request):
 def article_detail_api(request, slug):
     article = get_object_or_404(Article, slug=slug, is_published=True)
     return JsonResponse({"result": _serialize(article, request)})
+
+
+@require_http_methods(["POST"])
+def article_event(request):
+    data = _request_data(request)
+    if not isinstance(data, dict):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+    event_type = str(data.get("event_type") or "")
+    allowed = {choice[0] for choice in ArticleEvent.EVENT_TYPES}
+    session_id = str(data.get("session_id") or "")[:64]
+    if event_type not in allowed or not re.fullmatch(r"[a-zA-Z0-9-]{16,64}", session_id):
+        return JsonResponse({"error": "invalid_event"}, status=400)
+    try:
+        article_id = int(data.get("article_id"))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "invalid_article"}, status=400)
+    article = get_object_or_404(Article, pk=article_id, is_published=True)
+    client_ip = request.META.get("REMOTE_ADDR", "unknown")
+    rate_key = f"article-event:{client_ip}:{timezone.now():%Y%m%d%H%M}"
+    try:
+        count = cache.incr(rate_key)
+    except ValueError:
+        cache.set(rate_key, 1, 90)
+        count = 1
+    if count > 120:
+        return JsonResponse({"error": "rate_limited"}, status=429)
+    target_path = str(data.get("target_path") or "")[:500]
+    if target_path and (not target_path.startswith("/") or target_path.startswith("//")):
+        target_path = ""
+    property_id = data.get("property_id")
+    try:
+        property_id = int(property_id) if property_id is not None else None
+    except (TypeError, ValueError):
+        property_id = None
+    _, created = ArticleEvent.objects.get_or_create(
+        article=article, session_id=session_id, event_type=event_type,
+        target_path=target_path, property_id=property_id,
+    )
+    return JsonResponse({"status": "recorded" if created else "duplicate"}, status=201 if created else 200)
+
+
+@require_GET
+def article_analytics(request):
+    if not _staff_required(request):
+        return JsonResponse({"error": "forbidden"}, status=403)
+    try:
+        days = int(request.GET.get("period", 28))
+    except (TypeError, ValueError):
+        days = 28
+    days = days if days in {7, 28, 90} else 28
+    since = timezone.now() - timedelta(days=days)
+    rows = Article.objects.annotate(
+        views=Count("events", filter=Q(events__created_at__gte=since, events__event_type="view")),
+        visitors=Count("events__session_id", distinct=True, filter=Q(events__created_at__gte=since, events__event_type="view")),
+        internal_clicks=Count("events", filter=Q(events__created_at__gte=since, events__event_type="internal_click")),
+        site_pages=Count("events", filter=Q(events__created_at__gte=since, events__event_type="site_page_view")),
+        favorites=Count("events", filter=Q(events__created_at__gte=since, events__event_type="favorite")),
+        consultations=Count("events", filter=Q(events__created_at__gte=since, events__event_type="consultation")),
+    ).order_by("-views", "title")
+    results = [{
+        "id": item.id, "title": item.title, "slug": item.slug,
+        "is_published": item.is_published, "views": item.views,
+        "visitors": item.visitors, "internal_clicks": item.internal_clicks,
+        "site_pages": item.site_pages, "favorites": item.favorites,
+        "consultations": item.consultations,
+    } for item in rows]
+    return JsonResponse({"period": days, "results": results})
 
 
 @require_http_methods(["GET", "POST"])
