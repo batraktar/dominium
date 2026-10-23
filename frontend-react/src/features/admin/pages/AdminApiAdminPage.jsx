@@ -7,6 +7,7 @@ import HighlightTab from '../components/HighlightTab.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import ClientsTab from '../components/ClientsTab.jsx'
 import ArticlesTab from '../components/ArticlesTab.jsx'
+import SearchConsoleTab from '../components/SearchConsoleTab.jsx'
 import './admin-api-admin.css'
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('uk-UA')
@@ -47,6 +48,11 @@ function AdminNav({ activeTab, onTabChange, stats }) {
       id: 'articles',
       label: 'Статті',
       icon: 'ri-article-line',
+    },
+    {
+      id: 'search-console',
+      label: 'Пошук Google',
+      icon: 'ri-line-chart-line',
     },
     {
       id: 'settings',
@@ -243,6 +249,8 @@ function AdminApiAdminPage() {
           {activeTab === 'highlight' && <HighlightTab />}
 
           {activeTab === 'articles' && <ArticlesTab />}
+
+          {activeTab === 'search-console' && <SearchConsoleTab />}
 
           {activeTab === 'settings' && <SettingsTab />}
         </div>
