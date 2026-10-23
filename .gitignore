@@ -13,6 +13,7 @@ venv/
 .python-version
 .idea/
 .vscode/
+.worktrees/
 db.sqlite3
 media/
 staticfiles/
