@@ -33,6 +33,8 @@ function App() {
     handleLogout,
     isLoggingIn,
     loginError,
+    setLoginError,
+    handleGoogleAuthenticated,
     googleAuthUrl,
   } = useAppController()
 
@@ -79,13 +81,19 @@ function App() {
         />
       </AppFrame>
 
-      <RegisterModal googleAuthUrl={googleAuthUrl} />
+      <RegisterModal
+        googleAuthUrl={googleAuthUrl}
+        onGoogleAuthenticated={handleGoogleAuthenticated}
+        onGoogleError={setLoginError}
+      />
       <LoginModal
         onSubmit={handleLoginSubmit}
         currentPathWithQuery={currentPathWithQuery}
         isLoggingIn={isLoggingIn}
         loginError={loginError}
         googleAuthUrl={googleAuthUrl}
+        onGoogleAuthenticated={handleGoogleAuthenticated}
+        onGoogleError={setLoginError}
       />
       <MobileNav
         userIsStaff={userIsStaff}

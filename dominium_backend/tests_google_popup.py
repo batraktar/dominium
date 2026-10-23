@@ -72,6 +72,11 @@ class GoogleCredentialLoginTests(TestCase):
                 "client_id": "dominium-client.apps.googleusercontent.com",
             },
         )
+        self.assertIn("https://accounts.google.com", response["Content-Security-Policy"])
+        self.assertIn(
+            "frame-src https://accounts.google.com",
+            response["Content-Security-Policy"],
+        )
 
     @patch("dominium_backend.views.auth.verify_google_identity")
     def test_verified_credential_creates_user_and_session(self, verify):

@@ -1,6 +1,6 @@
-import googleLogo from '../../../../../static/base/assets/img/google-logo.svg'
+import GoogleIdentityButton from './GoogleIdentityButton.jsx'
 
-function RegisterModal({ googleAuthUrl }) {
+function RegisterModal({ googleAuthUrl, onGoogleAuthenticated, onGoogleError }) {
   const headerGradientStyle = {
     backgroundImage: 'linear-gradient(to right, rgba(19, 62, 68, 0.9), #133E44)',
   }
@@ -31,17 +31,11 @@ function RegisterModal({ googleAuthUrl }) {
             керувати збереженими об&apos;єктами та швидше залишати заявки.
           </p>
           <div className="flex flex-col gap-3">
-            <button
-              type="button"
-              data-google-auth
-              data-auth-url={googleAuthUrl}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-full border border-gray-300 bg-white hover:border-primary hover:shadow transition"
-            >
-              <span className="inline-flex items-center justify-center w-8 h-8 bg-white">
-                <img src={googleLogo} alt="Google" className="w-5 h-5" />
-              </span>
-              <span className="text-sm font-medium text-gray-700">Продовжити з Google</span>
-            </button>
+            <GoogleIdentityButton
+              fallbackUrl={googleAuthUrl}
+              onAuthenticated={onGoogleAuthenticated}
+              onError={onGoogleError}
+            />
             <p className="text-center text-sm text-gray-600">
               Вже маєте акаунт?
               <button

@@ -1,4 +1,4 @@
-import googleLogo from '../../../../../static/base/assets/img/google-logo.svg'
+import GoogleIdentityButton from './GoogleIdentityButton.jsx'
 
 function LoginModal({
   onSubmit,
@@ -6,6 +6,8 @@ function LoginModal({
   isLoggingIn = false,
   loginError = '',
   googleAuthUrl,
+  onGoogleAuthenticated,
+  onGoogleError,
 }) {
   const headerGradientStyle = {
     backgroundImage: 'linear-gradient(to right, rgba(19, 62, 68, 0.9), #133E44)',
@@ -84,19 +86,11 @@ function LoginModal({
           <div className="border-t border-gray-100 pt-4 space-y-4">
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-wide text-gray-400 text-center">Або увійдіть через</p>
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  data-google-auth
-                  data-auth-url={googleAuthUrl}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-full border border-gray-300 bg-white hover:border-primary hover:shadow transition"
-                >
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-white">
-                    <img src={googleLogo} alt="Google" className="w-5 h-5" />
-                  </span>
-                  <span className="text-sm font-medium text-gray-700">Увійти через Google</span>
-                </button>
-              </div>
+              <GoogleIdentityButton
+                fallbackUrl={googleAuthUrl}
+                onAuthenticated={onGoogleAuthenticated}
+                onError={onGoogleError}
+              />
             </div>
             <p className="text-sm text-gray-600 text-center">
               Немає акаунта?

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import useAuthActions from '../../features/auth/hooks/useAuthActions.js'
 import useConsultationForm from '../../features/home/hooks/useConsultationForm.js'
 import useHomeFeaturedProperties from '../../features/home/hooks/useHomeFeaturedProperties.js'
@@ -8,7 +8,7 @@ import { readBodyBoolDataset, readBodyStringDataset } from '../../shared/utils/b
 import { getCurrentPathWithQuery } from '../../shared/utils/navigation.js'
 import { getRouteFlags } from '../routing.js'
 
-const GOOGLE_AUTH_URL = apiEndpoints.googleAuth
+const GOOGLE_AUTH_URL = apiEndpoints.googleAuthFallback
 
 export default function useAppController() {
   const currentPathname = window.location.pathname
@@ -33,6 +33,14 @@ export default function useAppController() {
   const [userEmail, setUserEmail] = useState(() => readBodyStringDataset('userEmail'))
   const [userPhone, setUserPhone] = useState(() => readBodyStringDataset('userPhone'))
 
+  const applyAuthSession = useCallback((session = {}) => {
+    setUserIsAuthenticated(Boolean(session.is_authenticated))
+    setUserIsStaff(Boolean(session.is_staff))
+    setUserDisplayName(session.display_name || '')
+    setUserEmail(session.email || '')
+    setUserPhone(session.phone || '')
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
 
@@ -45,13 +53,7 @@ export default function useAppController() {
         if (!response.ok) throw new Error(`Auth session request failed: ${response.status}`)
         return response.json()
       })
-      .then((session) => {
-        setUserIsAuthenticated(Boolean(session.is_authenticated))
-        setUserIsStaff(Boolean(session.is_staff))
-        setUserDisplayName(session.display_name || '')
-        setUserEmail(session.email || '')
-        setUserPhone(session.phone || '')
-      })
+      .then(applyAuthSession)
       .catch((error) => {
         if (error.name !== 'AbortError') {
           console.error('Could not load authentication session', error)
@@ -59,7 +61,7 @@ export default function useAppController() {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [applyAuthSession])
 
   const featuredProperties = useHomeFeaturedProperties({
     enabled: isHomeRoute,
@@ -73,7 +75,14 @@ export default function useAppController() {
   } = useConsultationForm()
 
   const { handleLoginSubmit, handleLogout, isLoggingIn, loginError, setLoginError } =
-    useAuthActions()
+    useAuthActions({ onSession: applyAuthSession })
+
+  const handleGoogleAuthenticated = useCallback((session) => {
+    applyAuthSession(session)
+    setLoginError('')
+    window.dominiumCloseModal?.('login')
+    window.dominiumCloseModal?.('register')
+  }, [applyAuthSession, setLoginError])
 
   const authQueryHandledRef = useRef(false)
 
@@ -126,6 +135,8 @@ export default function useAppController() {
     handleLogout,
     isLoggingIn,
     loginError,
+    setLoginError,
+    handleGoogleAuthenticated,
     googleAuthUrl: GOOGLE_AUTH_URL,
   }
 }

@@ -3,7 +3,7 @@ import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
 import { getCurrentPathWithQuery, normalizeNextPath } from '../../../shared/utils/navigation.js'
 
-function useAuthActions() {
+function useAuthActions({ onSession = () => {} } = {}) {
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [loginError, setLoginError] = useState('')
 
@@ -34,13 +34,13 @@ function useAuthActions() {
     setLoginError('')
 
     try {
-      await apiClient.postForm(apiEndpoints.login, payload)
+      const { data } = await apiClient.postForm(apiEndpoints.login, payload)
 
       if (typeof window.dominiumCloseModal === 'function') {
         window.dominiumCloseModal('login')
       }
       form.reset()
-      window.location.assign(nextPath || '/')
+      onSession({ is_authenticated: true, ...(data?.user || {}) })
     } catch (error) {
       const fallbackMessage = 'Не вдалося виконати вхід. Спробуйте ще раз.'
       const message =
@@ -57,17 +57,17 @@ function useAuthActions() {
     event.preventDefault()
 
     try {
-      const { response } = await apiClient.post(apiEndpoints.logout, {
+      await apiClient.post(apiEndpoints.logout, {
         parseAs: 'raw',
         withJsonAccept: false,
       })
-
-      if (response.redirected) {
-        window.location.href = response.url
-        return
-      }
-
-      window.location.reload()
+      onSession({
+        is_authenticated: false,
+        is_staff: false,
+        display_name: '',
+        email: '',
+        phone: '',
+      })
     } catch (error) {
       console.error('Could not log out', error)
       window.alert(error?.message || 'Не вдалося вийти. Спробуйте ще раз.')

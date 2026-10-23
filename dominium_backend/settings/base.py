@@ -429,12 +429,12 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = os.getenv(
 
 DEFAULT_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; "
+    "script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://accounts.google.com; "
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
     "img-src 'self' data: https:; "
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
     "connect-src 'self'; "
-    "frame-src 'none'; "
+    "frame-src https://accounts.google.com; "
     "object-src 'none'; "
     "base-uri 'self'; "
     "form-action 'self' https://accounts.google.com; "
