@@ -1,10 +1,13 @@
 import json
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from PIL import Image
 
-from house.models import Article
+from house.models import Article, ArticleImage
 
 
 class ArticlePublicationTests(TestCase):
@@ -108,3 +111,108 @@ class ArticlePublicationTests(TestCase):
         self.assertContains(published, 'name="robots" content="index, follow')
         detail = self.client.get(reverse("article_detail_api", args=[self.published.slug]))
         self.assertEqual(detail.json()["result"]["body"], "Безпечний текст статті")
+
+    def test_staff_uploads_orders_and_deletes_article_images(self):
+        self.client.force_login(self.staff)
+        upload = self.client.post(
+            reverse("article_admin_images", args=[self.published.id]),
+            data={
+                "images": [self._image("second.png"), self._image("first.png")],
+                "alt_texts": json.dumps(["Друге фото", "Перше фото"]),
+                "captions": json.dumps(["Підпис 2", "Підпис 1"]),
+            },
+        )
+        self.assertEqual(upload.status_code, 201, upload.content)
+        images = upload.json()["results"]
+        self.assertEqual([item["sort_order"] for item in images], [0, 1])
+        self.assertEqual(images[0]["alt_text"], "Друге фото")
+
+        reorder = self.client.post(
+            reverse("article_admin_images_order", args=[self.published.id]),
+            data=json.dumps({"ids": [images[1]["id"], images[0]["id"]]}),
+            content_type="application/json",
+        )
+        self.assertEqual(reorder.status_code, 200, reorder.content)
+        public = self.client.get(reverse("article_detail_api", args=[self.published.slug]))
+        self.assertEqual(
+            [item["alt_text"] for item in public.json()["result"]["images"]],
+            ["Перше фото", "Друге фото"],
+        )
+
+        deleted = self.client.delete(
+            reverse("article_admin_image_item", args=[images[0]["id"]])
+        )
+        self.assertEqual(deleted.status_code, 204)
+        self.assertEqual(ArticleImage.objects.filter(article=self.published).count(), 1)
+
+    def test_article_image_upload_rejects_invalid_content_and_non_staff(self):
+        self.client.force_login(self.staff)
+        invalid = self.client.post(
+            reverse("article_admin_images", args=[self.published.id]),
+            data={"images": SimpleUploadedFile("fake.jpg", b"not an image", content_type="image/jpeg")},
+        )
+        self.assertEqual(invalid.status_code, 400)
+        self.client.logout()
+        self.assertEqual(
+            self.client.post(reverse("article_admin_images", args=[self.published.id])).status_code,
+            403,
+        )
+
+    def test_json_import_preview_and_save_are_strict_and_always_draft(self):
+        self.client.force_login(self.staff)
+        payload = {
+            "title": "Імпортована стаття",
+            "slug": "imported-article",
+            "summary": "Коротко",
+            "body": "Безпечний текст",
+            "seo_title": "SEO",
+            "seo_description": "Опис пошуку",
+            "is_published": True,
+        }
+        preview = self.client.post(
+            reverse("article_import_preview"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(preview.status_code, 200, preview.content)
+        self.assertFalse(preview.json()["result"]["is_published"])
+        self.assertFalse(Article.objects.filter(slug="imported-article").exists())
+
+        saved = self.client.post(
+            reverse("article_import"),
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        self.assertEqual(saved.status_code, 201, saved.content)
+        article = Article.objects.get(slug="imported-article")
+        self.assertFalse(article.is_published)
+
+        duplicate = self.client.post(
+            reverse("article_import"), data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(duplicate.status_code, 400)
+
+    def test_json_import_rejects_html_unknown_fields_and_oversized_payload(self):
+        self.client.force_login(self.staff)
+        base = {"title": "Назва", "slug": "safe-slug", "summary": "Опис", "body": "Текст"}
+        for payload in (
+            {**base, "body": "<script>alert(1)</script>"},
+            {**base, "unexpected": "value"},
+        ):
+            response = self.client.post(
+                reverse("article_import_preview"), data=json.dumps(payload), content_type="application/json"
+            )
+            self.assertEqual(response.status_code, 400, response.content)
+
+        oversized = self.client.post(
+            reverse("article_import_preview"),
+            data=json.dumps({**base, "body": "x" * 210_000}),
+            content_type="application/json",
+        )
+        self.assertEqual(oversized.status_code, 413)
+
+    @staticmethod
+    def _image(name):
+        output = BytesIO()
+        Image.new("RGB", (10, 10), color="green").save(output, format="PNG")
+        return SimpleUploadedFile(name, output.getvalue(), content_type="image/png")

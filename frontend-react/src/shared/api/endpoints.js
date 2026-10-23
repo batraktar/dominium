@@ -35,5 +35,10 @@ export const apiEndpoints = {
   articleDetail: (slug) => `/api/articles/${encodeURIComponent(slug)}/`,
   adminArticles: '/api/admin/articles/',
   adminArticleItem: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/`,
+  adminArticleImportPreview: '/api/admin/articles/import-preview/',
+  adminArticleImport: '/api/admin/articles/import/',
+  adminArticleImages: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/images/`,
+  adminArticleImagesOrder: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/images/order/`,
+  adminArticleImageItem: (imageId) => `/api/admin/article-images/${encodeURIComponent(imageId)}/`,
   adminSearchConsole: '/api/admin/search-console/',
 }

@@ -75,6 +75,11 @@ urlpatterns = [
         article_views.article_admin_item,
         name="article_admin_item",
     ),
+    path("api/admin/articles/import-preview/", article_views.article_import_preview, name="article_import_preview"),
+    path("api/admin/articles/import/", article_views.article_import, name="article_import"),
+    path("api/admin/articles/<int:article_id>/images/", article_views.article_admin_images, name="article_admin_images"),
+    path("api/admin/articles/<int:article_id>/images/order/", article_views.article_admin_images_order, name="article_admin_images_order"),
+    path("api/admin/article-images/<int:image_id>/", article_views.article_admin_image_item, name="article_admin_image_item"),
     path(
         "api/admin/search-console/",
         admin_views.search_console_performance,

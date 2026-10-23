@@ -444,3 +444,19 @@ class Article(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class ArticleImage(models.Model):
+    article = models.ForeignKey(
+        Article, related_name="images", on_delete=models.CASCADE
+    )
+    image = models.ImageField(upload_to="article_images/")
+    alt_text = models.CharField(max_length=200, blank=True)
+    caption = models.CharField(max_length=500, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return f"{self.article}: {self.alt_text or self.image.name}"
