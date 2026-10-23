@@ -158,6 +158,18 @@ class ArticlePublicationTests(TestCase):
             403,
         )
 
+    def test_article_cover_rejects_invalid_image_content(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("article_admin_collection"),
+            data={
+                "title": "Стаття", "slug": "bad-cover", "summary": "Опис", "body": "Текст",
+                "cover_image": SimpleUploadedFile("fake.jpg", b"not-image", content_type="image/jpeg"),
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("cover_image", response.json()["errors"])
+
     def test_json_import_preview_and_save_are_strict_and_always_draft(self):
         self.client.force_login(self.staff)
         payload = {

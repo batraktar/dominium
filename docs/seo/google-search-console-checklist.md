@@ -33,11 +33,14 @@ Owner: DOMINIUM frontend/backend
 3. `/search/region/lviv/`
 4. `/search/city/lviv/` (актуальний slug з sitemap)
 5. `/property/<top-slug>/`
+6. `/articles/`
+7. `/articles/<published-slug>/`
 
 Очікування:
 1. URL is on Google (для старих сторінок) або queued for indexing (для нових).
 2. User-declared canonical = Google-selected canonical.
 3. Crawled page має SSR meta/schema (не пустий head).
+4. Чернетки статей відсутні у public API та sitemap; опубліковані статті присутні.
 
 ## 5) Post-launch monitoring window (14 days)
 1. Coverage: тренд indexed pages не падає різко (>20%).

@@ -188,6 +188,9 @@ def article_admin_collection(request):
     if errors:
         return JsonResponse({"errors": errors}, status=400)
     if request.FILES.get("cover_image"):
+        cover_error = _validate_image(request.FILES["cover_image"])
+        if cover_error:
+            return JsonResponse({"errors": {"cover_image": cover_error}}, status=400)
         article.cover_image = request.FILES["cover_image"]
     errors = _save(article)
     if errors:
@@ -209,6 +212,9 @@ def article_admin_item(request, article_id):
     if errors:
         return JsonResponse({"errors": errors}, status=400)
     if request.FILES.get("cover_image"):
+        cover_error = _validate_image(request.FILES["cover_image"])
+        if cover_error:
+            return JsonResponse({"errors": {"cover_image": cover_error}}, status=400)
         article.cover_image = request.FILES["cover_image"]
     errors = _save(article)
     if errors:

@@ -48,16 +48,30 @@ dominium-vm/bin/python manage.py sync_crm_properties --dry-run --max-pages 1
 
 Інтервал у формі адмінки є підказкою для цього cron. Сам сайт навмисно не змінює системний планувальник хостингу.
 
-## 3. Google OAuth через приватну адмінку
+## 3. Google-вхід
 
 1. У Google Cloud Console створіть OAuth Client типу `Web application`.
 2. Додайте `https://example.com` до Authorized JavaScript origins.
-3. Скопіюйте точний Authorized redirect URI, показаний у `Налаштування → Google`.
-4. Вставте Client ID і Client Secret у цій вкладці та збережіть.
+3. Задайте `GOOGLE_CLIENT_ID` у production `.env`. React використовує Google Identity Services, а Django перевіряє credential саме для цього client ID і створює звичайну Django-сесію.
+4. `GOOGLE_CLIENT_SECRET` та allauth redirect URI залишаються для резервного redirect-flow. Основний GIS-вхід працює у поточній вкладці без повного перезавантаження SPA після успіху.
 
-Google-ключі зберігаються у стандартній моделі `django-allauth` і прив’язуються до поточного Django Site. Secret маскується у відповідях адмінського API.
+Якщо резервний allauth-flow налаштовується через приватну адмінку, його secret зберігається у стандартній моделі `django-allauth`, прив’язаній до поточного Django Site, і маскується у відповідях API.
 
-## 4. Що перевірити після розгортання
+## 4. Google Search Console у React-адмінці
+
+1. У Google Cloud увімкніть Google Search Console API й створіть окремий service account без зайвих ролей проєкту.
+2. У Search Console відкрийте domain property `sc-domain:dominium.com.ua` → `Налаштування` → `Користувачі та дозволи` та додайте email service account з доступом на читання.
+3. Повний JSON ключа передайте лише через захищену server-side змінну `GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON` (одним рядком). Не вставляйте його в Git, React, чат або журнали.
+4. Задайте:
+
+```env
+GOOGLE_SEARCH_CONSOLE_SITE_URL=sc-domain:dominium.com.ua
+GOOGLE_SEARCH_CONSOLE_CACHE_SECONDS=900
+```
+
+Після перезапуску відкрийте `/api/admin/` → `Пошук Google`. Endpoint використовує лише scope `webmasters.readonly`; неавторизовані й non-staff користувачі отримують 404. Якщо ключ відсутній, staff бачить безпечний стан «не налаштовано». Дані Search Console не realtime й зазвичай відстають на 2–3 дні.
+
+## 5. Що перевірити після розгортання
 
 ```sh
 dominium-vm/bin/python manage.py check --deploy

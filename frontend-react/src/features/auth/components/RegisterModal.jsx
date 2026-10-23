@@ -1,6 +1,6 @@
 import GoogleIdentityButton from './GoogleIdentityButton.jsx'
 
-function RegisterModal({ googleAuthUrl, onGoogleAuthenticated, onGoogleError }) {
+function RegisterModal({ googleAuthUrl, onGoogleAuthenticated, onGoogleError, loginError = '' }) {
   const headerGradientStyle = {
     backgroundImage: 'linear-gradient(to right, rgba(19, 62, 68, 0.9), #133E44)',
   }
@@ -36,6 +36,7 @@ function RegisterModal({ googleAuthUrl, onGoogleAuthenticated, onGoogleError }) 
               onAuthenticated={onGoogleAuthenticated}
               onError={onGoogleError}
             />
+            {loginError ? <p className="text-sm text-red-500 text-center font-fixel">{loginError}</p> : null}
             <p className="text-center text-sm text-gray-600">
               Вже маєте акаунт?
               <button

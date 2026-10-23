@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.conf import settings
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -18,6 +19,7 @@ from accounts.models import Favorite
 from house.api.serializers import serialize_property
 from house.models import Property
 from accounts.services.google_identity import GoogleIdentityError, verify_google_identity
+from dominium_backend.views.common import get_client_ip
 
 
 def _auth_payload(user):
@@ -84,6 +86,18 @@ def google_identity_config(request):
 @require_POST
 @never_cache
 def google_identity_login(request):
+    rate_key = f"google-login-rate:{get_client_ip(request) or 'ip-unknown'}"
+    current = cache.get(rate_key, 0)
+    if current >= settings.LOGIN_RATE_LIMIT:
+        return JsonResponse(
+            {"status": "error", "code": "rate_limited", "message": "Забагато спроб. Спробуйте пізніше."},
+            status=429,
+        )
+    try:
+        cache.incr(rate_key)
+    except ValueError:
+        cache.set(rate_key, 1, timeout=settings.LOGIN_RATE_WINDOW)
+
     try:
         payload = json.loads(request.body.decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):

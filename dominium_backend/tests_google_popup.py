@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
+from django.core.cache import cache
 from unittest.mock import patch
 
 from django.test import Client, TestCase, override_settings
@@ -156,6 +157,22 @@ class GoogleCredentialLoginTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    @override_settings(LOGIN_RATE_LIMIT=2, LOGIN_RATE_WINDOW=60)
+    @patch("dominium_backend.views.auth.verify_google_identity")
+    def test_google_login_is_rate_limited_without_verifying_more_tokens(self, verify):
+        cache.clear()
+        verify.side_effect = GoogleIdentityError("invalid credential")
+        client, token = self._csrf_client()
+        for expected in (400, 400, 429):
+            response = client.post(
+                reverse("google_identity_login"),
+                data='{"credential":"invalid"}',
+                content_type="application/json",
+                HTTP_X_CSRFTOKEN=token,
+            )
+            self.assertEqual(response.status_code, expected)
+        self.assertEqual(verify.call_count, 2)
 
 class GooglePopupCompleteViewTests(TestCase):
     def setUp(self):

@@ -85,6 +85,7 @@ function App() {
         googleAuthUrl={googleAuthUrl}
         onGoogleAuthenticated={handleGoogleAuthenticated}
         onGoogleError={setLoginError}
+        loginError={loginError}
       />
       <LoginModal
         onSubmit={handleLoginSubmit}
