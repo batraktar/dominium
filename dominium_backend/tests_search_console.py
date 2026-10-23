@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from dominium_backend.services.search_console import (
@@ -12,9 +12,10 @@ from dominium_backend.services.search_console import (
     SearchConsoleNotConfigured,
     get_search_performance,
 )
+from house.models import SearchConsoleSettings
 
 
-class SearchConsoleServiceTests(SimpleTestCase):
+class SearchConsoleServiceTests(TestCase):
     def setUp(self):
         cache.clear()
 
@@ -61,6 +62,25 @@ class SearchConsoleServiceTests(SimpleTestCase):
     def test_rejects_unsupported_period(self):
         with self.assertRaises(ValueError):
             get_search_performance(14)
+
+    @override_settings(
+        GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON="env-secret",
+        GOOGLE_SEARCH_CONSOLE_SITE_URL="sc-domain:env.invalid",
+    )
+    @patch("dominium_backend.services.search_console.AuthorizedSession")
+    @patch("dominium_backend.services.search_console.service_account.Credentials.from_service_account_info")
+    def test_django_admin_configuration_takes_precedence_over_env(self, credentials_from_info, session_class):
+        SearchConsoleSettings.objects.create(
+            site_url="sc-domain:dominium.com.ua",
+            service_account_json=json.dumps({"type": "service_account", "client_email": "admin@example.invalid"}),
+            cache_seconds=60,
+        )
+        session_class.return_value.post.side_effect = [self._response({"rows": []}) for _ in range(4)]
+        get_search_performance(7, today=date(2026, 10, 23))
+        credentials_from_info.assert_called_once_with(
+            {"type": "service_account", "client_email": "admin@example.invalid"},
+            scopes=[READONLY_SCOPE],
+        )
 
     @override_settings(
         GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON="",
@@ -124,3 +144,41 @@ class SearchConsoleEndpointTests(TestCase):
         self.assertEqual(failed.status_code, 502)
         self.assertEqual(failed.json(), {"status": "unavailable"})
         self.assertNotIn("credential-private-key", failed.content.decode())
+
+
+class SearchConsoleDjangoAdminTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_superuser(
+            username="gsc-admin", email="gsc-admin@example.invalid", password="test-password"
+        )
+        self.client.force_login(self.admin)
+
+    def test_saved_secret_is_not_rendered_and_blank_edit_preserves_it(self):
+        saved = SearchConsoleSettings.objects.create(
+            site_url="sc-domain:dominium.com.ua",
+            service_account_json='{"type":"service_account","private_key":"DO-NOT-RENDER"}',
+            cache_seconds=900,
+        )
+        change_url = reverse("admin:house_searchconsolesettings_change", args=[saved.pk])
+        page = self.client.get(change_url)
+        self.assertEqual(page.status_code, 200)
+        self.assertNotContains(page, "DO-NOT-RENDER")
+
+        response = self.client.post(
+            change_url,
+            {"site_url": "sc-domain:dominium.com.ua", "service_account_json": "", "cache_seconds": "600"},
+        )
+        self.assertEqual(response.status_code, 302, response.content)
+        saved.refresh_from_db()
+        self.assertIn("DO-NOT-RENDER", saved.service_account_json)
+        self.assertEqual(saved.cache_seconds, 600)
+
+    def test_admin_rejects_non_service_account_json(self):
+        add_url = reverse("admin:house_searchconsolesettings_add")
+        response = self.client.post(
+            add_url,
+            {"site_url": "sc-domain:dominium.com.ua", "service_account_json": '{"type":"authorized_user"}', "cache_seconds": "900"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Потрібен JSON ключа Google service account")
+        self.assertFalse(SearchConsoleSettings.objects.exists())

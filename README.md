@@ -71,6 +71,7 @@ dominium_backend/
 - Для додаткових середовищ створюй файл на зразок `settings/staging.py` та встановлюй `DJANGO_ENV=staging`.
 - Шаблон конфігів у `.env.example` покриває всі змінні, потрібні для дев/прод середовищ.
 - Не зберігай реальні ключі в git: копіюй `.env.example` або `.env.docker.example` і підставляй власні значення.
+- Search Console бажано налаштовувати через стандартну `/admin/` → `Google Search Console`; DB-конфіг має пріоритет над env fallback, а secret ніколи не повертається в React API.
 
 ## API / імпорт
 

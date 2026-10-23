@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.cache import cache
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
+from house.models import SearchConsoleSettings
 
 
 READONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
@@ -27,9 +28,19 @@ class SearchConsoleUnavailable(SearchConsoleError):
     pass
 
 
-def _credentials():
-    raw = settings.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON
-    if not raw or not settings.GOOGLE_SEARCH_CONSOLE_SITE_URL:
+def _configuration():
+    saved = SearchConsoleSettings.objects.order_by("pk").first()
+    if saved and saved.service_account_json:
+        return saved.service_account_json, saved.site_url.strip(), max(1, saved.cache_seconds)
+    return (
+        settings.GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON,
+        settings.GOOGLE_SEARCH_CONSOLE_SITE_URL,
+        settings.GOOGLE_SEARCH_CONSOLE_CACHE_SECONDS,
+    )
+
+
+def _credentials(raw):
+    if not raw:
         raise SearchConsoleNotConfigured("Search Console is not configured")
     try:
         info = json.loads(raw)
@@ -80,13 +91,15 @@ def get_search_performance(period_days: int, *, today: date | None = None) -> di
     if period_days not in SUPPORTED_PERIODS:
         raise ValueError("Unsupported Search Console period")
 
-    site_url = settings.GOOGLE_SEARCH_CONSOLE_SITE_URL
+    raw_credentials, site_url, cache_seconds = _configuration()
+    if not site_url:
+        raise SearchConsoleNotConfigured("Search Console is not configured")
     cache_key = f"search-console:v1:{site_url}:{period_days}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
-    credentials = _credentials()
+    credentials = _credentials(raw_credentials)
     session = AuthorizedSession(credentials)
     end_date = today or date.today()
     start_date = end_date - timedelta(days=period_days - 1)
@@ -126,5 +139,5 @@ def get_search_performance(period_days: int, *, today: date | None = None) -> di
             "first_incomplete_date"
         ),
     }
-    cache.set(cache_key, result, settings.GOOGLE_SEARCH_CONSOLE_CACHE_SECONDS)
+    cache.set(cache_key, result, cache_seconds)
     return result

@@ -1,4 +1,5 @@
 from django import forms
+import json
 from django.contrib import admin, messages
 from django.shortcuts import render
 from django.urls import path
@@ -13,6 +14,7 @@ from .models import (
     Property,
     PropertyImage,
     PropertyType,
+    SearchConsoleSettings,
     TelegramNotificationTemplate,
 )
 from .services.importer import import_images_from_parsed
@@ -177,6 +179,53 @@ class ClientAdmin(admin.ModelAdmin):
 @admin.register(AppSettings)
 class AppSettingsAdmin(admin.ModelAdmin):
     list_display = ["key", "updated_at"]
+
+
+class SearchConsoleSettingsForm(forms.ModelForm):
+    service_account_json = forms.CharField(
+        required=False,
+        label="Service account JSON",
+        help_text="Вставте повний JSON ключа. Після збереження значення приховується; порожнє поле збереже чинний ключ.",
+        widget=forms.PasswordInput(render_value=False, attrs={"autocomplete": "new-password"}),
+    )
+
+    class Meta:
+        model = SearchConsoleSettings
+        fields = ["site_url", "service_account_json", "cache_seconds"]
+
+    def clean_service_account_json(self):
+        value = self.cleaned_data.get("service_account_json", "").strip()
+        if not value and self.instance.pk:
+            return SearchConsoleSettings.objects.only("service_account_json").get(pk=self.instance.pk).service_account_json
+        if not value:
+            return ""
+        try:
+            payload = json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise forms.ValidationError("Некоректний JSON-файл.") from exc
+        if not isinstance(payload, dict) or payload.get("type") != "service_account":
+            raise forms.ValidationError("Потрібен JSON ключа Google service account.")
+        for field in ("client_email", "private_key", "token_uri"):
+            if not payload.get(field):
+                raise forms.ValidationError(f"У JSON відсутнє поле {field}.")
+        return value
+
+
+@admin.register(SearchConsoleSettings)
+class SearchConsoleSettingsAdmin(admin.ModelAdmin):
+    form = SearchConsoleSettingsForm
+    list_display = ["site_url", "configured", "cache_seconds", "updated_at"]
+    fieldsets = ((None, {"fields": ("site_url", "service_account_json", "cache_seconds"), "description": "Readonly-доступ до Search Console. Секрет не показується після збереження."}),)
+
+    @admin.display(boolean=True, description="Ключ налаштовано")
+    def configured(self, obj):
+        return bool(obj.service_account_json)
+
+    def has_add_permission(self, request):
+        return not SearchConsoleSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(TelegramNotificationTemplate)

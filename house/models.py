@@ -392,6 +392,20 @@ class AppSettings(models.Model):
         return obj
 
 
+class SearchConsoleSettings(models.Model):
+    site_url = models.CharField(max_length=255, default="sc-domain:dominium.com.ua")
+    service_account_json = models.TextField(blank=True)
+    cache_seconds = models.PositiveIntegerField(default=900)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Google Search Console"
+        verbose_name_plural = "Google Search Console"
+
+    def __str__(self):
+        return "Google Search Console"
+
+
 class TelegramNotificationTemplate(models.Model):
     name = models.CharField(max_length=100)
     event_type = models.CharField(max_length=50, choices=[

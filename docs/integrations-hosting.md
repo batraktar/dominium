@@ -61,15 +61,17 @@ dominium-vm/bin/python manage.py sync_crm_properties --dry-run --max-pages 1
 
 1. У Google Cloud увімкніть Google Search Console API й створіть окремий service account без зайвих ролей проєкту.
 2. У Search Console відкрийте domain property `sc-domain:dominium.com.ua` → `Налаштування` → `Користувачі та дозволи` та додайте email service account з доступом на читання.
-3. Повний JSON ключа передайте лише через захищену server-side змінну `GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON` (одним рядком). Не вставляйте його в Git, React, чат або журнали.
-4. Задайте:
+3. Відкрийте стандартну Django-адмінку `/admin/` → `Google Search Console` → `Додати`. Вкажіть property `sc-domain:dominium.com.ua`, вставте повний JSON ключа та збережіть. Поле ключа після збереження залишається порожнім і не віддає чинний секрет у HTML; порожнє поле при наступному редагуванні зберігає поточний ключ.
+4. За потреби змініть кеш (типово 900 секунд). Env-параметри є лише резервним bootstrap, якщо запису в адмінці немає:
 
 ```env
 GOOGLE_SEARCH_CONSOLE_SITE_URL=sc-domain:dominium.com.ua
 GOOGLE_SEARCH_CONSOLE_CACHE_SECONDS=900
+# необов’язковий fallback, повний JSON одним рядком:
+GOOGLE_SEARCH_CONSOLE_SERVICE_ACCOUNT_JSON=
 ```
 
-Після перезапуску відкрийте `/api/admin/` → `Пошук Google`. Endpoint використовує лише scope `webmasters.readonly`; неавторизовані й non-staff користувачі отримують 404. Якщо ключ відсутній, staff бачить безпечний стан «не налаштовано». Дані Search Console не realtime й зазвичай відстають на 2–3 дні.
+Після збереження відкрийте `/api/admin/` → `Пошук Google`. Endpoint використовує лише scope `webmasters.readonly`; неавторизовані й non-staff користувачі отримують 404. Якщо ключ відсутній, staff бачить безпечний стан «не налаштовано». Дані Search Console не realtime й зазвичай відстають на 2–3 дні. Доступ до `/admin/` і резервних копій БД повинен бути обмежений, оскільки service-account JSON є серверним секретом.
 
 ## 5. Що перевірити після розгортання
 
