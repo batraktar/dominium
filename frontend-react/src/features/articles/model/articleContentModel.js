@@ -32,3 +32,21 @@ export function articleContentFlow(body, images = []) {
   })
   return flow
 }
+
+export function articleTextParts(value) {
+  const text = String(value || '')
+  const matches = [...text.matchAll(/https:\/\/[^\s<]+/g)]
+  if (!matches.length) return [{ type: 'text', value: text }]
+  const parts = []
+  let cursor = 0
+  matches.forEach((match) => {
+    if (match.index > cursor) parts.push({ type: 'text', value: text.slice(cursor, match.index) })
+    const raw = match[0]
+    const url = raw.replace(/[),.;!?»]+$/, '')
+    parts.push({ type: 'link', value: url })
+    if (url.length < raw.length) parts.push({ type: 'text', value: raw.slice(url.length) })
+    cursor = match.index + raw.length
+  })
+  if (cursor < text.length) parts.push({ type: 'text', value: text.slice(cursor) })
+  return parts
+}
