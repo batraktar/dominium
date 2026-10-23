@@ -117,7 +117,9 @@ def _is_public_host(host: str) -> bool:
     return True
 
 
-def ensure_safe_import_url(url: str, *, url_kind: str = "html") -> str:
+def ensure_safe_import_url(
+    url: str, *, url_kind: str = "html", enforce_allowlist: bool = True
+) -> str:
     parsed = urlparse((url or "").strip())
     if parsed.scheme not in {"http", "https"}:
         raise UnsafeImportURLError("Import URL must use http/https.")
@@ -133,11 +135,11 @@ def ensure_safe_import_url(url: str, *, url_kind: str = "html") -> str:
     allow_private = bool(getattr(settings, "IMPORT_ALLOW_PRIVATE_HOSTS", False))
     allowed_hosts, allowlist_name = _resolve_allowed_hosts(url_kind=url_kind)
     require_allowlist = bool(getattr(settings, "IMPORT_REQUIRE_ALLOWED_HOSTS", False))
-    if require_allowlist and not allowed_hosts:
+    if enforce_allowlist and require_allowlist and not allowed_hosts:
         raise UnsafeImportURLError(
             f"Import allowlist is not configured. Set {allowlist_name} in environment."
         )
-    if allowed_hosts and not any(
+    if enforce_allowlist and allowed_hosts and not any(
         _host_matches_pattern(host, pattern) for pattern in allowed_hosts
     ):
         raise UnsafeImportURLError(
@@ -188,9 +190,12 @@ def fetch_remote_content(
     allowed_content_types: tuple[str, ...],
     accept_header: str | None = None,
     url_kind: str = "html",
+    enforce_allowlist: bool = True,
 ) -> tuple[bytes, str, str]:
     redirect_limit = max(0, int(getattr(settings, "IMPORT_HTTP_REDIRECT_LIMIT", 3)))
-    current_url = ensure_safe_import_url(url, url_kind=url_kind)
+    current_url = ensure_safe_import_url(
+        url, url_kind=url_kind, enforce_allowlist=enforce_allowlist
+    )
 
     headers = {"User-Agent": "dominium-importer/1.0"}
     if accept_header:
@@ -211,6 +216,7 @@ def fetch_remote_content(
                 current_url = ensure_safe_import_url(
                     urljoin(current_url, location),
                     url_kind=url_kind,
+                    enforce_allowlist=enforce_allowlist,
                 )
                 continue
 

@@ -17,7 +17,9 @@ test('article prompt requests the strict safe JSON schema', () => {
   assert.match(ARTICLE_CHATGPT_PROMPT, /"cover_image_url"/)
   assert.match(ARTICLE_CHATGPT_PROMPT, /"images"/)
   assert.match(ARTICLE_CHATGPT_PROMPT, /прямі HTTPS-посилання/i)
-  assert.match(ARTICLE_CHATGPT_PROMPT, /Не вигадуй URL/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /не вигадуй адрес/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /upload\.wikimedia\.org/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /стаття важливіша за фото/i)
   assert.match(ARTICLE_CHATGPT_PROMPT, /перевір, що JSON парситься/i)
 })
 

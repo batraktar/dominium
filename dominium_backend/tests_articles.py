@@ -2,6 +2,7 @@ import json
 from io import BytesIO
 from unittest.mock import patch
 
+import requests
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -272,8 +273,16 @@ class ArticlePublicationTests(TestCase):
     def test_json_import_rejects_insecure_or_malformed_image_links(self):
         self.client.force_login(self.staff)
         base = {"title": "Назва", "slug": "image-link-test", "summary": "Опис", "body": "Текст"}
+        unsafe = self.client.post(
+            reverse("article_import_preview"),
+            data=json.dumps({**base, "cover_image_url": "http://example.com/cover.jpg"}),
+            content_type="application/json",
+        )
+        self.assertEqual(unsafe.status_code, 200, unsafe.content)
+        self.assertEqual(unsafe.json()["result"]["cover_image_url"], "")
+        self.assertTrue(unsafe.json()["result"]["warnings"])
+
         for media in (
-            {"cover_image_url": "http://example.com/cover.jpg"},
             {"images": [{"url": "https://example.com/a.jpg", "unexpected": "value"}]},
             {"images": "https://example.com/a.jpg"},
         ):
@@ -283,6 +292,25 @@ class ArticlePublicationTests(TestCase):
                 content_type="application/json",
             )
             self.assertEqual(response.status_code, 400, response.content)
+
+    @patch("dominium_backend.views.articles.ensure_safe_import_url", side_effect=lambda url, **_: url)
+    @patch("dominium_backend.views.articles.fetch_remote_content", side_effect=requests.RequestException("offline"))
+    def test_json_import_creates_draft_when_remote_images_fail(self, _fetch, _safe_url):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("article_import"),
+            data=json.dumps({
+                "title": "Стаття без доступного фото", "slug": "draft-with-skipped-image",
+                "summary": "Опис", "body": "Текст",
+                "cover_image_url": "https://images.example/cover.jpg",
+                "images": [{"url": "https://images.example/photo.jpg", "alt_text": "Фото"}],
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertTrue(Article.objects.filter(slug="draft-with-skipped-image").exists())
+        self.assertEqual(ArticleImage.objects.filter(article__slug="draft-with-skipped-image").count(), 0)
+        self.assertEqual(len(response.json()["warnings"]), 2)
 
     def test_json_import_rejects_html_unknown_fields_and_oversized_payload(self):
         self.client.force_login(self.staff)

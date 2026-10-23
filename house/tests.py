@@ -510,6 +510,31 @@ class ImportSecurityUtilsTest(SimpleTestCase):
         with self.assertRaises(UnsafeImportURLError):
             ensure_safe_import_url("http://localhost/admin")
 
+    @override_settings(
+        IMPORT_REQUIRE_ALLOWED_HOSTS=True,
+        IMPORT_ALLOWED_HOSTS=["cdn.riastatic.com"],
+        IMPORT_ALLOWED_IMAGE_HOSTS=["cdn.riastatic.com"],
+    )
+    @patch(
+        "house.utils.network_security._resolve_host_ips",
+        return_value=("93.184.216.34",),
+    )
+    def test_optional_media_can_bypass_domain_allowlist_but_not_ssrf_checks(self, _mock_resolve):
+        self.assertEqual(
+            ensure_safe_import_url(
+                "https://upload.wikimedia.org/photo.jpg",
+                url_kind="image",
+                enforce_allowlist=False,
+            ),
+            "https://upload.wikimedia.org/photo.jpg",
+        )
+        with self.assertRaises(UnsafeImportURLError):
+            ensure_safe_import_url(
+                "http://127.0.0.1/private.jpg",
+                url_kind="image",
+                enforce_allowlist=False,
+            )
+
     def test_identity_key_collapses_watermark_path_variants(self):
         original = image_url_identity_key("https://img.example.com/photos/first.jpg")
         watermarked = image_url_identity_key(

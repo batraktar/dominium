@@ -107,55 +107,63 @@ def _validate_image(upload):
 
 def _validate_import_media(data):
     errors = {}
+    warnings = []
     cover_url = str(data.get("cover_image_url") or "").strip()
     raw_images = data.get("images", [])
     if not isinstance(raw_images, list):
-        return None, {"images": "Поле images має бути списком."}
+        return None, {"images": "Поле images має бути списком."}, warnings
     if len(raw_images) > settings.ARTICLE_IMPORT_MAX_IMAGES:
-        return None, {"images": f"Дозволено не більше {settings.ARTICLE_IMPORT_MAX_IMAGES} фото."}
+        return None, {"images": f"Дозволено не більше {settings.ARTICLE_IMPORT_MAX_IMAGES} фото."}, warnings
 
-    media = {"cover_image_url": cover_url, "images": []}
-    candidates = [("cover_image_url", cover_url)] if cover_url else []
+    media = {"cover_image_url": "", "images": []}
+    if cover_url:
+        if urlparse(cover_url).scheme.lower() != "https":
+            warnings.append("cover_image_url: дозволені лише HTTPS-посилання; обкладинку пропущено.")
+        else:
+            try:
+                ensure_safe_import_url(cover_url, url_kind="image", enforce_allowlist=False)
+                media["cover_image_url"] = cover_url
+            except UnsafeImportURLError:
+                warnings.append("cover_image_url: небезпечна або локальна адреса; обкладинку пропущено.")
     for index, item in enumerate(raw_images):
         if not isinstance(item, dict) or set(item) - {"url", "alt_text", "caption"}:
             errors["images"] = f"Фото #{index + 1} має некоректну структуру."
             continue
         url = str(item.get("url") or "").strip()
-        media["images"].append({
+        candidate = {
             "url": url,
             "alt_text": str(item.get("alt_text") or "").strip()[:200],
             "caption": str(item.get("caption") or "").strip()[:500],
-        })
-        candidates.append((f"images[{index}].url", url))
-
-    for field, url in candidates:
+        }
         if not url:
-            errors[field] = "Додайте пряме HTTPS-посилання на зображення."
+            warnings.append(f"images[{index}].url: порожнє посилання пропущено.")
             continue
         if urlparse(url).scheme.lower() != "https":
-            errors[field] = "Дозволені лише HTTPS-посилання."
+            warnings.append(f"images[{index}].url: дозволені лише HTTPS-посилання; фото пропущено.")
             continue
         try:
-            ensure_safe_import_url(url, url_kind="image")
+            ensure_safe_import_url(url, url_kind="image", enforce_allowlist=False)
         except UnsafeImportURLError:
-            errors[field] = "Посилання веде на недозволену або локальну адресу."
-    return media, errors
+            warnings.append(f"images[{index}].url: небезпечна або локальна адреса; фото пропущено.")
+            continue
+        media["images"].append(candidate)
+    return media, errors, warnings
 
 
 def _import_payload(request):
     if request.content_type != "application/json":
-        return None, None, JsonResponse({"errors": {"body": "Очікується JSON."}}, status=400)
+        return None, None, [], JsonResponse({"errors": {"body": "Очікується JSON."}}, status=400)
     if len(request.body) > settings.ARTICLE_IMPORT_MAX_BYTES:
-        return None, None, JsonResponse({"error": "payload_too_large"}, status=413)
+        return None, None, [], JsonResponse({"error": "payload_too_large"}, status=413)
     data = _request_data(request)
     if not isinstance(data, dict):
-        return None, None, JsonResponse({"errors": {"body": "Некоректний JSON."}}, status=400)
+        return None, None, [], JsonResponse({"errors": {"body": "Некоректний JSON."}}, status=400)
     unknown = sorted(set(data) - IMPORT_FIELDS)
     if unknown:
-        return None, None, JsonResponse({"errors": {"fields": "Невідомі поля: " + ", ".join(unknown)}}, status=400)
+        return None, None, [], JsonResponse({"errors": {"fields": "Невідомі поля: " + ", ".join(unknown)}}, status=400)
     article = Article(is_published=False)
     errors = _apply(article, data)
-    media, media_errors = _validate_import_media(data)
+    media, media_errors, warnings = _validate_import_media(data)
     errors.update(media_errors)
     article.is_published = False
     article.published_at = None
@@ -170,8 +178,8 @@ def _import_payload(request):
     if Article.objects.filter(slug=article.slug).exists():
         errors["slug"] = "Такий slug уже існує."
     if errors:
-        return None, None, JsonResponse({"errors": errors}, status=400)
-    return article, media, None
+        return None, None, warnings, JsonResponse({"errors": errors, "warnings": warnings}, status=400)
+    return article, media, warnings, None
 
 
 def _download_import_image(url, filename_prefix):
@@ -182,6 +190,7 @@ def _download_import_image(url, filename_prefix):
         allowed_content_types=("image/jpeg", "image/png", "image/webp", "image/gif"),
         accept_header="image/jpeg,image/png,image/webp,image/gif",
         url_kind="image",
+        enforce_allowlist=False,
     )
     with Image.open(BytesIO(raw)) as image:
         image.verify()
@@ -199,18 +208,19 @@ def _download_import_image(url, filename_prefix):
 
 def _download_import_media(media):
     downloaded = {"cover": None, "images": []}
-    try:
-        if media["cover_image_url"]:
+    warnings = []
+    if media["cover_image_url"]:
+        try:
             downloaded["cover"], _ = _download_import_image(media["cover_image_url"], "cover")
-        for index, item in enumerate(media["images"]):
+        except (requests.RequestException, UnsafeImportURLError, ImportPayloadTooLargeError, ImportContentTypeError, UnidentifiedImageError, OSError, ValueError):
+            warnings.append("Обкладинку не вдалося завантажити, тому її пропущено.")
+    for index, item in enumerate(media["images"]):
+        try:
             upload, _ = _download_import_image(item["url"], f"image-{index + 1}")
             downloaded["images"].append((upload, item))
-    except (
-        requests.RequestException, UnsafeImportURLError, ImportPayloadTooLargeError,
-        ImportContentTypeError, UnidentifiedImageError, OSError, ValueError,
-    ):
-        return None, "Не вдалося безпечно завантажити одне із зображень. Перевірте прямі HTTPS-посилання."
-    return downloaded, None
+        except (requests.RequestException, UnsafeImportURLError, ImportPayloadTooLargeError, ImportContentTypeError, UnidentifiedImageError, OSError, ValueError):
+            warnings.append(f"Фото #{index + 1} не завантажилось і було пропущене: {item['url']}")
+    return downloaded, warnings
 
 
 def _apply(article, data, *, partial=False):
@@ -387,7 +397,7 @@ def article_admin_item(request, article_id):
 def article_import_preview(request):
     if not _staff_required(request):
         return JsonResponse({"error": "forbidden"}, status=403)
-    article, media, error = _import_payload(request)
+    article, media, warnings, error = _import_payload(request)
     if error:
         return error
     return JsonResponse({"result": {
@@ -395,6 +405,7 @@ def article_import_preview(request):
         "body": article.body, "seo_title": article.seo_title,
         "seo_description": article.seo_description, "is_published": False,
         "cover_image_url": media["cover_image_url"], "images": media["images"],
+        "warnings": warnings,
     }})
 
 
@@ -402,12 +413,11 @@ def article_import_preview(request):
 def article_import(request):
     if not _staff_required(request):
         return JsonResponse({"error": "forbidden"}, status=403)
-    article, media, error = _import_payload(request)
+    article, media, warnings, error = _import_payload(request)
     if error:
         return error
-    downloaded, download_error = _download_import_media(media)
-    if download_error:
-        return JsonResponse({"errors": {"images": download_error}}, status=400)
+    downloaded, download_warnings = _download_import_media(media)
+    warnings.extend(download_warnings)
     with transaction.atomic():
         if downloaded["cover"]:
             article.cover_image = downloaded["cover"]
@@ -422,7 +432,7 @@ def article_import(request):
                 caption=item["caption"],
                 sort_order=index,
             )
-    return JsonResponse({"result": _serialize(article, request)}, status=201)
+    return JsonResponse({"result": _serialize(article, request), "warnings": warnings}, status=201)
 
 
 @require_http_methods(["GET", "POST"])

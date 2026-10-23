@@ -95,13 +95,13 @@ function ArticlesTab() {
   const previewImport = async () => {
     try {
       const { data } = await apiClient.postJson(apiEndpoints.adminArticleImportPreview, parseArticleImport(importJson))
-      setImportPreview(data.result); setError(''); setNotice('JSON перевірено. Буде створено чернетку.')
+      setImportPreview(data.result); setError(''); setNotice(data.result?.warnings?.length ? `JSON перевірено. ${data.result.warnings.join(' ')}` : 'JSON перевірено. Буде створено чернетку.')
     } catch (importError) { setImportPreview(null); setError(importError?.message || 'Не вдалося перевірити JSON.') }
   }
   const saveImport = async () => {
     try {
       const { data } = await apiClient.postJson(apiEndpoints.adminArticleImport, parseArticleImport(importJson))
-      setImportPreview(null); setImportJson(''); setForm(data.result); setNotice('Чернетку імпортовано.'); await load()
+      setImportPreview(null); setImportJson(''); setForm(data.result); setNotice(data.warnings?.length ? `Чернетку імпортовано. ${data.warnings.join(' ')}` : 'Чернетку імпортовано.'); await load()
     } catch (importError) { setError(importError?.message || 'Не вдалося імпортувати статтю.') }
   }
   const readJsonFile = (file) => {
