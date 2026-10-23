@@ -17,10 +17,15 @@ Slug — унікальний, латиницею, малими літерами
 Для cover_image_url та images використовуй лише реальні прямі HTTPS-посилання на JPG, PNG, WebP або GIF, які відкривають саме файл зображення, а не HTML-сторінку. Не вигадуй URL. Обирай тематичні фото з джерел, де дозволене повторне використання, і додавай змістовний alt_text. Якщо перевірених прямих посилань немає — залиш cover_image_url порожнім, а images порожнім списком.
 Не додавай is_published: імпорт завжди створює чернетку.`
 
+export function getArticleChatGptUrl() {
+  return `https://chatgpt.com/?q=${encodeURIComponent(ARTICLE_CHATGPT_PROMPT)}`
+}
+
 export function parseArticleImport(value) {
   let text = String(value || '').replace(/^\uFEFF/, '').trim()
   const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
   if (fenced) text = fenced[1].trim()
+  text = text.replaceAll('https\\://', 'https://')
 
   // ChatGPT occasionally appends a single quote after an otherwise complete
   // JSON object (`}"`). Ignore only that narrow, unambiguous wrapper typo.

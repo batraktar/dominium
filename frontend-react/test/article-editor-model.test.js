@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   ARTICLE_CHATGPT_PROMPT,
+  getArticleChatGptUrl,
   parseArticleImport,
 } from '../src/features/admin/model/articleImportModel.js'
 import { shouldShowArticlesFooterLink } from '../src/features/layout/model/footerModel.js'
@@ -19,6 +20,12 @@ test('article prompt requests the strict safe JSON schema', () => {
   assert.match(ARTICLE_CHATGPT_PROMPT, /Не вигадуй URL/i)
 })
 
+test('builds a ChatGPT URL with the current article prompt', () => {
+  const url = getArticleChatGptUrl()
+  assert.match(url, /^https:\/\/chatgpt\.com\/\?q=/)
+  assert.match(decodeURIComponent(url), /cover_image_url/)
+})
+
 test('parses a JSON article and rejects invalid roots', () => {
   const parsed = parseArticleImport('{"title":"Назва","slug":"nazva","summary":"Опис","body":"Текст"}')
   assert.equal(parsed.slug, 'nazva')
@@ -28,6 +35,7 @@ test('parses a JSON article and rejects invalid roots', () => {
 test('normalizes common ChatGPT wrappers without weakening JSON validation', () => {
   assert.deepEqual(parseArticleImport('```json\n{"title":"Назва"}\n```'), { title: 'Назва' })
   assert.deepEqual(parseArticleImport('{"title":"Назва"}"'), { title: 'Назва' })
+  assert.deepEqual(parseArticleImport('{"url":"https\\://example.com/photo.jpg"}'), { url: 'https://example.com/photo.jpg' })
   assert.throws(
     () => parseArticleImport('{"title":"Назва",}'),
     /лапки та коми/i,
