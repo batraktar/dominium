@@ -1,8 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
-from django.test import Client, TestCase
+from unittest.mock import patch
+
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from allauth.socialaccount.models import SocialApp
+
+from accounts.services.google_identity import GoogleIdentity, GoogleIdentityError
 
 
 class AuthSessionViewTests(TestCase):
@@ -49,6 +53,104 @@ class AuthSessionViewTests(TestCase):
             },
         )
 
+
+@override_settings(GOOGLE_CLIENT_ID="dominium-client.apps.googleusercontent.com")
+class GoogleCredentialLoginTests(TestCase):
+    def _csrf_client(self):
+        client = Client(enforce_csrf_checks=True)
+        token = client.get(reverse("house_api:csrf_token")).json()["csrfToken"]
+        return client, token
+
+    def test_config_exposes_only_public_client_id(self):
+        response = self.client.get(reverse("google_identity_config"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "enabled": True,
+                "client_id": "dominium-client.apps.googleusercontent.com",
+            },
+        )
+
+    @patch("dominium_backend.views.auth.verify_google_identity")
+    def test_verified_credential_creates_user_and_session(self, verify):
+        verify.return_value = GoogleIdentity(
+            subject="google-subject-1",
+            email="olena@example.com",
+            full_name="Олена Тест",
+        )
+        client, token = self._csrf_client()
+
+        response = client.post(
+            reverse("google_identity_login"),
+            data='{"credential":"signed-google-token"}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["user"]["is_authenticated"])
+        user = get_user_model().objects.get(email="olena@example.com")
+        self.assertEqual(user.full_name, "Олена Тест")
+        self.assertTrue(user.is_email_verified)
+        self.assertEqual(user.socialaccount_set.get(provider="google").uid, "google-subject-1")
+        self.assertEqual(client.session.get("_auth_user_id"), str(user.pk))
+
+    @patch("dominium_backend.views.auth.verify_google_identity")
+    def test_existing_verified_email_is_reused_without_losing_staff(self, verify):
+        existing = get_user_model().objects.create_user(
+            username="existing-staff",
+            email="staff@example.com",
+            is_staff=True,
+        )
+        verify.return_value = GoogleIdentity(
+            subject="google-subject-staff",
+            email="staff@example.com",
+            full_name="Staff Name",
+        )
+        client, token = self._csrf_client()
+
+        response = client.post(
+            reverse("google_identity_login"),
+            data='{"credential":"signed-google-token"}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(get_user_model().objects.filter(email="staff@example.com").count(), 1)
+        existing.refresh_from_db()
+        self.assertTrue(existing.is_staff)
+        self.assertEqual(response.json()["user"]["email"], "staff@example.com")
+
+    @patch("dominium_backend.views.auth.verify_google_identity")
+    def test_invalid_or_unverified_credential_does_not_create_session(self, verify):
+        verify.side_effect = GoogleIdentityError("invalid credential")
+        client, token = self._csrf_client()
+
+        response = client.post(
+            reverse("google_identity_login"),
+            data='{"credential":"invalid"}',
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "google_credential_invalid")
+        self.assertNotIn("_auth_user_id", client.session)
+        self.assertEqual(get_user_model().objects.count(), 0)
+
+    def test_google_login_requires_csrf(self):
+        client = Client(enforce_csrf_checks=True)
+
+        response = client.post(
+            reverse("google_identity_login"),
+            data='{"credential":"signed-google-token"}',
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
 
 class GooglePopupCompleteViewTests(TestCase):
     def setUp(self):

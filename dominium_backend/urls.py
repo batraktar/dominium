@@ -86,6 +86,16 @@ urlpatterns = [
         name="interactive_map_test_data",
     ),
     path("api/auth/session/", auth_views.auth_session, name="auth_session"),
+    path(
+        "api/auth/google-config/",
+        auth_views.google_identity_config,
+        name="google_identity_config",
+    ),
+    path(
+        "api/auth/google/",
+        auth_views.google_identity_login,
+        name="google_identity_login",
+    ),
     path("api/like/<int:property_id>/", auth_views.toggle_like, name="toggle_like_api"),
     path(
         "api/consultation/",
