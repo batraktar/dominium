@@ -15,11 +15,19 @@ test('article prompt requests the strict safe JSON schema', () => {
   assert.match(ARTICLE_CHATGPT_PROMPT, /без markdown/i)
 })
 
-test('parses a JSON article and rejects markdown fences or invalid roots', () => {
+test('parses a JSON article and rejects invalid roots', () => {
   const parsed = parseArticleImport('{"title":"Назва","slug":"nazva","summary":"Опис","body":"Текст"}')
   assert.equal(parsed.slug, 'nazva')
-  assert.throws(() => parseArticleImport('```json\n{}\n```'), /чистий JSON/i)
   assert.throws(() => parseArticleImport('[]'), /JSON-об’єкт/i)
+})
+
+test('normalizes common ChatGPT wrappers without weakening JSON validation', () => {
+  assert.deepEqual(parseArticleImport('```json\n{"title":"Назва"}\n```'), { title: 'Назва' })
+  assert.deepEqual(parseArticleImport('{"title":"Назва"}"'), { title: 'Назва' })
+  assert.throws(
+    () => parseArticleImport('{"title":"Назва",}'),
+    /лапки та коми/i,
+  )
 })
 
 test('footer article discovery is visible only to staff', () => {
