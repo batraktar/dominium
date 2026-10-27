@@ -131,3 +131,38 @@
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
+
+/* Search controls use explicit colors because the production utility build may
+   not emit every custom palette opacity variant used by dynamic React markup. */
+#main-search-form .filter-range,
+#main-search-form > .container > .grid > div {
+  color: #fff;
+}
+
+#main-search-form input[type="number"],
+#location-filter {
+  color: #133e44;
+  background: rgba(255, 255, 255, 0.97);
+}
+
+#property-sort-wrapper,
+#property-sort-wrapper span,
+#property-sort-wrapper button {
+  color: #f5f1e8;
+}
+
+#property-sort-wrapper .dropdown-menu,
+#property-sort-wrapper .dropdown-menu button {
+  color: #133e44;
+  background: #fff;
+}
+
+#property-info .currency-info {
+  color: #133e44;
+  background: #f1ede3;
+}
+
+#property-info .currency-info p,
+#property-info .currency-info i {
+  color: #133e44;
+}
