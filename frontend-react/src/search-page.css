@@ -174,15 +174,15 @@
 
 .search-filter-card {
   padding: 16px;
-  color: #133e44;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(19, 62, 68, 0.12);
+  color: #fff;
+  background: rgba(117, 143, 142, 0.94);
+  border: 1px solid rgba(245, 241, 232, 0.34);
   border-radius: 14px;
-  box-shadow: 0 8px 22px rgba(19, 62, 68, 0.06);
+  box-shadow: 0 8px 22px rgba(19, 62, 68, 0.14);
 }
 
 .search-filter-label {
-  color: #133e44;
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
 }
@@ -194,18 +194,18 @@
 }
 
 .search-filter-label i {
-  color: #758f8e;
+  color: #f5f1e8;
   font-size: 17px;
 }
 
 .filter-reset {
-  color: #718285;
+  color: rgba(255, 255, 255, 0.78);
   font-size: 10px;
   font-weight: 500;
 }
 
 .filter-reset:hover {
-  color: #133e44;
+  color: #fff;
 }
 
 .search-filter-control {
@@ -235,7 +235,7 @@
 .search-filter-summary {
   display: flex;
   justify-content: space-between;
-  color: #718285;
+  color: rgba(255, 255, 255, 0.86);
   font: 500 10px/1.3 FixelText, sans-serif;
 }
 
