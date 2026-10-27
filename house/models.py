@@ -521,6 +521,13 @@ class ArticleEvent(models.Model):
 
 class JourneySession(models.Model):
     session_id = models.CharField(max_length=64, unique=True)
+    user = models.ForeignKey(
+        "accounts.CustomUser", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="journey_sessions",
+    )
+    customer_name = models.CharField(max_length=150, blank=True)
+    customer_phone = models.CharField(max_length=30, blank=True, db_index=True)
+    customer_email = models.EmailField(blank=True, db_index=True)
     first_path = models.CharField(max_length=500, blank=True)
     referrer_host = models.CharField(max_length=255, blank=True)
     utm_source = models.CharField(max_length=100, blank=True)

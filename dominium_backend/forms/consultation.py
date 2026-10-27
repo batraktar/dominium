@@ -26,3 +26,4 @@ class ConsultationForm(ContactInfoMixin):
         strip=True,
     )
     property_id = forms.IntegerField(required=False, min_value=1)
+    journey_session_id = forms.CharField(required=False, max_length=64, strip=True)

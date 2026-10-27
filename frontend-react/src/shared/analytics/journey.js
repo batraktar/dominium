@@ -36,6 +36,12 @@ export function getJourneyContext(location = window.location, storage = window.l
   return { sessionId, attribution }
 }
 
+export function getJourneySessionId(storage = window.localStorage) {
+  const existing = storage.getItem(SESSION_KEY)
+  if (existing) return existing
+  return getJourneyContext(window.location, storage, document.referrer).sessionId
+}
+
 export function trackJourneyEvent(eventType, options = {}) {
   if (typeof window === 'undefined') return Promise.resolve()
   const { sessionId, attribution } = getJourneyContext()

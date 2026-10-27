@@ -1,5 +1,6 @@
 import { sendConsultation } from '../../services/propertyApi.js'
 import { extractPropertyUiErrorMessage } from './propertyDetailErrors.js'
+import { getJourneySessionId } from '../../../../shared/analytics/journey.js'
 
 export default function usePropertyDetailContactActions({
   property,
@@ -31,6 +32,7 @@ export default function usePropertyDetailContactActions({
         message: contactMessage.trim(),
         property: propertyPageUrl,
         property_id: property.id,
+        journey_session_id: getJourneySessionId(),
       })
 
       setContactMessage('')

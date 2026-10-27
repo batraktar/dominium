@@ -542,6 +542,9 @@ class Command(BaseCommand):
         if not eligible:
             if existing_ext and existing_ext.is_import_eligible:
                 if not dry_run:
+                    if not existing_ext.property.is_archived:
+                        existing_ext.property.is_archived = True
+                        existing_ext.property.save(update_fields=["is_archived"])
                     existing_ext.is_import_eligible = False
                     existing_ext.raw_data = item
                     existing_ext.save(
@@ -699,6 +702,9 @@ class Command(BaseCommand):
             changed = True
         if property_obj.external_id != str(ext.crm_property_id):
             property_obj.external_id = str(ext.crm_property_id)
+            changed = True
+        if is_import_eligible and property_obj.is_archived:
+            property_obj.is_archived = False
             changed = True
 
         if dry_run:

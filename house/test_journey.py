@@ -67,3 +67,43 @@ class JourneyApiTests(TestCase):
         self.assertContains(response, 'nonce="')
         self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")
         self.assertEqual(response["Cache-Control"], "private, no-store")
+
+    def test_authenticated_event_links_session_to_user(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("journey_event"), json.dumps(self.payload()), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(JourneySession.objects.get().user, self.user)
+
+    def test_successful_consultation_links_contact_to_journey_session(self):
+        session = JourneySession.objects.create(session_id="consultation-session")
+        with self.settings(TELEGRAM_BOT_TOKEN="token", TELEGRAM_CHAT_IDS=[1]):
+            from unittest.mock import patch
+            with patch("dominium_backend.views.public.requests.post") as send:
+                send.return_value.raise_for_status.return_value = None
+                response = self.client.post(reverse("consultation_api"), {
+                    "name": "Олена",
+                    "phone": "+380 67 123 45 67",
+                    "email": "OLENA@example.com",
+                    "message": "Хочу консультацію",
+                    "journey_session_id": session.session_id,
+                })
+        self.assertEqual(response.status_code, 200)
+        session.refresh_from_db()
+        self.assertEqual(session.customer_name, "Олена")
+        self.assertEqual(session.customer_phone, "+380671234567")
+        self.assertEqual(session.customer_email, "olena@example.com")
+
+    def test_staff_analytics_exposes_linked_contact_only_to_staff(self):
+        session = JourneySession.objects.create(
+            session_id="known-contact", customer_name="Іван", customer_phone="+380501112233"
+        )
+        JourneyEvent.objects.create(
+            event_id=uuid.uuid4(), session=session, event_type="page_view", path="/"
+        )
+        self.client.force_login(self.staff)
+        payload = self.client.get(reverse("journey_analytics")).json()
+        known = next(item for item in payload["journeys"] if item["session_id"] == "-contact")
+        self.assertEqual(known["customer"]["name"], "Іван")
+        self.assertEqual(known["customer"]["phone"], "+380501112233")

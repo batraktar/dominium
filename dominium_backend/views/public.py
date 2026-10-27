@@ -12,7 +12,7 @@ from django.utils.html import strip_tags
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_GET, require_POST
 
-from house.models import HomepageHighlightSettings, Property
+from house.models import HomepageHighlightSettings, JourneySession, Property
 from house.utils.sanitization import sanitize_rich_text
 from dominium_backend.seo_regions import (
     DEFAULT_INDEX_ROBOTS,
@@ -129,6 +129,18 @@ def consultation_view(request):
             updated_fields.append("email")
         if updated_fields:
             user.save(update_fields=updated_fields)
+
+    journey_session_id = cleaned.get("journey_session_id") or ""
+    if journey_session_id:
+        normalized_phone = "+" + "".join(char for char in cleaned["phone"] if char.isdigit())
+        identity = {
+            "customer_name": cleaned["name"],
+            "customer_phone": normalized_phone,
+            "customer_email": email.casefold(),
+        }
+        if request.user.is_authenticated:
+            identity["user"] = request.user
+        JourneySession.objects.filter(session_id=journey_session_id).update(**identity)
 
     return JsonResponse({"status": "ok"}, status=200)
 

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getJourneyContext } from './journey.js'
+import { getJourneyContext, getJourneySessionId } from './journey.js'
 
 function storage() {
   const values = new Map()
@@ -25,4 +25,10 @@ test('keeps one anonymous session and first-touch attribution', () => {
   assert.equal(first.sessionId, second.sessionId)
   assert.equal(second.attribution.utm_source, 'google')
   assert.equal(second.attribution.utm_medium, 'organic')
+})
+
+test('returns the same journey session id for consultation attribution', () => {
+  const localStorage = storage()
+  const context = getJourneyContext({ search: '' }, localStorage, '')
+  assert.equal(getJourneySessionId(localStorage), context.sessionId)
 })

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
+import { getJourneySessionId } from '../../../shared/analytics/journey.js'
 
 function useConsultationForm() {
   const [isSendingConsultation, setIsSendingConsultation] = useState(false)
@@ -17,6 +18,7 @@ function useConsultationForm() {
     for (const [key, value] of formData.entries()) {
       payload.append(key, String(value))
     }
+    payload.set('journey_session_id', getJourneySessionId())
 
     setIsSendingConsultation(true)
     setConsultationMessage('')

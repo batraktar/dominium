@@ -70,6 +70,8 @@ def journey_event(request):
             value = (urlparse(value).hostname or value).lower()[:limit]
         session_defaults[field] = value
     session, _ = JourneySession.objects.get_or_create(session_id=session_id, defaults=session_defaults)
+    if request.user.is_authenticated and session.user_id != request.user.id:
+        JourneySession.objects.filter(pk=session.pk).update(user=request.user)
 
     property_obj = None
     article_obj = None
@@ -146,6 +148,12 @@ def journey_analytics(request):
                 "property_id": event.property_id,
                 "created_at": event.created_at.isoformat(),
             } for event in session_events],
+            "customer": {
+                "user_id": session.user_id,
+                "name": session.customer_name,
+                "phone": session.customer_phone,
+                "email": session.customer_email,
+            },
         })
 
     return JsonResponse({

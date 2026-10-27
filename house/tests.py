@@ -718,6 +718,51 @@ class RealtsoftSyncTest(TestCase):
         self.assertFalse(_should_import({"deal": 3, "realty_type": 10, **advertised}))
         self.assertFalse(_should_import({"deal": 1, "realty_type": 1, "tags_cache": "інше"}))
 
+    def test_existing_property_without_required_tag_is_archived_not_deleted(self):
+        property_obj = Property.objects.create(
+            title="Без реклами", address="Ужгород", price=100, area=10, rooms=1,
+            external_source="realtsoft", external_id="777",
+        )
+        external = ExternalProperty.objects.create(
+            crm_property_id=777, property=property_obj, source="realtsoft", is_import_eligible=True,
+        )
+
+        result = RealtsoftSyncCommand()._sync_single_item(
+            Mock(), {"id": 777, "deal": 1, "realty_type": 1, "tags_cache": "інше"}, False,
+            import_tag="реклама",
+        )
+
+        self.assertEqual(result, "updated")
+        self.assertTrue(Property.objects.filter(pk=property_obj.pk).exists())
+        property_obj.refresh_from_db()
+        external.refresh_from_db()
+        self.assertTrue(property_obj.is_archived)
+        self.assertFalse(external.is_import_eligible)
+
+    @patch("house.management.commands.sync_crm_properties.Command._sync_images")
+    def test_required_tag_reactivates_archived_existing_property(self, _sync_images):
+        property_obj = Property.objects.create(
+            title="Повертається", address="Ужгород", price=100, area=10, rooms=1,
+            external_source="realtsoft", external_id="778", is_archived=True,
+        )
+        external = ExternalProperty.objects.create(
+            crm_property_id=778, property=property_obj, source="realtsoft", is_import_eligible=False,
+        )
+        mapped = {
+            "title": property_obj.title, "description": "", "address": property_obj.address,
+            "price": property_obj.price, "area": 10, "rooms": 1, "latitude": None,
+            "longitude": None, "price_currency": "USD", "property_type_name": None,
+            "deal_type_name": None, "images": ["https://cdn.example/photo.jpg"],
+        }
+
+        RealtsoftSyncCommand()._update_existing(
+            external, mapped, {"id": 778, "tags_cache": "реклама"}, False,
+            is_import_eligible=True,
+        )
+
+        property_obj.refresh_from_db()
+        self.assertFalse(property_obj.is_archived)
+
     @override_settings(TELEGRAM_BOT_TOKEN="test-token")
     @patch("house.management.commands.send_seo_article_reminder.requests.post")
     def test_seo_article_reminder_uses_only_configured_chats(self, post):
