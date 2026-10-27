@@ -19,3 +19,40 @@ export function buildJourneyDashboard(data = {}) {
   const last = funnel.at(-1)?.value || 0
   return { funnel, daily, dailyMax, overallConversion: percent(last, first) }
 }
+
+export function filterAnalyticsVisitors(visitors = [], filters = {}) {
+  const source = String(filters.source || '').toLowerCase()
+  const eventType = String(filters.eventType || '')
+  const query = String(filters.query || '').trim().toLowerCase()
+  return visitors.filter((visitor) => {
+    if (source && String(visitor.source || '').toLowerCase() !== source) return false
+    if (eventType && !visitor.events?.some((event) => event.type === eventType)) return false
+    if (!query) return true
+    const haystack = [
+      visitor.visitor_id, visitor.ip_address, visitor.customer?.name,
+      visitor.customer?.phone, visitor.customer?.email,
+    ].filter(Boolean).join(' ').toLowerCase()
+    return haystack.includes(query)
+  })
+}
+
+export function summarizeVisitorPaths(visitors = []) {
+  const counts = new Map()
+  const addTransition = (from, to) => {
+    if (!from || !to || from === to) return
+    const key = `${from}\u0000${to}`
+    const current = counts.get(key) || { from, to, count: 0 }
+    current.count += 1
+    counts.set(key, current)
+  }
+  visitors.forEach((visitor) => {
+    const events = [...(visitor.events || [])].sort((left, right) =>
+      String(left.created_at || '').localeCompare(String(right.created_at || '')))
+    events.forEach((event, index) => {
+      if (event.target_path) addTransition(event.path, event.target_path)
+      const previous = events[index - 1]
+      if (previous && !previous.target_path) addTransition(previous.path, event.path)
+    })
+  })
+  return [...counts.values()].sort((left, right) => right.count - left.count || left.from.localeCompare(right.from))
+}

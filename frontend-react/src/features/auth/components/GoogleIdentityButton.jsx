@@ -5,6 +5,7 @@ import {
   exchangeGoogleCredential,
   loadGoogleIdentityScript,
 } from '../utils/googleIdentity.js'
+import { trackJourneyEvent } from '../../../shared/analytics/journey.js'
 
 function GoogleIdentityButton({ onAuthenticated, onError, fallbackUrl }) {
   const containerRef = useRef(null)
@@ -34,10 +35,15 @@ function GoogleIdentityButton({ onAuthenticated, onError, fallbackUrl }) {
         google.accounts.id.initialize({
           client_id: config.client_id,
           callback: async (response) => {
+            await trackJourneyEvent('auth_start', { metadata: { provider: 'google' } })
             try {
               const session = await exchangeGoogleCredential(response?.credential)
-              if (session) callbackRef.current.onAuthenticated?.(session)
+              if (session) {
+                await trackJourneyEvent('auth_success', { metadata: { provider: 'google' } })
+                callbackRef.current.onAuthenticated?.(session)
+              }
             } catch (error) {
+              await trackJourneyEvent('auth_failure', { metadata: { provider: 'google', reason: 'exchange_failed' } })
               callbackRef.current.onError?.(
                 error?.message || 'Не вдалося увійти через Google. Спробуйте ще раз.',
               )

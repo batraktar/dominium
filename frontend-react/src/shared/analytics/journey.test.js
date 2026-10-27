@@ -32,3 +32,25 @@ test('returns the same journey session id for consultation attribution', () => {
   const context = getJourneyContext({ search: '' }, localStorage, '')
   assert.equal(getJourneySessionId(localStorage), context.sessionId)
 })
+
+test('shares visitor and visit across tabs but assigns each tab its own identity', () => {
+  const localStorage = storage()
+  const firstTab = getJourneyContext({ search: '' }, localStorage, '', storage(), 1000)
+  const secondTab = getJourneyContext({ search: '' }, localStorage, '', storage(), 2000)
+
+  assert.equal(firstTab.visitorId, secondTab.visitorId)
+  assert.equal(firstTab.visitId, secondTab.visitId)
+  assert.notEqual(firstTab.tabId, secondTab.tabId)
+})
+
+test('rotates a visit after thirty minutes of inactivity without changing visitor', () => {
+  const localStorage = storage()
+  const sessionStorage = storage()
+  const first = getJourneyContext({ search: '' }, localStorage, '', sessionStorage, 1000)
+  const active = getJourneyContext({ search: '' }, localStorage, '', sessionStorage, 1000 + 29 * 60 * 1000)
+  const expired = getJourneyContext({ search: '' }, localStorage, '', sessionStorage, 1000 + 60 * 60 * 1000)
+
+  assert.equal(first.visitId, active.visitId)
+  assert.notEqual(active.visitId, expired.visitId)
+  assert.equal(first.visitorId, expired.visitorId)
+})

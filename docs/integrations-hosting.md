@@ -64,6 +64,14 @@ CRM-імпорт і публічний API використовують точн
 більше одного нагадування на запланований день і не змінює одержувачів інших
 Telegram-повідомлень.
 
+Для щоденної анонімізації IP старше 30 днів додайте окремий cron:
+
+```cron
+20 3 * * * /absolute/path/to/dominium/scripts/anonymize_journey_ips_cron.sh
+```
+
+Команда не видаляє аналітику: IPv4 маскується до мережі `/24`, IPv6 — до `/48`.
+
 ## 3. Google-вхід
 
 1. У Google Cloud Console створіть OAuth Client типу `Web application`.

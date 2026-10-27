@@ -3,6 +3,7 @@ import { apiEndpoints } from '../../api/endpoints.js'
 import { submitGoogleAuthInCurrentTab } from '../../../features/auth/utils/googleAuth.js'
 import { ensureCsrfToken } from '../../utils/csrf.js'
 import { getCurrentPathWithQuery, normalizeNextPath } from '../../utils/navigation.js'
+import { trackJourneyEvent } from '../../analytics/journey.js'
 
 export default function useDominiumModalEffects({
   setLoginError = () => {},
@@ -141,6 +142,7 @@ export default function useDominiumModalEffects({
       const onGoogleClick = async (event) => {
         event.preventDefault()
         const authUrl = btn.dataset.authUrl || googleAuthUrl
+        await trackJourneyEvent('auth_start', { metadata: { provider: 'google' } })
         try {
           const csrfToken = await ensureCsrfToken()
           submitGoogleAuthInCurrentTab({
@@ -151,6 +153,7 @@ export default function useDominiumModalEffects({
             documentObject: document,
           })
         } catch {
+          await trackJourneyEvent('auth_failure', { metadata: { provider: 'google', reason: 'start_failed' } })
           setLoginError('Не вдалося підготувати безпечний вхід через Google. Спробуйте ще раз.')
           openModal('login', { next: getCurrentPathWithQuery() })
         }

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
 import { ARTICLE_CHATGPT_PROMPT, getArticleChatGptUrl, parseArticleImport } from '../model/articleImportModel.js'
-import ArticleAnalytics from './ArticleAnalytics.jsx'
 
 const EMPTY_FORM = { id: null, title: '', slug: '', summary: '', body: '', seo_title: '', seo_description: '', is_published: false, images: [], cover_image_url: '' }
 
@@ -113,7 +112,6 @@ function ArticlesTab() {
     <div className="admin-panel__header"><div><h2 className="admin-panel__title">Статті</h2><p className="admin-panel__subtitle">Створення, фото, імпорт чернеток і публікація.</p></div><button type="button" className="admin-button admin-button--secondary" onClick={reset}>Нова стаття</button></div>
     {error ? <div className="admin-alert admin-alert--error article-alert" role="alert">{error}</div> : null}
     {notice ? <div className="admin-alert admin-alert--success article-alert" role="status">{notice}</div> : null}
-    <ArticleAnalytics />
     <details className="article-import-panel"><summary>Імпорт із ChatGPT JSON</summary><div className="article-import-panel__content">
       <p>Скопіюйте промпт у ChatGPT, вставте чистий JSON або виберіть .json-файл. Імпорт завжди створює чернетку.</p>
       <div className="admin-toolbar"><button type="button" className="admin-button admin-button--primary" onClick={openChatGpt}>Створити в ChatGPT ↗</button><button type="button" className="admin-button admin-button--secondary" onClick={() => navigator.clipboard.writeText(ARTICLE_CHATGPT_PROMPT).then(() => setNotice('Промпт скопійовано.')).catch(() => setError('Не вдалося скопіювати промпт.'))}>Лише скопіювати</button><label className="admin-button admin-button--ghost">Вибрати JSON<input className="sr-only" type="file" accept="application/json,.json" onChange={(event) => readJsonFile(event.target.files?.[0])} /></label></div>

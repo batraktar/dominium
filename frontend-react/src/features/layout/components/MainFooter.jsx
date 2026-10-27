@@ -46,6 +46,9 @@ function MainFooter({ userIsStaff = false }) {
         </div>
 
         <p className="text-sm font-fixel text-white/60">&copy; 2025 DOMINIUM. Усі права захищено.</p>
+        <p className="text-xs font-fixel text-white/60">
+          Сайт зберігає технічні дані відвідування для безпеки та покращення сервісу; IP анонімізується через 30 днів.
+        </p>
       </div>
     </footer>
   )

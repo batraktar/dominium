@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from house.models import JourneyEvent, JourneySession, Property
+from house.management.commands.anonymize_journey_ips import anonymize_ip
 
 
 class JourneyApiTests(TestCase):
@@ -37,6 +38,53 @@ class JourneyApiTests(TestCase):
         self.assertEqual(second.status_code, 200)
         self.assertEqual(JourneyEvent.objects.count(), 1)
         self.assertEqual(JourneySession.objects.get().utm_source, "google")
+
+    def test_ip_anonymization_preserves_only_network_prefix(self):
+        self.assertEqual(anonymize_ip("203.0.113.77"), "203.0.113.0")
+        self.assertEqual(anonymize_ip("2001:db8:abcd:1234::1"), "2001:db8:abcd::")
+
+    def test_records_server_context_and_tab_identity_without_trusting_metadata(self):
+        payload = self.payload(
+            visitor_id="visitor-123",
+            tab_id="tab-456",
+            metadata={"ip": "198.51.100.9", "user_agent": "forged"},
+        )
+        response = self.client.post(
+            reverse("journey_event"),
+            json.dumps(payload),
+            content_type="application/json",
+            REMOTE_ADDR="203.0.113.7",
+            HTTP_USER_AGENT="Mozilla/5.0 Test Browser",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        session = JourneySession.objects.get()
+        event = JourneyEvent.objects.get()
+        self.assertEqual(session.visitor_id, "visitor-123")
+        self.assertEqual(session.ip_address, "203.0.113.7")
+        self.assertEqual(session.user_agent, "Mozilla/5.0 Test Browser")
+        self.assertEqual(event.tab_id, "tab-456")
+        self.assertNotIn("ip", event.metadata)
+
+    def test_backfills_new_identity_fields_for_an_existing_visit(self):
+        session = JourneySession.objects.create(session_id="legacy-visit")
+        response = self.client.post(
+            reverse("journey_event"),
+            json.dumps(self.payload(
+                session_id=session.session_id,
+                visitor_id="visitor-backfilled",
+                tab_id="tab-backfilled",
+            )),
+            content_type="application/json",
+            REMOTE_ADDR="203.0.113.22",
+            HTTP_USER_AGENT="Existing Browser",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        session.refresh_from_db()
+        self.assertEqual(session.visitor_id, "visitor-backfilled")
+        self.assertEqual(session.ip_address, "203.0.113.22")
+        self.assertEqual(session.user_agent, "Existing Browser")
 
     def test_rejects_external_path_and_arbitrary_metadata(self):
         response = self.client.post(
@@ -142,3 +190,28 @@ class JourneyApiTests(TestCase):
             {"date": payload["daily"][-1]["date"], "sessions": 3, "property_views": 2, "consultations": 1},
         )
         self.assertTrue(all(item["sessions"] == 0 for item in payload["daily"][:-1]))
+
+    def test_staff_analytics_groups_visits_by_visitor_and_exposes_tab_timeline(self):
+        first = JourneySession.objects.create(
+            session_id="visit-one", visitor_id="visitor-shared", ip_address="203.0.113.7",
+            user_agent="Mozilla/5.0 Test",
+        )
+        second = JourneySession.objects.create(
+            session_id="visit-two", visitor_id="visitor-shared", ip_address="203.0.113.7",
+        )
+        JourneyEvent.objects.create(
+            event_id=uuid.uuid4(), session=first, tab_id="tab-a", event_type="page_view", path="/articles/test/"
+        )
+        JourneyEvent.objects.create(
+            event_id=uuid.uuid4(), session=second, tab_id="tab-b", event_type="favorite", path="/property/test/"
+        )
+
+        self.client.force_login(self.staff)
+        payload = self.client.get(reverse("journey_analytics"), {"period": 7}).json()
+
+        self.assertEqual(payload["overview"]["visitors"], 1)
+        visitor = next(row for row in payload["visitors"] if row["visitor_id"] == "visitor-shared")
+        self.assertEqual(visitor["visit_count"], 2)
+        self.assertEqual(visitor["tab_count"], 2)
+        self.assertEqual(visitor["ip_address"], "203.0.113.7")
+        self.assertEqual([event["tab_id"] for event in visitor["events"]], ["tab-a", "tab-b"])

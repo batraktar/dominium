@@ -2,18 +2,43 @@ import apiClient from '../api/client.js'
 import { apiEndpoints } from '../api/endpoints.js'
 
 const SESSION_KEY = 'dominium_journey_session'
+const VISITOR_KEY = 'dominium_journey_visitor'
+const LAST_ACTIVITY_KEY = 'dominium_journey_last_activity'
+const TAB_KEY = 'dominium_journey_tab'
 const ATTRIBUTION_KEY = 'dominium_journey_attribution'
+const VISIT_TIMEOUT_MS = 30 * 60 * 1000
 
 function randomId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-export function getJourneyContext(location = window.location, storage = window.localStorage, referrer = document.referrer) {
-  let sessionId = storage.getItem(SESSION_KEY)
-  if (!sessionId) {
-    sessionId = randomId()
-    storage.setItem(SESSION_KEY, sessionId)
+export function getJourneyContext(
+  location = window.location,
+  storage = window.localStorage,
+  referrer = document.referrer,
+  tabStorage = null,
+  now = Date.now(),
+) {
+  const resolvedTabStorage = tabStorage || (typeof window !== 'undefined' ? window.sessionStorage : storage)
+  let visitorId = storage.getItem(VISITOR_KEY)
+  if (!visitorId) {
+    visitorId = randomId()
+    storage.setItem(VISITOR_KEY, visitorId)
+  }
+  const lastActivity = Number(storage.getItem(LAST_ACTIVITY_KEY) || 0)
+  let visitId = storage.getItem(SESSION_KEY)
+  const visitExpired = lastActivity > 0 && now - lastActivity > VISIT_TIMEOUT_MS
+  if (!visitId || visitExpired) {
+    visitId = randomId()
+    storage.setItem(SESSION_KEY, visitId)
+    storage.setItem(ATTRIBUTION_KEY, '')
+  }
+  storage.setItem(LAST_ACTIVITY_KEY, String(now))
+  let tabId = resolvedTabStorage.getItem(TAB_KEY)
+  if (!tabId) {
+    tabId = randomId()
+    resolvedTabStorage.setItem(TAB_KEY, tabId)
   }
   let attribution
   try {
@@ -33,7 +58,7 @@ export function getJourneyContext(location = window.location, storage = window.l
     }
     storage.setItem(ATTRIBUTION_KEY, JSON.stringify(attribution))
   }
-  return { sessionId, attribution }
+  return { sessionId: visitId, visitorId, visitId, tabId, attribution }
 }
 
 export function getJourneySessionId(storage = window.localStorage) {
@@ -44,10 +69,12 @@ export function getJourneySessionId(storage = window.localStorage) {
 
 export function trackJourneyEvent(eventType, options = {}) {
   if (typeof window === 'undefined') return Promise.resolve()
-  const { sessionId, attribution } = getJourneyContext()
+  const { visitorId, visitId, tabId, attribution } = getJourneyContext()
   const payload = {
     event_id: randomId(),
-    session_id: sessionId,
+    session_id: visitId,
+    visitor_id: visitorId,
+    tab_id: tabId,
     event_type: eventType,
     path: window.location.pathname,
     target_path: options.targetPath || '',

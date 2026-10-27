@@ -521,6 +521,7 @@ class ArticleEvent(models.Model):
 
 class JourneySession(models.Model):
     session_id = models.CharField(max_length=64, unique=True)
+    visitor_id = models.CharField(max_length=64, blank=True, db_index=True)
     user = models.ForeignKey(
         "accounts.CustomUser", null=True, blank=True, on_delete=models.SET_NULL,
         related_name="journey_sessions",
@@ -535,6 +536,8 @@ class JourneySession(models.Model):
     utm_campaign = models.CharField(max_length=150, blank=True)
     utm_content = models.CharField(max_length=150, blank=True)
     utm_term = models.CharField(max_length=150, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True, db_index=True)
+    user_agent = models.CharField(max_length=500, blank=True)
     first_seen_at = models.DateTimeField(auto_now_add=True, db_index=True)
     last_seen_at = models.DateTimeField(auto_now=True, db_index=True)
 
@@ -552,11 +555,15 @@ class JourneyEvent(models.Model):
         ("favorite", "Обране"),
         ("contact_click", "Контакт"),
         ("consultation", "Заявка"),
+        ("auth_start", "Початок входу"),
+        ("auth_success", "Успішний вхід"),
+        ("auth_failure", "Помилка входу"),
     ]
 
     event_id = models.UUIDField(unique=True, editable=False)
     session = models.ForeignKey(JourneySession, related_name="events", on_delete=models.CASCADE)
     event_type = models.CharField(max_length=32, choices=EVENT_TYPES, db_index=True)
+    tab_id = models.CharField(max_length=64, blank=True, db_index=True)
     path = models.CharField(max_length=500)
     target_path = models.CharField(max_length=500, blank=True)
     property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.SET_NULL)

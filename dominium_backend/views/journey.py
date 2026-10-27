@@ -51,10 +51,13 @@ def journey_event(request):
         return JsonResponse({"error": "invalid_event_id"}, status=400)
 
     session_id = str(payload.get("session_id", "")).strip()
+    visitor_id = str(payload.get("visitor_id", "")).strip()
+    tab_id = str(payload.get("tab_id", "")).strip()
     event_type = str(payload.get("event_type", "")).strip()
     path = _local_path(payload.get("path"), required=True)
     target_path = _local_path(payload.get("target_path"))
-    if not session_id or len(session_id) > 64 or event_type not in EVENT_TYPES or path is None or target_path is None:
+    if (not session_id or len(session_id) > 64 or len(visitor_id) > 64 or len(tab_id) > 64
+            or event_type not in EVENT_TYPES or path is None or target_path is None):
         return JsonResponse({"error": "invalid_event"}, status=400)
 
     rate_key = f"journey:{get_client_ip(request)}:{timezone.now():%Y%m%d%H%M}"
@@ -67,13 +70,33 @@ def journey_event(request):
         return JsonResponse({"error": "rate_limited"}, status=429)
 
     attribution = payload.get("attribution") if isinstance(payload.get("attribution"), dict) else {}
-    session_defaults = {"first_path": path}
+    session_defaults = {
+        "first_path": path,
+        "visitor_id": visitor_id or session_id,
+        "ip_address": get_client_ip(request) or None,
+        "user_agent": request.headers.get("User-Agent", "")[:500],
+    }
     for field, limit in ATTRIBUTION_FIELDS.items():
         value = str(attribution.get(field, "")).strip()[:limit]
         if field == "referrer_host" and value:
             value = (urlparse(value).hostname or value).lower()[:limit]
         session_defaults[field] = value
-    session, _ = JourneySession.objects.get_or_create(session_id=session_id, defaults=session_defaults)
+    session, session_created = JourneySession.objects.get_or_create(session_id=session_id, defaults=session_defaults)
+    if not session_created:
+        context_updates = []
+        if not session.visitor_id:
+            session.visitor_id = visitor_id or session_id
+            context_updates.append("visitor_id")
+        observed_ip = get_client_ip(request) or None
+        if observed_ip and session.ip_address != observed_ip:
+            session.ip_address = observed_ip
+            context_updates.append("ip_address")
+        observed_agent = request.headers.get("User-Agent", "")[:500]
+        if observed_agent and session.user_agent != observed_agent:
+            session.user_agent = observed_agent
+            context_updates.append("user_agent")
+        if context_updates:
+            session.save(update_fields=context_updates)
     if request.user.is_authenticated and session.user_id != request.user.id:
         JourneySession.objects.filter(pk=session.pk).update(user=request.user)
 
@@ -92,12 +115,16 @@ def journey_event(request):
     safe_metadata = {}
     if event_type == "search":
         safe_metadata["query"] = str(metadata.get("query", "")).strip()[:120]
+    elif event_type in {"auth_start", "auth_success", "auth_failure"}:
+        safe_metadata["provider"] = str(metadata.get("provider", "google")).strip()[:30]
+        safe_metadata["reason"] = str(metadata.get("reason", "")).strip()[:80]
 
     _, created = JourneyEvent.objects.get_or_create(
         event_id=event_id,
         defaults={
             "session": session,
             "event_type": event_type,
+            "tab_id": tab_id,
             "path": path,
             "target_path": target_path,
             "property": property_obj,
@@ -124,6 +151,10 @@ def journey_analytics(request):
     since = timezone.now() - timezone.timedelta(days=days)
     events = JourneyEvent.objects.filter(created_at__gte=since)
     sessions = JourneySession.objects.filter(events__created_at__gte=since).distinct()
+    visitors_count = (
+        sessions.exclude(visitor_id="").values("visitor_id").distinct().count()
+        + sessions.filter(visitor_id="").count()
+    )
     counts = dict(events.values_list("event_type").annotate(total=Count("id")))
     funnel = [
         {"key": "sessions", "label": "Сесії", "value": sessions.count()},
@@ -177,17 +208,22 @@ def journey_analytics(request):
         .annotate(events=Count("id"), visitors=Count("session_id", distinct=True))
         .order_by("-visitors", "-events")[:10]
     )
-    recent_sessions = sessions.prefetch_related("events").order_by("-last_seen_at")[:20]
+    recent_sessions = sessions.select_related("user").prefetch_related("events").order_by("-last_seen_at")[:100]
     journeys = []
     for session in recent_sessions:
         session_events = list(session.events.filter(created_at__gte=since).order_by("created_at")[:30])
         journeys.append({
             "session_id": session.session_id[-8:],
+            "visitor_id": session.visitor_id or session.session_id,
+            "tab_count": len({event.tab_id for event in session_events if event.tab_id}),
+            "ip_address": str(session.ip_address or ""),
+            "user_agent": session.user_agent,
             "source": session.utm_source or session.referrer_host or "direct",
             "first_path": session.first_path,
             "last_seen_at": session.last_seen_at.isoformat(),
             "events": [{
                 "type": event.event_type,
+                "tab_id": event.tab_id[-8:] if event.tab_id else "",
                 "path": event.path,
                 "target_path": event.target_path,
                 "property_id": event.property_id,
@@ -201,9 +237,36 @@ def journey_analytics(request):
             },
         })
 
+    visitor_groups = {}
+    for journey in journeys:
+        key = journey["visitor_id"]
+        group = visitor_groups.setdefault(key, {
+            "visitor_id": key,
+            "source": journey["source"],
+            "first_path": journey["first_path"],
+            "last_seen_at": journey["last_seen_at"],
+            "visit_count": 0,
+            "tab_count": 0,
+            "ip_address": journey["ip_address"],
+            "user_agent": journey["user_agent"],
+            "customer": journey["customer"],
+            "events": [],
+        })
+        group["visit_count"] += 1
+        group["events"].extend(journey["events"])
+        group["tab_count"] = len({event["tab_id"] for event in group["events"] if event["tab_id"]})
+        if journey["last_seen_at"] > group["last_seen_at"]:
+            group["last_seen_at"] = journey["last_seen_at"]
+        if not group["customer"].get("name") and journey["customer"].get("name"):
+            group["customer"] = journey["customer"]
+    visitor_rows = sorted(visitor_groups.values(), key=lambda row: row["last_seen_at"], reverse=True)
+    for row in visitor_rows:
+        row["events"].sort(key=lambda event: event["created_at"])
+
     return JsonResponse({
         "period": days,
         "overview": {
+            "visitors": visitors_count,
             "sessions": sessions.count(),
             "events": events.count(),
             "property_views": funnel[1]["value"],
@@ -216,6 +279,7 @@ def journey_analytics(request):
         "sources": sources,
         "top_properties": top_properties,
         "journeys": journeys,
+        "visitors": visitor_rows,
     })
 
 
