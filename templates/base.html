@@ -125,13 +125,13 @@
 
     {% include 'partials/preloader.html' %}
 
-    <div class="fade-in">
-      <div id="scroll-container" class="min-h-screen">
+    <div class="fade-in dominium-shell">
+      <div id="scroll-container" class="dominium-scroll-container">
         {% block header %}
           {% include 'partials/header.html' %}
         {% endblock %}
 
-        <main id="main-content" tabindex="-1" class="{% block main_padding %}pt-0 pb-0{% endblock %}">
+        <main id="main-content" tabindex="-1" class="dominium-main dominium-main--legacy {% block main_padding %}pb-0{% endblock %}">
           {% block content %}
 
           {% endblock %}

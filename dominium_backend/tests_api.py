@@ -1408,6 +1408,18 @@ class SpaRuntimeSwitchAuditTest(TestCase):
         self.assertNotIn('name="dominium-runtime-shell" content="react-spa"', content)
         self.assertIn('id="csrf-token"', content)
 
+    def test_legacy_home_uses_shared_shell_contract(self):
+        guest_content = self.client.get(reverse("start_page")).content.decode("utf-8")
+        self.assertIn('class="dominium-site-header"', guest_content)
+        self.assertIn('class="dominium-site-footer"', guest_content)
+        self.assertIn('class="dominium-main dominium-main--legacy', guest_content)
+        self.assertNotIn('class="dominium-site-footer__articles"', guest_content)
+
+        self.client.force_login(self.staff)
+        staff_content = self.client.get(reverse("start_page")).content.decode("utf-8")
+        self.assertIn('class="dominium-site-footer__articles"', staff_content)
+        self.assertIn('aria-current="page">Головна</a>', staff_content)
+
     def test_unknown_route_uses_backend_404_template(self):
         response = self.client.get("/runtime-audit-missing-route/")
         self.assertEqual(response.status_code, 404)

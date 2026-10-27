@@ -18,7 +18,7 @@ function MobileNav({
 
   return (
     <nav
-      className="dominium-mobile-nav fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/70 bg-white/95 shadow-[0_-12px_30px_rgba(19,62,68,0.12)] backdrop-blur-md md:hidden"
+      className="dominium-mobile-nav fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/70 bg-white/95 shadow-[0_-12px_30px_rgba(19,62,68,0.12)] backdrop-blur-md lg:hidden"
       aria-label="Нижня навігація"
     >
       <div className="grid min-h-[76px] grid-flow-col auto-cols-fr px-2 py-2">

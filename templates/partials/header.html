@@ -1,65 +1,38 @@
 {% load static %}
 {% load socialaccount %}
-<header class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
-  <div class="container mx-auto px-4 py-4">
-    <div class="flex items-center justify-between">
-      <div class="relative h-5 md:h-10 overflow-visible flex items-center justify-center md:justify-start w-full md:w-auto">
-        <a href="/" aria-label="DOMINIUM — головна сторінка">
-          <img
-            src="{% static 'base/assets/img/Logoblack.png' %}"
-            alt="DOMINIUM Logo"
-            class="h-[50px] md:h-[60px]"
-            width="180"
-            height="60"
-            decoding="async"
-          />
+<header class="dominium-site-header">
+  <div class="dominium-site-header__inner container">
+    <div class="dominium-site-header__row">
+      <div class="dominium-site-header__brand">
+        <a href="/" aria-label="DOMINIUM — головна сторінка"{% if request.path == '/' %} aria-current="page"{% endif %}>
+          <img src="{% static 'base/assets/img/Logoblack.png' %}" alt="DOMINIUM Logo" width="220" height="56" decoding="async" />
         </a>
       </div>
-
-      <nav class="hidden md:flex items-center space-x-8" aria-label="Основна навігація">
-        <a href="/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Головна</a>
-        <a href="/search/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Пошук</a>
-        <a href="/likes/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Обране</a>
+      <nav class="dominium-site-header__nav" aria-label="Основна навігація">
+        <a href="/" class="dominium-site-header__link{% if request.path == '/' %} is-active{% endif %}"{% if request.path == '/' %} aria-current="page"{% endif %}>Головна</a>
+        <a href="/search/" class="dominium-site-header__link{% if request.path|slice:':7' == '/search' %} is-active{% endif %}"{% if request.path|slice:':7' == '/search' %} aria-current="page"{% endif %}>Пошук</a>
+        <a href="/likes/" class="dominium-site-header__link{% if request.path|slice:':6' == '/likes' %} is-active{% endif %}"{% if request.path|slice:':6' == '/likes' %} aria-current="page"{% endif %}>Обране</a>
         {% if request.user.is_staff %}
-          <a href="{% url 'property_api_admin' %}" class="text-deepOcean font-fixel font-normal hover:text-coolSage flex items-center gap-1">
-            <i class="ri-dashboard-line text-base"></i>
+          <a href="{% url 'property_api_admin' %}" class="dominium-site-header__link dominium-site-header__admin-link{% if request.path|slice:':10' == '/api/admin' %} is-active{% endif %}"{% if request.path|slice:':10' == '/api/admin' %} aria-current="page"{% endif %}>
+            <i class="ri-dashboard-line" aria-hidden="true"></i>
             API адмінка
           </a>
         {% endif %}
-        {% comment %} <a href="/about/" class="text-deepOcean font-fixel font-normal hover:text-coolSage">Про нас</a> {% endcomment %}
       </nav>
-      <div class="hidden md:flex items-center space-x-4">
-        <a href="https://www.facebook.com/61573653220530/" aria-label="Facebook DOMINIUM" class="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"><i class="ri-facebook-fill ri-lg"></i></a>
-        <a href="https://www.instagram.com/dominium_realty_agency" aria-label="Instagram DOMINIUM" class="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"><i class="ri-instagram-fill ri-lg"></i></a>
-        <a href="https://www.tiktok.com/@dominium_realty_agency" aria-label="TikTok DOMINIUM" class="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"><i class="ri-tiktok-fill ri-lg"></i></a>
-
+      <div class="dominium-site-header__actions">
+        <div class="dominium-site-header__socials">
+          <a href="https://www.facebook.com/61573653220530/" aria-label="Facebook DOMINIUM"><i class="ri-facebook-fill ri-lg"></i></a>
+          <a href="https://www.instagram.com/dominium_realty_agency" aria-label="Instagram DOMINIUM"><i class="ri-instagram-fill ri-lg"></i></a>
+          <a href="https://www.tiktok.com/@dominium_realty_agency" aria-label="TikTok DOMINIUM"><i class="ri-tiktok-fill ri-lg"></i></a>
+        </div>
         {% if request.user.is_authenticated %}
-          <div class="flex items-center space-x-2 ml-4">
-            <span class="text-sm text-deepOcean">Привіт, {{ request.user.display_name }}</span>
-            <button
-              type="button"
-              data-logout-url="{% url 'logout' %}"
-              class="text-sm text-red-600 hover:underline"
-            >
-              Вийти
-            </button>
+          <div class="dominium-site-header__account">
+            <span>Привіт, {{ request.user.display_name }}</span>
+            <button type="button" data-logout-url="{% url 'logout' %}" class="dominium-site-header__logout">Вийти</button>
           </div>
         {% else %}
-          <button
-            type="button"
-            data-google-auth
-            data-auth-url="{% url 'google_popup_start' %}"
-            class="ml-2 text-sm text-primary border border-primary px-4 py-1.5 rounded-button hover:bg-primary hover:text-white transition"
-          >
-            Зареєструватися
-          </button>
-          <button
-            type="button"
-            class="ml-2 text-sm text-white bg-primary hover:bg-primary/90 px-4 py-1.5 rounded-button transition"
-            data-open-modal="login"
-          >
-            Увійти
-          </button>
+          <button type="button" data-google-auth data-auth-url="{% url 'google_popup_start' %}" class="dominium-site-header__auth-button dominium-site-header__auth-button--secondary">Зареєструватися</button>
+          <button type="button" class="dominium-site-header__auth-button dominium-site-header__auth-button--primary" data-open-modal="login">Увійти</button>
         {% endif %}
       </div>
     </div>

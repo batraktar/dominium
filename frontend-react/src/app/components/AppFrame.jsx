@@ -37,7 +37,6 @@ function AppFrame({
             userDisplayName={userDisplayName}
             onLogout={onLogout}
             googleAuthUrl={googleAuthUrl}
-            className={isSearchRoute ? 'hidden lg:block' : ''}
           />
 
           <main

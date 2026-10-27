@@ -1,4 +1,5 @@
 import logoBlack from '../../../../../static/base/assets/img/Logoblack.png'
+import { getPrimaryNavKey } from '../model/siteShellModel.js'
 
 function MainHeader({
   userIsStaff = false,
@@ -6,87 +7,79 @@ function MainHeader({
   userDisplayName = '',
   onLogout,
   googleAuthUrl,
-  className = '',
 }) {
+  const activeKey = getPrimaryNavKey(typeof window !== 'undefined' ? window.location.pathname : '/')
+  const navClass = (key) => `dominium-site-header__link${activeKey === key ? ' is-active' : ''}`
+
   return (
-    <header className={`fixed top-0 left-0 right-0 bg-white shadow-md z-50 ${className}`}>
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="relative h-12 md:h-14 overflow-visible flex items-center justify-center md:justify-start w-full md:w-auto">
-            <a href="/" aria-label="DOMINIUM — головна сторінка">
+    <header className="dominium-site-header">
+      <div className="dominium-site-header__inner container">
+        <div className="dominium-site-header__row">
+          <div className="dominium-site-header__brand">
+            <a href="/" aria-label="DOMINIUM — головна сторінка" aria-current={activeKey === 'home' ? 'page' : undefined}>
               <img
                 src={logoBlack}
                 alt="DOMINIUM Logo"
-                className="h-12 md:h-14 w-auto object-contain"
-                width="210"
-                height="60"
+                width="220"
+                height="56"
                 decoding="async"
               />
             </a>
           </div>
 
-          <nav className="hidden md:flex items-center space-x-8" aria-label="Основна навігація">
-            <a
-              href="/"
-              className="text-deepOcean font-fixel font-normal hover:text-coolSage"
-            >
+          <nav className="dominium-site-header__nav" aria-label="Основна навігація">
+            <a href="/" className={navClass('home')} aria-current={activeKey === 'home' ? 'page' : undefined}>
               Головна
             </a>
-            <a
-              href="/search/"
-              className="text-deepOcean font-fixel font-normal hover:text-coolSage"
-            >
+            <a href="/search/" className={navClass('search')} aria-current={activeKey === 'search' ? 'page' : undefined}>
               Пошук
             </a>
-            <a
-              href="/likes/"
-              className="text-deepOcean font-fixel font-normal hover:text-coolSage"
-            >
+            <a href="/likes/" className={navClass('likes')} aria-current={activeKey === 'likes' ? 'page' : undefined}>
               Обране
             </a>
             {userIsStaff ? (
               <a
                 href="/api/admin/"
-                className="text-deepOcean font-fixel font-normal hover:text-coolSage flex items-center gap-1"
+                className={`${navClass('admin')} dominium-site-header__admin-link`}
+                aria-current={activeKey === 'admin' ? 'page' : undefined}
               >
-                <i className="ri-dashboard-line text-base"></i>
+                <i className="ri-dashboard-line" aria-hidden="true"></i>
                 API адмінка
               </a>
             ) : null}
           </nav>
 
-          <div className="hidden md:flex items-center space-x-4">
-            <a
-              href="https://www.facebook.com/61573653220530/"
-              aria-label="Facebook DOMINIUM"
-              className="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"
-            >
-              <i className="ri-facebook-fill ri-lg"></i>
-            </a>
-            <a
-              href="https://www.instagram.com/dominium_realty_agency"
-              aria-label="Instagram DOMINIUM"
-              className="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"
-            >
-              <i className="ri-instagram-fill ri-lg"></i>
-            </a>
-            <a
-              href="https://www.tiktok.com/@dominium_realty_agency"
-              aria-label="TikTok DOMINIUM"
-              className="w-10 h-10 flex items-center justify-center text-deepOcean hover:text-coolSage"
-            >
-              <i className="ri-tiktok-fill ri-lg"></i>
-            </a>
+          <div className="dominium-site-header__actions">
+            <div className="dominium-site-header__socials">
+              <a
+                href="https://www.facebook.com/61573653220530/"
+                aria-label="Facebook DOMINIUM"
+              >
+                <i className="ri-facebook-fill ri-lg"></i>
+              </a>
+              <a
+                href="https://www.instagram.com/dominium_realty_agency"
+                aria-label="Instagram DOMINIUM"
+              >
+                <i className="ri-instagram-fill ri-lg"></i>
+              </a>
+              <a
+                href="https://www.tiktok.com/@dominium_realty_agency"
+                aria-label="TikTok DOMINIUM"
+              >
+                <i className="ri-tiktok-fill ri-lg"></i>
+              </a>
+            </div>
 
             {userIsAuthenticated ? (
-              <div className="flex items-center space-x-2 ml-4">
-                <span className="text-sm text-deepOcean">
+              <div className="dominium-site-header__account">
+                <span>
                   Привіт, {userDisplayName || 'користувач'}
                 </span>
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="text-sm text-red-600 hover:underline"
+                  className="dominium-site-header__logout"
                 >
                   Вийти
                 </button>
@@ -97,13 +90,13 @@ function MainHeader({
                   type="button"
                   data-google-auth
                   data-auth-url={googleAuthUrl}
-                  className="ml-2 text-sm text-primary border border-primary px-4 py-1.5 rounded-button hover:bg-primary hover:text-white transition"
+                  className="dominium-site-header__auth-button dominium-site-header__auth-button--secondary"
                 >
                   Зареєструватися
                 </button>
                 <button
                   type="button"
-                  className="ml-2 text-sm text-white bg-primary hover:bg-primary/90 px-4 py-1.5 rounded-button transition"
+                  className="dominium-site-header__auth-button dominium-site-header__auth-button--primary"
                   data-open-modal="login"
                 >
                   Увійти

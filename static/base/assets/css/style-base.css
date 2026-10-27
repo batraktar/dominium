@@ -331,6 +331,255 @@ select {
     padding-right: 1rem;
 }
 
+/* Shared public shell: used by both React and retained Django templates. */
+.dominium-site-header {
+    display: none;
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 88px;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(19, 62, 68, 0.1);
+}
+
+.dominium-site-header__inner,
+.dominium-site-header__row {
+    height: 100%;
+}
+
+.dominium-site-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(1rem, 2vw, 2rem);
+}
+
+.dominium-site-header__brand {
+    display: flex;
+    flex: 0 0 220px;
+    align-items: center;
+}
+
+.dominium-site-header__brand a {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dominium-site-header__brand img {
+    display: block;
+    width: 220px;
+    height: 56px;
+    object-fit: contain;
+}
+
+.dominium-site-header__nav,
+.dominium-site-header__actions,
+.dominium-site-header__socials,
+.dominium-site-header__account {
+    display: flex;
+    align-items: center;
+}
+
+.dominium-site-header__nav {
+    gap: clamp(1rem, 1.75vw, 2rem);
+}
+
+.dominium-site-header__link {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    color: #133e44;
+    font-family: 'FixelText', sans-serif;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    transition: color 160ms ease;
+}
+
+.dominium-site-header__link:hover,
+.dominium-site-header__link:focus-visible,
+.dominium-site-header__link.is-active {
+    color: #758f8e;
+}
+
+.dominium-site-header__link.is-active {
+    font-weight: 600;
+}
+
+.dominium-site-header__actions {
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.dominium-site-header__socials {
+    gap: 0.25rem;
+}
+
+.dominium-site-header__socials a {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    color: #133e44;
+    transition: color 160ms ease;
+}
+
+.dominium-site-header__socials a:hover,
+.dominium-site-header__socials a:focus-visible {
+    color: #758f8e;
+}
+
+.dominium-site-header__account {
+    gap: 0.6rem;
+    font-family: 'FixelText', sans-serif;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.dominium-site-header__logout {
+    min-height: 44px;
+    color: #dc2626;
+}
+
+.dominium-site-header__logout:hover,
+.dominium-site-header__logout:focus-visible {
+    text-decoration: underline;
+}
+
+.dominium-site-header__auth-button {
+    min-height: 44px;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid #133e44;
+    border-radius: 8px;
+    font-family: 'FixelText', sans-serif;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.dominium-site-header__auth-button--secondary {
+    background: #fff;
+    color: #133e44;
+}
+
+.dominium-site-header__auth-button--primary,
+.dominium-site-header__auth-button--secondary:hover,
+.dominium-site-header__auth-button--secondary:focus-visible {
+    background: #133e44;
+    color: #fff;
+}
+
+.dominium-site-header__auth-button--primary:hover,
+.dominium-site-header__auth-button--primary:focus-visible {
+    background: #24575d;
+}
+
+.dominium-site-footer {
+    margin-top: auto;
+    padding: 1.5rem 0 calc(1.5rem + 76px + env(safe-area-inset-bottom));
+    background: #758f8e;
+    text-align: center;
+}
+
+.dominium-site-footer__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dominium-site-footer__brand img {
+    display: block;
+    width: 160px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.dominium-site-footer__tagline,
+.dominium-site-footer__articles,
+.dominium-site-footer__copyright,
+.dominium-site-footer__privacy {
+    margin: 0;
+    font-family: 'FixelText', sans-serif;
+    color: #fff;
+}
+
+.dominium-site-footer__articles {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 600;
+}
+
+.dominium-site-footer__articles:hover,
+.dominium-site-footer__articles:focus-visible {
+    color: #133e44;
+}
+
+.dominium-site-footer__socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.dominium-site-footer__socials a {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    color: #133e44;
+}
+
+.dominium-site-footer__socials a:hover,
+.dominium-site-footer__socials a:focus-visible {
+    color: #fff;
+}
+
+.dominium-site-footer__copyright {
+    font-size: 0.875rem;
+    opacity: 0.72;
+}
+
+.dominium-site-footer__privacy {
+    max-width: 760px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    opacity: 0.72;
+}
+
+@media (min-width: 1024px) {
+    .dominium-site-header {
+        display: block;
+    }
+
+    .dominium-site-footer {
+        padding-bottom: 1.5rem;
+    }
+
+    .dominium-main {
+        padding-top: 88px;
+    }
+}
+
+@media (max-width: 1180px) {
+    .dominium-site-header__brand {
+        flex-basis: 190px;
+    }
+
+    .dominium-site-header__brand img {
+        width: 190px;
+    }
+
+    .dominium-site-header__socials {
+        display: none;
+    }
+}
+
 #map {
     height: 100%;
     width: 100%;

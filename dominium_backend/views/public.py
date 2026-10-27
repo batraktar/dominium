@@ -10,6 +10,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.html import strip_tags
 from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from house.models import HomepageHighlightSettings, JourneySession, Property
@@ -276,6 +277,7 @@ def property_detail(request, slug):
 
 
 @cache_page(getattr(settings, "HOME_CACHE_SECONDS", 300))
+@vary_on_cookie
 def base(request):
     settings_obj = HomepageHighlightSettings.objects.prefetch_related(
         "property_types"
