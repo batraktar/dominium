@@ -6,7 +6,7 @@ function PropertyContactQuickActions({ propertyId = null }) {
       <a
         href="tel:+380730032121"
         onClick={() => trackJourneyEvent('contact_click', { propertyId })}
-        className="w-full flex items-center bg-deepOcean text-white font-ermilov justify-center space-x-2 py-3 !rounded-button shadow-md hover:bg-deepOcean/90 transition"
+        className="property-call-action w-full flex items-center bg-deepOcean text-white font-ermilov justify-center space-x-2 py-3 !rounded-button shadow-md hover:bg-deepOcean/90 transition"
       >
         <i className="ri-phone-line"></i>
         <span>Зателефонувати</span>

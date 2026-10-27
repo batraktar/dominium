@@ -166,3 +166,17 @@
 #property-info .currency-info i {
   color: #133e44;
 }
+
+/* Keep the primary property CTA readable even when custom utility palette
+   classes are omitted from the production CSS bundle. */
+.property-call-action {
+  color: #fff;
+  background: #133e44;
+  border: 1px solid #133e44;
+}
+
+.property-call-action:hover,
+.property-call-action:focus-visible {
+  color: #fff;
+  background: #0f2f34;
+}
