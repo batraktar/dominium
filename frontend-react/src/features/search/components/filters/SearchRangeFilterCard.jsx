@@ -1,3 +1,42 @@
+import { useState } from 'react'
+
+import { commitRangeInput } from '../../model/rangeInputModel.js'
+
+function RangeNumberInput({ ariaLabel, value, fallback, min, max, onCommit }) {
+  const [draft, setDraft] = useState(String(value))
+
+  const commit = () => {
+    const nextValue = commitRangeInput(draft, { fallback, min, max })
+    setDraft(String(nextValue))
+    onCommit?.({ currentTarget: { value: String(nextValue) } })
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commit()
+      event.currentTarget.blur()
+    }
+  }
+
+  return (
+    <input
+      aria-label={ariaLabel}
+      type="number"
+      inputMode="numeric"
+      min={min}
+      max={max}
+      step="any"
+      value={draft}
+      onFocus={(event) => event.currentTarget.select()}
+      onChange={(event) => setDraft(event.currentTarget.value)}
+      onBlur={commit}
+      onKeyDown={handleKeyDown}
+      className="w-full bg-transparent font-semibold outline-none"
+    />
+  )
+}
+
 function SearchRangeFilterCard({
   filterKey,
   label,
@@ -30,11 +69,27 @@ function SearchRangeFilterCard({
         <div className="grid grid-cols-2 gap-2 text-sm font-fixel">
           <label className="search-filter-number">
             <span>Від</span>
-            <input aria-label={`${label}: від`} type="number" min={rangeConfig.min} max={range.max - rangeConfig.step} step={rangeConfig.step} value={range.min} onChange={onMinInput} className="w-full bg-transparent font-semibold outline-none" />
+            <RangeNumberInput
+              key={`min-${range.min}`}
+              ariaLabel={`${label}: від`}
+              value={range.min}
+              fallback={rangeConfig.min}
+              min={rangeConfig.min}
+              max={range.max - rangeConfig.step}
+              onCommit={onMinInput}
+            />
           </label>
           <label className="search-filter-number">
             <span>До</span>
-            <input aria-label={`${label}: до`} type="number" min={range.min + rangeConfig.step} max={rangeConfig.max} step={rangeConfig.step} value={range.max} onChange={onMaxInput} className="w-full bg-transparent font-semibold outline-none" />
+            <RangeNumberInput
+              key={`max-${range.max}`}
+              ariaLabel={`${label}: до`}
+              value={range.max}
+              fallback={rangeConfig.max}
+              min={range.min + rangeConfig.step}
+              max={rangeConfig.max}
+              onCommit={onMaxInput}
+            />
           </label>
         </div>
         <div className="search-filter-summary"><span>{minLabel}</span><span>{maxLabel}</span></div>
@@ -44,7 +99,7 @@ function SearchRangeFilterCard({
             className="range-slider range-min"
             min={rangeConfig.min}
             max={rangeConfig.max}
-            step={rangeConfig.step}
+            step={1}
             value={range.min}
             style={{
               background: buildRangeBackground(
@@ -61,7 +116,7 @@ function SearchRangeFilterCard({
             className="range-slider range-max"
             min={rangeConfig.min}
             max={rangeConfig.max}
-            step={rangeConfig.step}
+            step={1}
             value={range.max}
             style={{
               background: buildRangeBackground(

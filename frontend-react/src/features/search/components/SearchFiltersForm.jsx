@@ -2,7 +2,7 @@ import SearchActiveFilterChips from './filters/SearchActiveFilterChips.jsx'
 import SearchFiltersSubmitRow from './filters/SearchFiltersSubmitRow.jsx'
 import SearchPropertyTypeFilterCard from './filters/SearchPropertyTypeFilterCard.jsx'
 import SearchRangeFilterCard from './filters/SearchRangeFilterCard.jsx'
-import { LOCATION_OPTIONS } from '../constants/searchConfig.js'
+import SearchLocationSelect from './filters/SearchLocationSelect.jsx'
 
 function SearchFiltersForm({
   query = '',
@@ -63,10 +63,7 @@ function SearchFiltersForm({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           <div className="search-filter-card min-h-[118px] flex flex-col justify-between">
             <label htmlFor="location-filter" className="search-filter-label"><i className="ri-map-pin-2-line"></i><span>Де шукаємо?</span></label>
-            <select id="location-filter" value={location} onChange={(event) => onLocationChange?.(event.target.value)} className="search-filter-control dropdown-trigger w-full">
-              <option value="">Усі населені пункти</option>
-              {LOCATION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
+            <SearchLocationSelect value={location} onChange={onLocationChange} />
           </div>
           <SearchPropertyTypeFilterCard
             openDropdown={openDropdown}

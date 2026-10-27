@@ -246,10 +246,34 @@
   gap: 16px;
 }
 
-#main-search-form input[type="number"],
-#location-filter {
+#main-search-form input[type="number"] {
   color: #133e44;
   background: rgba(255, 255, 255, 0.97);
+}
+
+.search-location-select {
+  width: 100%;
+}
+
+.search-location-select .ant-select-selector {
+  background: rgba(255, 255, 255, 0.97) !important;
+  box-shadow: none !important;
+}
+
+.search-location-select.ant-select-focused .ant-select-selector,
+.search-location-select:hover .ant-select-selector {
+  border-color: #133e44 !important;
+}
+
+.search-location-select .ant-select-selection-placeholder,
+.search-location-select .ant-select-selection-item {
+  color: #133e44;
+  font-weight: 600;
+}
+
+.ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  color: #133e44;
+  background: #e7efed;
 }
 
 @media (max-width: 767px) {
