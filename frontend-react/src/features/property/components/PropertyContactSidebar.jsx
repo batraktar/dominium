@@ -21,8 +21,12 @@ function PropertyContactSidebar({
 }) {
   return (
     <div className="lg:col-span-1">
-      <div className="bg-coolSage p-6 rounded-lg shadow-sm sticky top-24">
+      <div className="bg-[#e8efed] border border-deepOcean/15 p-6 rounded-lg shadow-sm sticky top-24">
         <PropertyContactBrand logoSrc={logoSrc} />
+
+        <PropertyContactQuickActions propertyId={propertyId} />
+
+        <div className="mb-4 flex items-center gap-3 text-deepOcean/60"><span className="h-px flex-1 bg-deepOcean/15" /><span className="text-xs font-fixel">або залиште заявку</span><span className="h-px flex-1 bg-deepOcean/15" /></div>
 
         <PropertyContactForm
           contactName={contactName}
@@ -40,7 +44,6 @@ function PropertyContactSidebar({
           onSubmit={onSubmit}
         />
 
-        <PropertyContactQuickActions propertyId={propertyId} />
       </div>
     </div>
   )

@@ -12,13 +12,13 @@ function MainHeader({
     <header className={`fixed top-0 left-0 right-0 bg-white shadow-md z-50 ${className}`}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="relative h-5 md:h-10 overflow-visible flex items-center justify-center md:justify-start w-full md:w-auto">
+          <div className="relative h-12 md:h-14 overflow-visible flex items-center justify-center md:justify-start w-full md:w-auto">
             <a href="/" aria-label="DOMINIUM — головна сторінка">
               <img
                 src={logoBlack}
                 alt="DOMINIUM Logo"
-                className="h-[50px] md:h-[60px]"
-                width="180"
+                className="h-12 md:h-14 w-auto object-contain"
+                width="210"
                 height="60"
                 decoding="async"
               />

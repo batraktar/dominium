@@ -6,7 +6,13 @@ export const SORT_OPTIONS = [
   { value: 'area_desc', label: 'За площею (від більших)' },
 ]
 
-export const PER_PAGE_OPTIONS = [9, 12, 18, 24]
+export const PER_PAGE_OPTIONS = [24, 48, 96]
+
+export const LOCATION_OPTIONS = [
+  'Ужгород', 'Мукачево', 'Хуст', 'Берегове', 'Виноградів', 'Іршава', 'Свалява',
+  'Тячів', 'Рахів', 'Перечин', 'Чоп', 'Львів', 'Івано-Франківськ', 'Чернівці',
+  'Тернопіль', 'Київ',
+]
 
 export const CURRENCY_OPTIONS = [
   { code: 'USD', symbol: '$', label: 'USD ($)' },
@@ -16,14 +22,14 @@ export const CURRENCY_OPTIONS = [
 
 export const PRICE_RANGE_CONFIG = {
   min: 0,
-  max: 250000,
-  step: 1000,
+  max: 2000000,
+  step: 5000,
 }
 
 export const AREA_RANGE_CONFIG = {
   min: 0,
-  max: 250,
-  step: 5,
+  max: 5000,
+  step: 10,
 }
 
 export const ROOMS_RANGE_CONFIG = {

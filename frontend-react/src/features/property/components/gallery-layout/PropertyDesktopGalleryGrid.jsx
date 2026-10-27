@@ -15,7 +15,7 @@ function PropertyDesktopGalleryGrid({
           width="1200"
           height="900"
           sizes="(max-width: 1023px) 100vw, 66vw"
-          className="w-full h-full object-contain cursor-pointer"
+          className="w-full h-full object-cover cursor-pointer"
           alt={`${property.title} — головне фото`}
           onClick={() => {
             onModalImageIndexChange?.(0)
@@ -33,7 +33,7 @@ function PropertyDesktopGalleryGrid({
               width="1200"
               height="900"
               sizes="(max-width: 1023px) 100vw, 33vw"
-              className="w-full h-full object-contain cursor-pointer"
+              className="w-full h-full object-cover cursor-pointer"
               alt={`${property.title} — фото ${index + 2}`}
               onClick={() => {
                 onModalImageIndexChange?.(index + 1)

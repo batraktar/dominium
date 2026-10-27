@@ -14,8 +14,8 @@ function resolveSort(params) {
 }
 
 function resolvePerPage(params) {
-  const parsed = parseIntOr(params.get('per_page'), 9)
-  return PER_PAGE_OPTIONS.includes(parsed) ? parsed : 9
+  const parsed = parseIntOr(params.get('per_page'), 24)
+  return PER_PAGE_OPTIONS.includes(parsed) ? parsed : 24
 }
 
 function resolveCurrency(params) {
@@ -88,6 +88,7 @@ export function parseSearchInitialState(search = '') {
 
   return {
     query: params.get('q') || '',
+    location: params.get('location') || '',
     page: Math.max(parseIntOr(params.get('page'), 1), 1),
     sort: resolveSort(params),
     perPage: resolvePerPage(params),

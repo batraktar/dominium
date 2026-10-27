@@ -474,6 +474,37 @@ class SearchPageSmokeTest(TestCase):
         result_ids = [item["id"] for item in response.json()["results"]]
         self.assertIn(address_match.id, result_ids)
 
+    def test_api_location_filters_by_settlement_without_broad_text_matches(self):
+        property_type = PropertyType.objects.create(name="Ділянка", slug="land-location")
+        deal_type = DealType.objects.create(name="Продаж location")
+        khust = Property.objects.create(
+            title="Ділянка біля центру",
+            address="Хуст, Закарпатська область",
+            price=900000,
+            area=12,
+            rooms=0,
+            property_type=property_type,
+            deal_type=deal_type,
+        )
+        Property.objects.create(
+            title="Хуст згадано в описі назви",
+            address="Ужгород, Закарпатська область",
+            price=800000,
+            area=10,
+            rooms=0,
+            property_type=property_type,
+            deal_type=deal_type,
+        )
+
+        response = self.client.get(
+            reverse("house_api:property_list"),
+            {"location": "Хуст", "page_size": 20},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        result_ids = {item["id"] for item in response.json().get("results", [])}
+        self.assertEqual(result_ids, {khust.id})
+
     def test_api_sort_param_controls_ordering(self):
         property_type = PropertyType.objects.create(name="Будинок", slug="house")
         deal_type = DealType.objects.create(name="Оренда")

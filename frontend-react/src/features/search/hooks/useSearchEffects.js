@@ -7,12 +7,13 @@ export default function useSearchEffects({
   userIsAuthenticated = false,
   likedIdsLength = 0,
   query = '',
+  location = '',
   selectedPropertyTypes = [],
   priceRange,
   areaRange,
   roomsRange,
   sortOption = 'date',
-  perPage = 9,
+  perPage = 24,
   currency = 'USD',
   page = 1,
   requestRef,
@@ -45,6 +46,7 @@ export default function useSearchEffects({
 
   useSearchResultsEffect({
     query,
+    location,
     selectedPropertyTypes,
     priceRange,
     areaRange,

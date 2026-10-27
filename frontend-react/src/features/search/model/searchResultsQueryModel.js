@@ -36,12 +36,13 @@ export function resolveSearchScopeFromPath(pathname = window.location.pathname) 
 
 export function buildSearchQueryParams({
   query = '',
+  location = '',
   selectedPropertyTypes = [],
   priceRange,
   areaRange,
   roomsRange,
   sortOption = 'date',
-  perPage = 12,
+  perPage = 24,
   currency = 'USD',
   page = 1,
   pathname,
@@ -54,6 +55,11 @@ export function buildSearchQueryParams({
   if (trimmedQuery) {
     browserParams.set('q', trimmedQuery)
     apiParams.set('q', trimmedQuery)
+  }
+  const trimmedLocation = location.trim()
+  if (trimmedLocation) {
+    browserParams.set('location', trimmedLocation)
+    apiParams.set('location', trimmedLocation)
   }
 
   selectedPropertyTypes.forEach((slug) => {

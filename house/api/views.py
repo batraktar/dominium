@@ -401,6 +401,10 @@ class SecurePropertyViewSet(viewsets.ModelViewSet):
 
         queryset = apply_text_query_filter(queryset, query_params.get("q"))
 
+        location = (query_params.get("location") or "").strip()
+        if location:
+            queryset = queryset.filter(address__icontains=location)
+
         area_min = _try_parse_int(query_params.get("area_min"))
         area_max = _try_parse_int(query_params.get("area_max"))
         if area_min is not None:

@@ -13,6 +13,7 @@ export default function useSearchDerivedState({
   propertyTypes = [],
   selectedPropertyTypes = [],
   query = '',
+  location = '',
   priceRange,
   areaRange,
   roomsRange,
@@ -31,21 +32,24 @@ export default function useSearchDerivedState({
     [propertyTypeMap, selectedPropertyTypes],
   )
 
-  const activeChips = useMemo(
-    () =>
-      buildActiveFilterChips({
+  const activeChips = useMemo(() => {
+    const chips = buildActiveFilterChips({
         query,
         selectedPropertyTypes,
         propertyTypeMap,
         priceRange,
         areaRange,
         roomsRange,
-      }),
+      })
+    if (location) chips.unshift({ key: 'location', label: `Населений пункт: ${location}` })
+    return chips
+  },
     [
       areaRange,
       priceRange,
       propertyTypeMap,
       query,
+      location,
       roomsRange,
       selectedPropertyTypes,
     ],

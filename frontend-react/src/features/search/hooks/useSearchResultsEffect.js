@@ -5,12 +5,13 @@ import { buildSearchQueryParams, toSearchPageUrl } from '../model/searchResultsQ
 
 export default function useSearchResultsEffect({
   query = '',
+  location = '',
   selectedPropertyTypes = [],
   priceRange,
   areaRange,
   roomsRange,
   sortOption = 'date',
-  perPage = 9,
+  perPage = 24,
   currency = 'USD',
   page = 1,
   requestRef,
@@ -30,6 +31,7 @@ export default function useSearchResultsEffect({
 
       const { browserParams, apiParams } = buildSearchQueryParams({
         query,
+        location,
         selectedPropertyTypes,
         priceRange: {
           min: priceRange.min,
@@ -105,6 +107,7 @@ export default function useSearchResultsEffect({
     priceRange.max,
     priceRange.min,
     query,
+    location,
     roomsRange.max,
     roomsRange.min,
     selectedPropertyTypes,

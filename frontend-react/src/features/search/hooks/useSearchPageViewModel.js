@@ -19,6 +19,8 @@ export default function useSearchPageViewModel({
     queryInput: filterState.queryInput,
     setQueryInput: filterState.setQueryInput,
     query: filterState.query,
+    location: filterState.location,
+    handleLocationChange: actionHandlers.handleLocationChange,
     openDropdown: uiState.openDropdown,
     toggleDropdown: actionHandlers.toggleDropdown,
     propertyTypeSummary: derivedState.propertyTypeSummary,

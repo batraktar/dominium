@@ -3,6 +3,7 @@ import { useState } from 'react'
 export default function useSearchFilterState(initialState) {
   const [queryInput, setQueryInput] = useState(initialState.query)
   const [query, setQuery] = useState(initialState.query)
+  const [location, setLocation] = useState(initialState.location)
   const [page, setPage] = useState(initialState.page)
   const [sortOption, setSortOption] = useState(initialState.sort)
   const [perPage, setPerPage] = useState(initialState.perPage)
@@ -17,6 +18,8 @@ export default function useSearchFilterState(initialState) {
     setQueryInput,
     query,
     setQuery,
+    location,
+    setLocation,
     page,
     setPage,
     sortOption,

@@ -7,6 +7,7 @@ export default function useSearchFilterActions({
   queryInput = '',
   setQueryInput,
   setQuery,
+  setLocation,
   setPage,
   setSelectedPropertyTypes,
   priceRange,
@@ -50,6 +51,11 @@ export default function useSearchFilterActions({
   })
 
   const clearChip = (key) => {
+    if (key === 'location') {
+      setLocation('')
+      setPage(1)
+      return
+    }
     if (key === 'query') {
       setQuery('')
       setQueryInput('')
@@ -81,6 +87,7 @@ export default function useSearchFilterActions({
     ...submitActions,
     ...propertyTypeActions,
     ...rangeActions,
+    handleLocationChange: (value) => { setLocation(value); setPage(1) },
     clearChip,
     ...dropdownActions,
   }

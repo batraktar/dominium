@@ -9,6 +9,8 @@ function SearchPage({ userIsStaff = false, userIsAuthenticated = false }) {
     queryInput,
     setQueryInput,
     query,
+    location,
+    handleLocationChange,
     openDropdown,
     toggleDropdown,
     propertyTypeSummary,
@@ -66,6 +68,8 @@ function SearchPage({ userIsStaff = false, userIsAuthenticated = false }) {
         setQueryInput={setQueryInput}
         handleHeaderSubmit={handleHeaderSubmit}
         query={query}
+        location={location}
+        handleLocationChange={handleLocationChange}
         csrfToken={csrfToken}
         handleMainSubmit={handleMainSubmit}
         openDropdown={openDropdown}

@@ -17,6 +17,8 @@ function SearchTopControlsSection({
   setQueryInput,
   handleHeaderSubmit,
   query,
+  location,
+  handleLocationChange,
   csrfToken,
   handleMainSubmit,
   openDropdown,
@@ -62,6 +64,8 @@ function SearchTopControlsSection({
 
       <SearchFiltersForm
         query={query}
+        location={location}
+        onLocationChange={handleLocationChange}
         csrfToken={csrfToken}
         onSubmit={handleMainSubmit}
         openDropdown={openDropdown}
