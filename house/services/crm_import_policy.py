@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from house.models import AppSettings, ExternalProperty
@@ -18,7 +19,14 @@ def extract_crm_tags(item: dict[str, Any]) -> set[str]:
     tags: set[str] = set()
     tags_cache = item.get("tags_cache")
     if isinstance(tags_cache, str):
-        tags.update(part.strip().casefold() for part in tags_cache.split(",") if part.strip())
+        if tags_cache.lstrip().startswith("a:"):
+            tags.update(
+                value.strip().casefold()
+                for value in re.findall(r's:\d+:"([^"]*)"', tags_cache)
+                if value.strip()
+            )
+        else:
+            tags.update(part.strip().casefold() for part in tags_cache.split(",") if part.strip())
 
     raw_tags = item.get("tags")
     if isinstance(raw_tags, list):

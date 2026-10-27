@@ -27,6 +27,7 @@ from house.models import (
     PropertyType,
 )
 from house.services.importer import import_property_from_url
+from house.services.crm_import_policy import extract_crm_tags
 from house.services.search import apply_currency_display
 from house.utils.html_parser import parse_property_html
 from house.utils.image_selection import image_url_identity_key
@@ -717,6 +718,13 @@ class RealtsoftSyncTest(TestCase):
         self.assertFalse(_should_import({"deal": 2, "realty_type": 1, **advertised}))
         self.assertFalse(_should_import({"deal": 3, "realty_type": 10, **advertised}))
         self.assertFalse(_should_import({"deal": 1, "realty_type": 1, "tags_cache": "інше"}))
+
+    def test_extracts_required_tag_from_realtsoft_php_serialized_cache(self):
+        item = {
+            "tags_cache": 'a:2:{s:23:"Стойка Ольга";N;s:14:"реклама";N;}',
+        }
+
+        self.assertEqual(extract_crm_tags(item), {"стойка ольга", "реклама"})
 
     def test_existing_property_without_required_tag_is_archived_not_deleted(self):
         property_obj = Property.objects.create(
