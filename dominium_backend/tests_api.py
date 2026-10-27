@@ -13,7 +13,14 @@ from django.urls import reverse
 from PIL import Image
 
 from accounts.models import CustomUser
-from house.models import AppSettings, DealType, Property, PropertyImage, PropertyType
+from house.models import (
+    AppSettings,
+    DealType,
+    ExternalProperty,
+    Property,
+    PropertyImage,
+    PropertyType,
+)
 from dominium_backend.seo_regions import CITY_LANDING_CONFIG
 from dominium_backend.views.common import get_client_ip
 
@@ -65,6 +72,25 @@ class ConsultationEndpointTest(TestCase):
         mock_response.raise_for_status = Mock()
         mock_post.return_value = mock_response
 
+        property_type = PropertyType.objects.create(name="Квартира", slug="flat")
+        deal_type = DealType.objects.create(name="Продаж")
+        property_obj = Property.objects.create(
+            title="Тестовий об'єкт",
+            address="Ужгород",
+            price=100000,
+            area=50,
+            rooms=2,
+            property_type=property_type,
+            deal_type=deal_type,
+        )
+        ExternalProperty.objects.create(
+            crm_property_id=1546,
+            property=property_obj,
+            source="realtsoft",
+            crm_manager_user_id=49,
+            crm_manager_name="Пульч Ярослава",
+        )
+
         client = Client()
         payload = {
             "name": "Іван",
@@ -72,12 +98,16 @@ class ConsultationEndpointTest(TestCase):
             "email": "ivan@example.com",
             "message": "Хочу консультацію",
             "property": "https://example.com/property/1",
+            "property_id": property_obj.id,
         }
 
         ok_response = client.post(reverse("consultation_api"), data=payload)
         self.assertEqual(ok_response.status_code, 200)
         self.assertEqual(ok_response.json().get("status"), "ok")
         mock_post.assert_called_once()
+        telegram_text = mock_post.call_args.kwargs["json"]["text"]
+        self.assertIn("Менеджер", telegram_text)
+        self.assertIn("Пульч Ярослава", telegram_text)
 
         rate_limited = client.post(reverse("consultation_api"), data=payload)
         self.assertEqual(rate_limited.status_code, 429)

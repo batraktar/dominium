@@ -30,6 +30,7 @@ export default function usePropertyDetailContactActions({
         email: contactNoEmail ? '' : contactEmail.trim(),
         message: contactMessage.trim(),
         property: propertyPageUrl,
+        property_id: property.id,
       })
 
       setContactMessage('')

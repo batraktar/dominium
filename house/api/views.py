@@ -149,7 +149,7 @@ def _try_parse_int(value):
 def _properties_queryset():
     return Property.objects.select_related(
         "property_type", "deal_type"
-    ).prefetch_related("features", "images")
+    ).prefetch_related("features", "images", "external_sources")
 
 
 def _apply_keyword_scope_filter(queryset, keywords: list[str]):

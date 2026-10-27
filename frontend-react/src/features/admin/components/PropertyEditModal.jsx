@@ -373,6 +373,9 @@ function PropertyEditModal({ propertyId, onClose, onSave }) {
                       <p>—</p>
                     )}
                   </InfoItem>
+                  <InfoItem label="Менеджер">
+                    <p>{propData?.crm_manager_name || '—'}</p>
+                  </InfoItem>
                   {client ? (
                     <>
                       <InfoItem label="Власник">

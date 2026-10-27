@@ -67,6 +67,20 @@ def consultation_view(request):
     cleaned = form.cleaned_data
     email = cleaned.get("email") or ""
     property_url = cleaned.get("property") or "Не вказано"
+    manager_name = ""
+    property_id = cleaned.get("property_id")
+    if property_id:
+        property_obj = (
+            Property.objects.filter(pk=property_id)
+            .prefetch_related("external_sources")
+            .first()
+        )
+        if property_obj:
+            external = property_obj.external_sources.filter(source="realtsoft").first()
+            if external:
+                manager_name = external.crm_manager_name.strip()
+
+    manager_line = f"\n🧑‍💼 *Менеджер:* {manager_name}" if manager_name else ""
 
     text = (
         "📩 *Нова заявка на консультацію*\n"
@@ -75,6 +89,7 @@ def consultation_view(request):
         f"✉️ *Пошта:* {email or 'Немає'}\n"
         f"📝 *Повідомлення:* {cleaned['message']}\n"
         f"🔗 *Посилання на об'єкт:* {property_url}"
+        f"{manager_line}"
     )
 
     telegram_token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")

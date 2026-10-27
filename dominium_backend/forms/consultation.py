@@ -25,3 +25,4 @@ class ConsultationForm(ContactInfoMixin):
         max_length=500,
         strip=True,
     )
+    property_id = forms.IntegerField(required=False, min_value=1)

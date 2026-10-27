@@ -15,6 +15,7 @@ from house.management.commands.sync_crm_properties import (
     Command as RealtsoftSyncCommand,
     _build_address_parts,
     _prepare_images,
+    _resolve_crm_manager,
     _should_import,
 )
 from house.models import DealType, ExternalProperty, Property, PropertyImage, PropertyType
@@ -55,6 +56,53 @@ class PropertyApiSmokeTest(TestCase):
         self.assertEqual(payload["count"], 1)
         self.assertEqual(payload["results"][0]["title"], "Тестова квартира")
         self.assertEqual(payload["results"][0]["property_type"]["name"], "Квартира")
+
+    def test_crm_manager_name_is_visible_only_to_staff(self):
+        property_obj = Property.objects.create(
+            title="Об'єкт менеджера",
+            address="Ужгород",
+            price=120000,
+            area=54,
+            rooms=2,
+            property_type=self.property_type,
+            deal_type=self.deal_type,
+        )
+        ExternalProperty.objects.create(
+            crm_property_id=1546,
+            property=property_obj,
+            source="realtsoft",
+            crm_manager_user_id=49,
+            crm_manager_name="Пульч Ярослава",
+        )
+        url = reverse("house_api:property_list")
+
+        public_response = self.client.get(url)
+        self.assertEqual(public_response.status_code, 200)
+        self.assertIsNone(public_response.json()["results"][0]["crm_manager_name"])
+
+        self.client.force_login(self.staff)
+        staff_response = self.client.get(url)
+        self.assertEqual(staff_response.status_code, 200)
+        self.assertEqual(
+            staff_response.json()["results"][0]["crm_manager_name"],
+            "Пульч Ярослава",
+        )
+
+    def test_resolve_crm_manager_uses_cache(self):
+        crm_client = Mock()
+        crm_client.get_user.return_value = {"id": 49, "name": "Пульч Ярослава"}
+        cache = {}
+        item = {"responsible_user_id": 49}
+
+        self.assertEqual(
+            _resolve_crm_manager(item, crm_client, cache),
+            (49, "Пульч Ярослава"),
+        )
+        self.assertEqual(
+            _resolve_crm_manager(item, crm_client, cache),
+            (49, "Пульч Ярослава"),
+        )
+        crm_client.get_user.assert_called_once_with(49)
 
     @patch(
         "house.api.views.get_exchange_rates",
@@ -735,6 +783,21 @@ class RealtsoftSyncTest(TestCase):
         self.assertEqual(command._update_existing(external, mapped, {"id": 123}, False), "unchanged")
         self.assertEqual(download_image.call_count, 0)
         self.assertEqual(PropertyImage.objects.filter(property=property_obj).count(), 21)
+
+        self.assertEqual(
+            command._update_existing(
+                external,
+                mapped,
+                {"id": 123, "responsible_user_id": 49},
+                False,
+                manager_user_id=49,
+                manager_name="Пульч Ярослава",
+            ),
+            "updated",
+        )
+        external.refresh_from_db()
+        self.assertEqual(external.crm_manager_user_id, 49)
+        self.assertEqual(external.crm_manager_name, "Пульч Ярослава")
 
     @patch(
         "house.management.commands.sync_crm_properties._download_image",

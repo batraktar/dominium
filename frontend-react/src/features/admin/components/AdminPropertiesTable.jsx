@@ -41,6 +41,7 @@ function exportToCsv(data, filename) {
     'Статус',
     'Топ',
     'CRM URL',
+    'Менеджер CRM',
     'Джерело',
   ]
   const rows = data.map((property) => [
@@ -56,6 +57,7 @@ function exportToCsv(data, filename) {
     property.is_archived ? 'Архів' : 'Активний',
     property.featured_homepage ? 'Так' : 'Ні',
     csvValue(property.crm_url || ''),
+    csvValue(property.crm_manager_name || ''),
     csvValue(property.external_source || ''),
   ])
   const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n')
@@ -107,6 +109,7 @@ function PropertyRow({
   const details = [
     property.rooms ? `${property.rooms} кімн.` : null,
     property.area ? `${property.area} м²` : null,
+    property.crm_manager_name ? `Менеджер: ${property.crm_manager_name}` : null,
     property.is_archived ? 'Архів' : null,
   ].filter(Boolean)
 

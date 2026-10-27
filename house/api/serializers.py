@@ -106,11 +106,13 @@ def serialize_property(property_obj, request=None) -> dict:
         }
 
     crm_url = None
+    crm_manager_name = None
     ext = getattr(property_obj, "external_sources", None)
     if is_staff_request and ext:
         ext_rel = ext.filter(source="realtsoft").first()
         if ext_rel:
             crm_url = ext_rel.crm_url
+            crm_manager_name = ext_rel.crm_manager_name or None
 
     return {
         "id": property_obj.id,
@@ -159,5 +161,6 @@ def serialize_property(property_obj, request=None) -> dict:
         ),
         "client": client if is_staff_request else None,
         "crm_url": crm_url if is_staff_request else None,
+        "crm_manager_name": crm_manager_name if is_staff_request else None,
         "external_source": getattr(property_obj, "external_source", ""),
     }

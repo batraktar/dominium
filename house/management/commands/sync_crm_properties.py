@@ -89,6 +89,34 @@ def _safe_decimal(value: Any) -> Decimal | None:
         return None
 
 
+def _resolve_crm_manager(
+    item: dict,
+    crm_client,
+    cache: dict[int, str | None] | None = None,
+) -> tuple[int | None, str | None]:
+    manager_id = _safe_int(
+        item.get("responsible_user_id")
+        or item.get("feed_user_id")
+        or item.get("user_id")
+    )
+    if not manager_id:
+        return None, ""
+
+    manager_cache = cache if cache is not None else {}
+    if manager_id in manager_cache:
+        return manager_id, manager_cache[manager_id]
+
+    try:
+        manager = crm_client.get_user(manager_id)
+        manager_name = str(manager.get("name") or "").strip()
+    except RealtsoftAPIError:
+        logger.warning("Не вдалося отримати менеджера CRM#%s", manager_id)
+        manager_name = None
+
+    manager_cache[manager_id] = manager_name
+    return manager_id, manager_name
+
+
 from house.utils.resolve import resolve_property_type as _resolve_type, resolve_deal_type as _resolve_deal
 
 
@@ -406,6 +434,8 @@ class Command(BaseCommand):
         skipped_count = 0
         page = 1
         total_fetched = 0
+        seen_crm_ids: set[int] = set()
+        manager_cache: dict[int, str | None] = {}
 
         while True:
             if max_pages and page > max_pages:
@@ -423,6 +453,15 @@ class Command(BaseCommand):
 
             item_ids = [_safe_int(item.get("id")) for item in items]
             known_ids = [crm_id for crm_id in item_ids if crm_id]
+            fresh_ids = set(known_ids) - seen_crm_ids
+            if known_ids and not fresh_ids:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"  Сторінка {page}: CRM повторила вже отримані ID, sync завершено"
+                    )
+                )
+                break
+            seen_crm_ids.update(fresh_ids)
             if new_only and known_ids and all(
                 crm_id <= known_through_id for crm_id in known_ids
             ):
@@ -439,7 +478,12 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    result = self._sync_single_item(client, item, dry_run)
+                    result = self._sync_single_item(
+                        client,
+                        item,
+                        dry_run,
+                        manager_cache=manager_cache,
+                    )
                     if result == "created":
                         created_count += 1
                     elif result == "updated":
@@ -474,13 +518,24 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(summary))
 
-    def _sync_single_item(self, client, item: dict, dry_run: bool) -> str:
+    def _sync_single_item(
+        self,
+        client,
+        item: dict,
+        dry_run: bool,
+        manager_cache: dict[int, str | None] | None = None,
+    ) -> str:
         crm_id = int(item["id"])
 
         if not _should_import(item) or not _extract_crm_images(item):
             return "skipped"
 
         mapped = _map_crm_item_to_property(item)
+        manager_user_id, manager_name = _resolve_crm_manager(
+            item,
+            client,
+            manager_cache,
+        )
 
         existing_ext = (
             ExternalProperty.objects.select_related("property")
@@ -489,12 +544,38 @@ class Command(BaseCommand):
         )
 
         if existing_ext:
-            return self._update_existing(existing_ext, mapped, item, dry_run)
+            return self._update_existing(
+                existing_ext,
+                mapped,
+                item,
+                dry_run,
+                manager_user_id=manager_user_id,
+                manager_name=manager_name,
+            )
         else:
             crm_url = f"{client.url}/estate/{crm_id}"
-            return self._create_new(client, crm_id, mapped, item, dry_run, crm_url)
+            return self._create_new(
+                client,
+                crm_id,
+                mapped,
+                item,
+                dry_run,
+                crm_url,
+                manager_user_id=manager_user_id,
+                manager_name=manager_name,
+            )
 
-    def _create_new(self, crm_client, crm_id: int, mapped: dict, raw_item: dict, dry_run: bool, crm_url: str = "") -> str:
+    def _create_new(
+        self,
+        crm_client,
+        crm_id: int,
+        mapped: dict,
+        raw_item: dict,
+        dry_run: bool,
+        crm_url: str = "",
+        manager_user_id: int | None = None,
+        manager_name: str | None = None,
+    ) -> str:
         if dry_run:
             self.stdout.write(f"  [DRY RUN] Створю: CRM#{crm_id} — {mapped['title'][:60]}")
             return "created"
@@ -531,6 +612,8 @@ class Command(BaseCommand):
                 crm_property_id=crm_id,
                 property=property_obj,
                 crm_url=crm_url,
+                crm_manager_user_id=manager_user_id,
+                crm_manager_name=manager_name or "",
                 raw_data=raw_item,
                 sync_status="synced",
                 source="realtsoft",
@@ -547,10 +630,22 @@ class Command(BaseCommand):
         self.stdout.write(f"  Створено: CRM#{crm_id} — {mapped['title'][:60]}")
         return "created"
 
-    def _update_existing(self, ext: ExternalProperty, mapped: dict, raw_item: dict, dry_run: bool) -> str:
+    def _update_existing(
+        self,
+        ext: ExternalProperty,
+        mapped: dict,
+        raw_item: dict,
+        dry_run: bool,
+        manager_user_id: int | None = None,
+        manager_name: str | None = None,
+    ) -> str:
         property_obj = ext.property
 
         changed = False
+        manager_changed = (
+            ext.crm_manager_user_id != manager_user_id
+            or (manager_name is not None and ext.crm_manager_name != manager_name)
+        )
         fields_to_check = {
             "title": mapped["title"],
             "description": mapped["description"],
@@ -587,7 +682,7 @@ class Command(BaseCommand):
             changed = True
 
         if dry_run:
-            if changed:
+            if changed or manager_changed:
                 self.stdout.write(f"  [DRY RUN] Оновлю: CRM#{ext.crm_property_id} — {mapped['title'][:60]}")
                 return "updated"
             return "unchanged"
@@ -597,11 +692,22 @@ class Command(BaseCommand):
 
         ext.raw_data = raw_item
         ext.sync_status = "synced"
-        ext.save(update_fields=["raw_data", "sync_status", "last_synced"])
+        ext.crm_manager_user_id = manager_user_id
+        if manager_name is not None:
+            ext.crm_manager_name = manager_name
+        ext.save(
+            update_fields=[
+                "raw_data",
+                "sync_status",
+                "crm_manager_user_id",
+                "crm_manager_name",
+                "last_synced",
+            ]
+        )
 
         self._sync_images(property_obj, mapped["images"], dry_run=False)
 
-        if changed:
+        if changed or manager_changed:
             self.stdout.write(f"  Оновлено: CRM#{ext.crm_property_id} — {mapped['title'][:60]}")
             return "updated"
 

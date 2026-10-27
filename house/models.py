@@ -241,6 +241,18 @@ class ExternalProperty(models.Model):
         default="",
         help_text="URL об'єкта в CRM.",
     )
+    crm_manager_user_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="ID відповідального менеджера в Realtsoft CRM.",
+    )
+    crm_manager_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Ім'я відповідального менеджера для внутрішнього використання.",
+    )
     raw_data = models.JSONField(
         default=dict,
         blank=True,

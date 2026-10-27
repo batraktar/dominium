@@ -149,6 +149,9 @@ class RealtsoftClient:
             params["email"] = email
         return self.call("client/index", params, http_method="GET") or []
 
+    def get_user(self, user_id: int) -> dict:
+        return self.call("user/view", {"id": str(user_id)}, http_method="GET") or {}
+
     def create_client(
         self,
         phones: list[str],

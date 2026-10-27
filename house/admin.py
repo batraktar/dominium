@@ -9,6 +9,7 @@ from .models import (
     AppSettings,
     Client,
     DealType,
+    ExternalProperty,
     Feature,
     HomepageHighlightSettings,
     Property,
@@ -36,6 +37,21 @@ class DealTypeAdmin(admin.ModelAdmin):
 @admin.register(Feature)
 class FeatureAdmin(admin.ModelAdmin):
     list_display = ["name"]
+
+
+@admin.register(ExternalProperty)
+class ExternalPropertyAdmin(admin.ModelAdmin):
+    list_display = [
+        "crm_property_id",
+        "crm_manager_name",
+        "crm_manager_user_id",
+        "source",
+        "sync_status",
+        "last_synced",
+    ]
+    search_fields = ["crm_property_id", "crm_manager_name", "property__title"]
+    list_filter = ["source", "sync_status"]
+    readonly_fields = ["raw_data", "last_synced"]
 
 
 # === Інлайн для фото ===
