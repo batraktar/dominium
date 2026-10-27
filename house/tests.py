@@ -739,6 +739,27 @@ class RealtsoftSyncTest(TestCase):
         self.assertTrue(property_obj.is_archived)
         self.assertFalse(external.is_import_eligible)
 
+    def test_legacy_ineligible_property_without_required_tag_is_archived(self):
+        property_obj = Property.objects.create(
+            title="Старий запис без реклами", address="Ужгород", price=100, area=10, rooms=1,
+            external_source="realtsoft", external_id="779",
+        )
+        external = ExternalProperty.objects.create(
+            crm_property_id=779, property=property_obj, source="realtsoft", is_import_eligible=False,
+        )
+
+        result = RealtsoftSyncCommand()._sync_single_item(
+            Mock(), {"id": 779, "deal": 1, "realty_type": 1, "tags_cache": "інше"}, False,
+            import_tag="реклама",
+        )
+
+        self.assertEqual(result, "updated")
+        property_obj.refresh_from_db()
+        external.refresh_from_db()
+        self.assertTrue(property_obj.is_archived)
+        self.assertFalse(external.is_import_eligible)
+        self.assertEqual(external.raw_data["tags_cache"], "інше")
+
     @patch("house.management.commands.sync_crm_properties.Command._sync_images")
     def test_required_tag_reactivates_archived_existing_property(self, _sync_images):
         property_obj = Property.objects.create(

@@ -540,7 +540,7 @@ class Command(BaseCommand):
             .first()
         )
         if not eligible:
-            if existing_ext and existing_ext.is_import_eligible:
+            if existing_ext:
                 if not dry_run:
                     if not existing_ext.property.is_archived:
                         existing_ext.property.is_archived = True
