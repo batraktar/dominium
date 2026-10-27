@@ -19,6 +19,7 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from PIL import Image as PillowImage
 
 
 FONT_NAME = "FixelPresentation"
@@ -51,7 +52,16 @@ def _image_flowable(image_field, *, width, height):
         return None
     if not Path(path).exists():
         return None
-    image = Image(path, width=width, height=height, kind="proportional")
+    try:
+        source = PillowImage.open(path).convert("RGB")
+        source.thumbnail((1400, 1000), PillowImage.Resampling.LANCZOS)
+        prepared = BytesIO()
+        source.save(prepared, format="JPEG", quality=76, optimize=True)
+        prepared.seek(0)
+    except (OSError, ValueError):
+        return None
+    image = Image(prepared, width=width, height=height, kind="proportional")
+    image._prepared_source = prepared
     image.hAlign = "CENTER"
     return image
 
