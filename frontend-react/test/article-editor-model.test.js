@@ -21,6 +21,10 @@ test('article prompt requests the strict safe JSON schema', () => {
   assert.match(ARTICLE_CHATGPT_PROMPT, /upload\.wikimedia\.org/i)
   assert.match(ARTICLE_CHATGPT_PROMPT, /стаття важливіша за фото/i)
   assert.match(ARTICLE_CHATGPT_PROMPT, /перевір, що JSON парситься/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /4–8 доречних фотографій/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /коротке тире «–»/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /списки лише коли/i)
+  assert.match(ARTICLE_CHATGPT_PROMPT, /people-first/i)
 })
 
 test('builds a ChatGPT URL with the current article prompt', () => {

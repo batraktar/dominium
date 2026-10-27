@@ -304,8 +304,12 @@ function CityAutocomplete({ value, onChange }) {
 
 function SettingsTab() {
   const [activeSection, setActiveSection] = useState('general')
-  const [crmSettings, setCrmSettings] = useState({ url: '', api_key: '', secret_key: '', enabled: false, sync_interval: 30 })
-  const [tgSettings, setTgSettings] = useState({ bot_token: '', chat_id: '', enabled: false })
+  const [crmSettings, setCrmSettings] = useState({ url: '', api_key: '', secret_key: '', enabled: false, sync_interval: 30, import_tag: 'реклама' })
+  const [tgSettings, setTgSettings] = useState({
+    bot_token: '', chat_id: '', enabled: false,
+    seo_reminder_enabled: false, seo_reminder_time: '10:00',
+    seo_reminder_weekdays: [0], seo_reminder_chat_ids: '', seo_reminder_message: '',
+  })
   const [googleSettings, setGoogleSettings] = useState({ client_id: '', secret_key: '', has_secret_key: false, callback_url: '' })
   const [systemSettings, setSystemSettings] = useState({})
   const [templates, setTemplates] = useState([])
@@ -387,6 +391,16 @@ function SettingsTab() {
   const updateTemplate = (i, d) => setTemplates(p => p.map((t, idx) => idx === i ? d : t))
   const removeTemplate = (i) => setTemplates(p => p.filter((_, idx) => idx !== i))
   const activeTemplatesCount = templates.filter(template => template.is_active).length
+  const reminderWeekdays = [
+    { value: 0, label: 'Пн' }, { value: 1, label: 'Вт' }, { value: 2, label: 'Ср' },
+    { value: 3, label: 'Чт' }, { value: 4, label: 'Пт' }, { value: 5, label: 'Сб' },
+    { value: 6, label: 'Нд' },
+  ]
+  const toggleReminderWeekday = (value) => {
+    const current = Array.isArray(tgSettings.seo_reminder_weekdays) ? tgSettings.seo_reminder_weekdays : []
+    const next = current.includes(value) ? current.filter(day => day !== value) : [...current, value].sort()
+    setTgSettings({ ...tgSettings, seo_reminder_weekdays: next })
+  }
   const lastLog = logs[logs.length - 1]
   const settingsSections = [
     { id: 'general', label: 'Статус', icon: 'ri-dashboard-line' },
@@ -538,6 +552,13 @@ function SettingsTab() {
                 </select>
                 <small>Встановіть такий самий інтервал для cron у панелі хостингу.</small>
               </label>
+              <label className="admin-field admin-form-grid__full">
+                <span>Тег публікації об’єктів</span>
+                <input type="text" value={crmSettings.import_tag || ''}
+                  onChange={e => setCrmSettings({ ...crmSettings, import_tag: e.target.value })}
+                  placeholder="реклама" className="admin-input" />
+                <small>На сайт потрапляють лише CRM-об’єкти з точним збігом цього тегу. Регістр не враховується.</small>
+              </label>
             </div>
           </div>
           <div className="settings-section__footer">
@@ -616,6 +637,50 @@ function SettingsTab() {
                 <input type="checkbox" checked={tgSettings.enabled} onChange={e => setTgSettings({ ...tgSettings, enabled: e.target.checked })} />
                 <span>Увімкнути відправку</span>
               </label>
+            </div>
+            <div className="settings-subsection">
+              <div className="settings-subsection__heading">
+                <div>
+                  <h4>Нагадування про SEO-статті</h4>
+                  <p>Окремий розклад і одержувачі. Інші повідомлення Telegram не змінюються.</p>
+                </div>
+                <label className="settings-toggle">
+                  <input type="checkbox" checked={Boolean(tgSettings.seo_reminder_enabled)}
+                    onChange={e => setTgSettings({ ...tgSettings, seo_reminder_enabled: e.target.checked })} />
+                  <span>Активне</span>
+                </label>
+              </div>
+              <div className="admin-form-grid">
+                <label className="admin-field">
+                  <span>Час, Europe/Kyiv</span>
+                  <input type="time" value={tgSettings.seo_reminder_time || '10:00'}
+                    onChange={e => setTgSettings({ ...tgSettings, seo_reminder_time: e.target.value })}
+                    className="admin-input" />
+                </label>
+                <label className="admin-field">
+                  <span>Chat ID нагадування</span>
+                  <input type="text" value={tgSettings.seo_reminder_chat_ids || ''}
+                    onChange={e => setTgSettings({ ...tgSettings, seo_reminder_chat_ids: e.target.value })}
+                    placeholder="7679436754, -100..." className="admin-input" />
+                </label>
+                <div className="admin-field admin-form-grid__full">
+                  <span>Дні тижня</span>
+                  <div className="settings-weekdays">
+                    {reminderWeekdays.map(day => (
+                      <button type="button" key={day.value}
+                        className={(tgSettings.seo_reminder_weekdays || []).includes(day.value) ? 'is-active' : ''}
+                        onClick={() => toggleReminderWeekday(day.value)}>{day.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <label className="admin-field admin-form-grid__full">
+                  <span>Текст нагадування</span>
+                  <textarea value={tgSettings.seo_reminder_message || ''}
+                    onChange={e => setTgSettings({ ...tgSettings, seo_reminder_message: e.target.value })}
+                    placeholder="Підготувати корисну рекламну SEO-статтю..." className="admin-textarea" rows="4" />
+                </label>
+              </div>
+              <p className="settings-muted">На сервері запускайте команду <code>send_seo_article_reminder</code> кожні 5 хвилин. Вона сама перевіряє розклад і не дублює відправлення.</p>
             </div>
           </div>
           <div className="settings-section__footer">

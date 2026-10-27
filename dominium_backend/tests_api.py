@@ -1161,6 +1161,30 @@ class AdminImageUploadSecurityTest(TestCase):
         self.assertEqual(saved["api_key"], "key")
         self.assertEqual(saved["secret_key"], "secret")
 
+    def test_crm_import_tag_setting_refreshes_existing_visibility(self):
+        self.property.external_source = "realtsoft"
+        self.property.external_id = "1546"
+        self.property.save(update_fields=["external_source", "external_id"])
+        external = ExternalProperty.objects.create(
+            crm_property_id=1546,
+            property=self.property,
+            source="realtsoft",
+            raw_data={"tags_cache": "Пульч Ярослава, реклама"},
+            is_import_eligible=False,
+        )
+
+        response = self.staff_client.post(
+            reverse("house_api:app_settings"),
+            data=json.dumps(
+                {"key": "crm", "value": {"enabled": True, "import_tag": "реклама"}}
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        external.refresh_from_db()
+        self.assertTrue(external.is_import_eligible)
+
 
 class HighlightSettingsAuthorizationTest(TestCase):
     def setUp(self):

@@ -18,7 +18,14 @@ from house.management.commands.sync_crm_properties import (
     _resolve_crm_manager,
     _should_import,
 )
-from house.models import DealType, ExternalProperty, Property, PropertyImage, PropertyType
+from house.models import (
+    AppSettings,
+    DealType,
+    ExternalProperty,
+    Property,
+    PropertyImage,
+    PropertyType,
+)
 from house.services.importer import import_property_from_url
 from house.services.search import apply_currency_display
 from house.utils.html_parser import parse_property_html
@@ -73,6 +80,7 @@ class PropertyApiSmokeTest(TestCase):
             source="realtsoft",
             crm_manager_user_id=49,
             crm_manager_name="Пульч Ярослава",
+            is_import_eligible=True,
         )
         url = reverse("house_api:property_list")
 
@@ -87,6 +95,31 @@ class PropertyApiSmokeTest(TestCase):
             staff_response.json()["results"][0]["crm_manager_name"],
             "Пульч Ярослава",
         )
+
+    def test_public_api_hides_realtsoft_property_without_import_tag(self):
+        property_obj = Property.objects.create(
+            title="Не для реклами",
+            address="Ужгород",
+            price=90000,
+            area=40,
+            rooms=1,
+            property_type=self.property_type,
+            deal_type=self.deal_type,
+            external_source="realtsoft",
+            external_id="1777",
+        )
+        ExternalProperty.objects.create(
+            crm_property_id=1777,
+            property=property_obj,
+            source="realtsoft",
+            raw_data={"tags_cache": "внутрішній"},
+            is_import_eligible=False,
+        )
+        url = reverse("house_api:property_list")
+
+        self.assertEqual(self.client.get(url).json()["count"], 0)
+        self.client.force_login(self.staff)
+        self.assertEqual(self.client.get(url).json()["count"], 1)
 
     def test_resolve_crm_manager_uses_cache(self):
         crm_client = Mock()
@@ -678,10 +711,36 @@ class RealtsoftSyncTest(TestCase):
         self.addCleanup(media_settings.disable)
 
     def test_imports_sales_and_only_commercial_rentals(self):
-        self.assertTrue(_should_import({"deal": 1, "realty_type": 1}))
-        self.assertTrue(_should_import({"deal": 2, "realty_type": 10}))
-        self.assertFalse(_should_import({"deal": 2, "realty_type": 1}))
-        self.assertFalse(_should_import({"deal": 3, "realty_type": 10}))
+        advertised = {"tags_cache": "Пульч Ярослава, реклама"}
+        self.assertTrue(_should_import({"deal": 1, "realty_type": 1, **advertised}))
+        self.assertTrue(_should_import({"deal": 2, "realty_type": 10, **advertised}))
+        self.assertFalse(_should_import({"deal": 2, "realty_type": 1, **advertised}))
+        self.assertFalse(_should_import({"deal": 3, "realty_type": 10, **advertised}))
+        self.assertFalse(_should_import({"deal": 1, "realty_type": 1, "tags_cache": "інше"}))
+
+    @override_settings(TELEGRAM_BOT_TOKEN="test-token")
+    @patch("house.management.commands.send_seo_article_reminder.requests.post")
+    def test_seo_article_reminder_uses_only_configured_chats(self, post):
+        post.return_value.raise_for_status = Mock()
+        AppSettings.set(
+            "telegram",
+            {
+                "seo_reminder_enabled": True,
+                "seo_reminder_time": "10:00",
+                "seo_reminder_weekdays": [0],
+                "seo_reminder_chat_ids": "111, 222",
+                "seo_reminder_message": "Підготувати статтю",
+            },
+        )
+
+        call_command("send_seo_article_reminder", force=True, stdout=StringIO())
+
+        self.assertEqual(post.call_count, 2)
+        self.assertEqual(
+            [call.kwargs["json"]["chat_id"] for call in post.call_args_list],
+            [111, 222],
+        )
+        self.assertTrue(AppSettings.get("seo_article_reminder_state")["last_sent_on"])
 
     def test_address_uses_crm_city_before_street(self):
         self.assertEqual(

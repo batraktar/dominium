@@ -26,6 +26,7 @@ from house.services.realtsoft_client import (
     get_realtsoft_client,
     is_realtsoft_sync_enabled,
 )
+from house.services.crm_import_policy import get_crm_import_tag, has_crm_import_tag
 from house.utils.sanitization import sanitize_rich_text
 
 logger = logging.getLogger(__name__)
@@ -167,12 +168,13 @@ def _extract_crm_images(item: dict) -> list[str]:
     return images
 
 
-def _should_import(item: dict) -> bool:
+def _should_import(item: dict, required_tag: str | None = None) -> bool:
     deal_id = str(item.get("deal") or "")
     realty_type_id = str(item.get("realty_type") or "")
-    return deal_id == "1" or (
+    supported = deal_id == "1" or (
         deal_id == "2" and realty_type_id in COMMERCIAL_REALTY_TYPE_IDS
     )
+    return supported and has_crm_import_tag(item, required_tag)
 
 
 def _prepare_images(crm_id: int, image_urls: list[str]) -> list[ContentFile]:
@@ -436,6 +438,8 @@ class Command(BaseCommand):
         total_fetched = 0
         seen_crm_ids: set[int] = set()
         manager_cache: dict[int, str | None] = {}
+        import_tag = get_crm_import_tag()
+        self.stdout.write(f"  Фільтр CRM-тега: {import_tag}")
 
         while True:
             if max_pages and page > max_pages:
@@ -483,6 +487,7 @@ class Command(BaseCommand):
                         item,
                         dry_run,
                         manager_cache=manager_cache,
+                        import_tag=import_tag,
                     )
                     if result == "created":
                         created_count += 1
@@ -524,10 +529,25 @@ class Command(BaseCommand):
         item: dict,
         dry_run: bool,
         manager_cache: dict[int, str | None] | None = None,
+        import_tag: str | None = None,
     ) -> str:
         crm_id = int(item["id"])
 
-        if not _should_import(item) or not _extract_crm_images(item):
+        eligible = _should_import(item, import_tag) and bool(_extract_crm_images(item))
+        existing_ext = (
+            ExternalProperty.objects.select_related("property")
+            .filter(crm_property_id=crm_id, source="realtsoft")
+            .first()
+        )
+        if not eligible:
+            if existing_ext and existing_ext.is_import_eligible:
+                if not dry_run:
+                    existing_ext.is_import_eligible = False
+                    existing_ext.raw_data = item
+                    existing_ext.save(
+                        update_fields=["is_import_eligible", "raw_data", "last_synced"]
+                    )
+                return "updated"
             return "skipped"
 
         mapped = _map_crm_item_to_property(item)
@@ -535,12 +555,6 @@ class Command(BaseCommand):
             item,
             client,
             manager_cache,
-        )
-
-        existing_ext = (
-            ExternalProperty.objects.select_related("property")
-            .filter(crm_property_id=crm_id, source="realtsoft")
-            .first()
         )
 
         if existing_ext:
@@ -551,6 +565,7 @@ class Command(BaseCommand):
                 dry_run,
                 manager_user_id=manager_user_id,
                 manager_name=manager_name,
+                is_import_eligible=True,
             )
         else:
             crm_url = f"{client.url}/estate/{crm_id}"
@@ -563,6 +578,7 @@ class Command(BaseCommand):
                 crm_url,
                 manager_user_id=manager_user_id,
                 manager_name=manager_name,
+                is_import_eligible=True,
             )
 
     def _create_new(
@@ -575,6 +591,7 @@ class Command(BaseCommand):
         crm_url: str = "",
         manager_user_id: int | None = None,
         manager_name: str | None = None,
+        is_import_eligible: bool = False,
     ) -> str:
         if dry_run:
             self.stdout.write(f"  [DRY RUN] Створю: CRM#{crm_id} — {mapped['title'][:60]}")
@@ -614,6 +631,7 @@ class Command(BaseCommand):
                 crm_url=crm_url,
                 crm_manager_user_id=manager_user_id,
                 crm_manager_name=manager_name or "",
+                is_import_eligible=is_import_eligible,
                 raw_data=raw_item,
                 sync_status="synced",
                 source="realtsoft",
@@ -638,6 +656,7 @@ class Command(BaseCommand):
         dry_run: bool,
         manager_user_id: int | None = None,
         manager_name: str | None = None,
+        is_import_eligible: bool = False,
     ) -> str:
         property_obj = ext.property
 
@@ -646,6 +665,7 @@ class Command(BaseCommand):
             ext.crm_manager_user_id != manager_user_id
             or (manager_name is not None and ext.crm_manager_name != manager_name)
         )
+        eligibility_changed = ext.is_import_eligible != is_import_eligible
         fields_to_check = {
             "title": mapped["title"],
             "description": mapped["description"],
@@ -682,7 +702,7 @@ class Command(BaseCommand):
             changed = True
 
         if dry_run:
-            if changed or manager_changed:
+            if changed or manager_changed or eligibility_changed:
                 self.stdout.write(f"  [DRY RUN] Оновлю: CRM#{ext.crm_property_id} — {mapped['title'][:60]}")
                 return "updated"
             return "unchanged"
@@ -693,6 +713,7 @@ class Command(BaseCommand):
         ext.raw_data = raw_item
         ext.sync_status = "synced"
         ext.crm_manager_user_id = manager_user_id
+        ext.is_import_eligible = is_import_eligible
         if manager_name is not None:
             ext.crm_manager_name = manager_name
         ext.save(
@@ -701,13 +722,14 @@ class Command(BaseCommand):
                 "sync_status",
                 "crm_manager_user_id",
                 "crm_manager_name",
+                "is_import_eligible",
                 "last_synced",
             ]
         )
 
         self._sync_images(property_obj, mapped["images"], dry_run=False)
 
-        if changed or manager_changed:
+        if changed or manager_changed or eligibility_changed:
             self.stdout.write(f"  Оновлено: CRM#{ext.crm_property_id} — {mapped['title'][:60]}")
             return "updated"
 

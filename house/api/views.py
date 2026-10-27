@@ -59,6 +59,7 @@ from house.utils.sanitization import sanitize_rich_text
 from house.utils.currency import get_exchange_rates
 from house.utils.html_parser import parse_property_html
 from house.services.realtsoft_client import RealtsoftAPIError, get_realtsoft_client
+from house.services.crm_import_policy import refresh_crm_import_eligibility
 from dominium_backend.seo_regions import collect_city_keywords, collect_region_keywords
 from dominium_backend.views.common import get_client_ip
 
@@ -325,7 +326,16 @@ class SecurePropertyViewSet(viewsets.ModelViewSet):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
-        return _properties_queryset()
+        queryset = _properties_queryset()
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(
+                ~Q(external_source="realtsoft")
+                | Q(
+                    external_sources__source="realtsoft",
+                    external_sources__is_import_eligible=True,
+                )
+            ).distinct()
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -1136,6 +1146,7 @@ def app_settings_view(request):
                 sanitized.setdefault("url", settings.REALTSOFT_CRM_URL)
                 sanitized.setdefault("enabled", settings.REALTSOFT_SYNC_ENABLED)
                 sanitized.setdefault("sync_interval", 30)
+                sanitized.setdefault("import_tag", "реклама")
                 sanitized.setdefault("api_key", settings.REALTSOFT_API_KEY)
                 sanitized.setdefault("secret_key", settings.REALTSOFT_SECRET_KEY)
             for secret_field in ("api_key", "secret_key", "bot_token"):
@@ -1213,7 +1224,18 @@ def app_settings_view(request):
             if secret_field in existing and not value.get(secret_field):
                 value[secret_field] = existing[secret_field]
 
+    if key == "crm":
+        saved_crm = existing if isinstance(existing, dict) else {}
+        import_tag = str(
+            value.get("import_tag")
+            or saved_crm.get("import_tag")
+            or "реклама"
+        ).strip()
+        value["import_tag"] = import_tag
+
     AppSettings.set(key, value)
+    if key == "crm":
+        refresh_crm_import_eligibility(value.get("import_tag"))
     return JsonResponse({"status": "ok", "key": key})
 
 

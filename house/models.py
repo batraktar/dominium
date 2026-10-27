@@ -253,6 +253,11 @@ class ExternalProperty(models.Model):
         default="",
         help_text="Ім'я відповідального менеджера для внутрішнього використання.",
     )
+    is_import_eligible = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Об'єкт має налаштований CRM-тег і може бути показаний публічно.",
+    )
     raw_data = models.JSONField(
         default=dict,
         blank=True,

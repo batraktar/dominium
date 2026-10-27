@@ -1,8 +1,8 @@
 .admin-page {
   min-height: 100svh;
   background:
-    linear-gradient(180deg, rgba(19, 62, 68, 0.08), rgba(248, 250, 252, 0) 320px),
-    #f6f8f7;
+    radial-gradient(circle at 8% 0%, rgba(45, 138, 132, 0.15), transparent 360px),
+    linear-gradient(180deg, #eef4f2 0, #f7f9f8 420px, #f4f6f5 100%);
   color: #0f172a;
   font-family: 'FixelText', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -19,6 +19,11 @@
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 18px;
+  padding: 24px;
+  border: 1px solid rgba(19, 62, 68, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #123d43, #1b5a5d);
+  box-shadow: 0 20px 55px rgba(14, 47, 51, 0.14);
 }
 
 .admin-page__title-block {
@@ -30,7 +35,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  color: #516968;
+  color: #a9d8d2;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -39,7 +44,7 @@
 
 .admin-page__title-block h1 {
   margin: 0;
-  color: #133e44;
+  color: #fff;
   font-family: 'Ermilov', 'FixelText', sans-serif;
   font-size: 2.75rem;
   line-height: 1.05;
@@ -49,7 +54,7 @@
 .admin-page__title-block p {
   max-width: 760px;
   margin: 10px 0 0;
-  color: #526564;
+  color: rgba(255, 255, 255, 0.74);
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -1018,7 +1023,7 @@
 
 .settings-tab__nav {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   padding: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -1143,6 +1148,70 @@
 
 .settings-section__footer--split {
   justify-content: space-between;
+}
+
+.settings-subsection {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid rgba(19, 62, 68, 0.12);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7fbfa, #fff);
+}
+
+.settings-subsection__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.settings-subsection__heading h4 {
+  margin: 0;
+  color: #133e44;
+  font-size: 1rem;
+}
+
+.settings-subsection__heading p {
+  margin: 5px 0 0;
+  color: #667776;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.settings-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-weekdays button {
+  min-width: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(19, 62, 68, 0.18);
+  border-radius: 9px;
+  background: #fff;
+  color: #526564;
+  font-weight: 700;
+}
+
+.settings-weekdays button:hover,
+.settings-weekdays button.is-active {
+  border-color: #1b5a5d;
+  background: #1b5a5d;
+  color: #fff;
+}
+
+.admin-page__header .admin-button--secondary {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.admin-page__header .admin-button--primary {
+  background: #fff;
+  color: #133e44;
+  box-shadow: none;
 }
 
 .settings-status-grid {
