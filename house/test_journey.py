@@ -107,3 +107,37 @@ class JourneyApiTests(TestCase):
         known = next(item for item in payload["journeys"] if item["session_id"] == "-contact")
         self.assertEqual(known["customer"]["name"], "Іван")
         self.assertEqual(known["customer"]["phone"], "+380501112233")
+
+    def test_staff_analytics_returns_unique_session_funnel_and_continuous_daily_trend(self):
+        sessions = [JourneySession.objects.create(session_id=f"funnel-{index}") for index in range(3)]
+        event_types = [
+            (sessions[0], "property_view"),
+            (sessions[0], "favorite"),
+            (sessions[0], "consultation"),
+            (sessions[1], "property_view"),
+            (sessions[1], "property_view"),
+            (sessions[2], "page_view"),
+        ]
+        for session, event_type in event_types:
+            JourneyEvent.objects.create(
+                event_id=uuid.uuid4(), session=session, event_type=event_type, path="/"
+            )
+
+        self.client.force_login(self.staff)
+        payload = self.client.get(reverse("journey_analytics"), {"period": 7}).json()
+
+        self.assertEqual(
+            payload["funnel"],
+            [
+                {"key": "sessions", "label": "Сесії", "value": 3},
+                {"key": "property_view", "label": "Переглянули об’єкт", "value": 2},
+                {"key": "intent", "label": "Виявили намір", "value": 1},
+                {"key": "consultation", "label": "Залишили заявку", "value": 1},
+            ],
+        )
+        self.assertEqual(len(payload["daily"]), 7)
+        self.assertEqual(
+            payload["daily"][-1],
+            {"date": payload["daily"][-1]["date"], "sessions": 3, "property_views": 2, "consultations": 1},
+        )
+        self.assertTrue(all(item["sessions"] == 0 for item in payload["daily"][:-1]))

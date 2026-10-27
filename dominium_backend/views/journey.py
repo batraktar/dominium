@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from django.core.cache import cache
 from django.db.models import Count
+from django.db.models.functions import TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -121,6 +122,47 @@ def journey_analytics(request):
     events = JourneyEvent.objects.filter(created_at__gte=since)
     sessions = JourneySession.objects.filter(events__created_at__gte=since).distinct()
     counts = dict(events.values_list("event_type").annotate(total=Count("id")))
+    funnel = [
+        {"key": "sessions", "label": "Сесії", "value": sessions.count()},
+        {
+            "key": "property_view",
+            "label": "Переглянули об’єкт",
+            "value": events.filter(event_type="property_view").values("session_id").distinct().count(),
+        },
+        {
+            "key": "intent",
+            "label": "Виявили намір",
+            "value": events.filter(event_type__in=("favorite", "contact_click")).values("session_id").distinct().count(),
+        },
+        {
+            "key": "consultation",
+            "label": "Залишили заявку",
+            "value": events.filter(event_type="consultation").values("session_id").distinct().count(),
+        },
+    ]
+    daily_rows = events.annotate(date=TruncDate("created_at")).values("date", "event_type").annotate(
+        sessions=Count("session_id", distinct=True)
+    )
+    daily_by_date = defaultdict(lambda: {"sessions": set(), "property_views": 0, "consultations": 0})
+    for event in events.annotate(date=TruncDate("created_at")).values("date", "event_type", "session_id"):
+        bucket = daily_by_date[event["date"]]
+        bucket["sessions"].add(event["session_id"])
+    for row in daily_rows:
+        if row["event_type"] == "property_view":
+            daily_by_date[row["date"]]["property_views"] = row["sessions"]
+        elif row["event_type"] == "consultation":
+            daily_by_date[row["date"]]["consultations"] = row["sessions"]
+    today = timezone.localdate()
+    daily = []
+    for offset in range(days - 1, -1, -1):
+        date = today - timezone.timedelta(days=offset)
+        bucket = daily_by_date[date]
+        daily.append({
+            "date": date.isoformat(),
+            "sessions": len(bucket["sessions"]),
+            "property_views": bucket["property_views"],
+            "consultations": bucket["consultations"],
+        })
     sources = list(
         sessions.values("utm_source", "utm_medium")
         .annotate(sessions=Count("id", distinct=True))
@@ -161,11 +203,13 @@ def journey_analytics(request):
         "overview": {
             "sessions": sessions.count(),
             "events": events.count(),
-            "property_views": counts.get("property_view", 0),
-            "intent": counts.get("favorite", 0) + counts.get("contact_click", 0),
-            "consultations": counts.get("consultation", 0),
+            "property_views": funnel[1]["value"],
+            "intent": funnel[2]["value"],
+            "consultations": funnel[3]["value"],
         },
         "events": counts,
+        "funnel": funnel,
+        "daily": daily,
         "sources": sources,
         "top_properties": top_properties,
         "journeys": journeys,
