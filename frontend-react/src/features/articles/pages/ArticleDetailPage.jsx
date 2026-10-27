@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { articleContentFlow, articleTextParts } from '../model/articleContentModel.js'
 import { getPublishedArticle } from '../services/articleApi.js'
 import { beginArticleAttribution, trackArticleEvent } from '../services/articleAnalytics.js'
+import { trackJourneyEvent } from '../../../shared/analytics/journey.js'
 
 function ArticleDetailPage() {
   const slug = decodeURIComponent(window.location.pathname.match(/^\/articles\/([^/]+)\/?$/)?.[1] || '')
@@ -17,7 +18,11 @@ function ArticleDetailPage() {
   useEffect(() => {
     const controller = new AbortController()
     getPublishedArticle(slug, { signal: controller.signal })
-      .then((result) => { setArticle(result); beginArticleAttribution(result) })
+      .then((result) => {
+        setArticle(result)
+        beginArticleAttribution(result)
+        trackJourneyEvent('article_view', { articleSlug: result.slug })
+      })
       .catch((loadError) => {
         if (loadError?.name !== 'AbortError') setError(loadError?.message || 'Статтю не знайдено.')
       })
@@ -31,7 +36,9 @@ function ArticleDetailPage() {
     <article className={`article-page container mx-auto max-w-4xl px-4 py-12 ${showActions ? 'article-page--with-actions' : ''}`} onClick={(event) => {
       const link = event.target.closest?.('a[href]')
       if (link && new URL(link.href, window.location.origin).origin === window.location.origin) {
-        trackArticleEvent('internal_click', { targetPath: new URL(link.href, window.location.origin).pathname })
+        const targetPath = new URL(link.href, window.location.origin).pathname
+        trackArticleEvent('internal_click', { targetPath })
+        trackJourneyEvent('internal_click', { articleSlug: article.slug, targetPath })
       }
     }}>
       <a href="/articles/" className="mb-6 inline-block text-accent">← Усі статті</a>

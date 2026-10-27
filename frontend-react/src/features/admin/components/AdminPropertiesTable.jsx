@@ -175,6 +175,16 @@ function PropertyRow({
           >
             <i className="ri-external-link-line"></i>
           </a>
+          <a
+            href={apiEndpoints.propertyPresentation(property.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="admin-icon-button"
+            title="Презентація / PDF"
+            aria-label="Відкрити презентацію для PDF"
+          >
+            <i className="ri-file-pdf-2-line"></i>
+          </a>
           <button
             type="button"
             onClick={() => onEdit(property)}

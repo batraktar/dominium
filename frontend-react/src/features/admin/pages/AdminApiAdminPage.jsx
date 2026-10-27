@@ -8,6 +8,7 @@ import SettingsTab from '../components/SettingsTab.jsx'
 import ClientsTab from '../components/ClientsTab.jsx'
 import ArticlesTab from '../components/ArticlesTab.jsx'
 import SearchConsoleTab from '../components/SearchConsoleTab.jsx'
+import JourneyAnalyticsTab from '../components/JourneyAnalyticsTab.jsx'
 import './admin-api-admin.css'
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('uk-UA')
@@ -48,6 +49,11 @@ function AdminNav({ activeTab, onTabChange, stats }) {
       id: 'articles',
       label: 'Статті',
       icon: 'ri-article-line',
+    },
+    {
+      id: 'analytics',
+      label: 'Аналітика',
+      icon: 'ri-route-line',
     },
     {
       id: 'search-console',
@@ -249,6 +255,8 @@ function AdminApiAdminPage() {
           {activeTab === 'highlight' && <HighlightTab />}
 
           {activeTab === 'articles' && <ArticlesTab />}
+
+          {activeTab === 'analytics' && <JourneyAnalyticsTab />}
 
           {activeTab === 'search-console' && <SearchConsoleTab />}
 

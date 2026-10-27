@@ -17,6 +17,7 @@ function PropertyContactSidebar({
   propertyUrl,
   isSendingContact = false,
   onSubmit,
+  propertyId,
 }) {
   return (
     <div className="lg:col-span-1">
@@ -39,7 +40,7 @@ function PropertyContactSidebar({
           onSubmit={onSubmit}
         />
 
-        <PropertyContactQuickActions />
+        <PropertyContactQuickActions propertyId={propertyId} />
       </div>
     </div>
   )

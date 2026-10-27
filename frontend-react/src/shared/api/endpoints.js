@@ -43,4 +43,7 @@ export const apiEndpoints = {
   adminArticleImagesOrder: (articleId) => `/api/admin/articles/${encodeURIComponent(articleId)}/images/order/`,
   adminArticleImageItem: (imageId) => `/api/admin/article-images/${encodeURIComponent(imageId)}/`,
   adminSearchConsole: '/api/admin/search-console/',
+  journeyEvents: '/api/journey/events/',
+  adminJourneyAnalytics: '/api/admin/journey/analytics/',
+  propertyPresentation: (propertyId) => `/api/admin/properties/${encodeURIComponent(propertyId)}/presentation/`,
 }

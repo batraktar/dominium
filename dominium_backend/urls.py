@@ -19,6 +19,7 @@ from dominium_backend.views import articles as article_views
 from dominium_backend.views import auth as auth_views
 from dominium_backend.views.common import build_canonical_uri
 from dominium_backend.views import public as public_views
+from dominium_backend.views import journey as journey_views
 from dominium_backend.views import security as security_views
 from dominium_backend.views import seo as seo_views
 from dominium_backend.views import spa as spa_views
@@ -61,6 +62,9 @@ urlpatterns = [
     path("articles/<slug:slug>/", spa_views.article_detail_spa, name="article_detail"),
     path("api/articles/", article_views.article_list_api, name="article_list_api"),
     path("api/articles/events/", article_views.article_event, name="article_event"),
+    path("api/journey/events/", journey_views.journey_event, name="journey_event"),
+    path("api/admin/journey/analytics/", journey_views.journey_analytics, name="journey_analytics"),
+    path("api/admin/properties/<int:property_id>/presentation/", journey_views.property_presentation, name="property_presentation"),
     path(
         "api/articles/<slug:slug>/",
         article_views.article_detail_api,

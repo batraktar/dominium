@@ -177,6 +177,12 @@ async function request(path, options = {}) {
             propertyId: match ? Number(match[1]) : null,
           })
         }).catch(() => undefined)
+        import('../analytics/journey.js').then(({ trackJourneyEvent }) => {
+          const propertyMatch = path.match(/^\/api\/like\/(\d+)\/$/)
+          trackJourneyEvent(path === '/api/consultation/' ? 'consultation' : 'favorite', {
+            propertyId: propertyMatch ? Number(propertyMatch[1]) : null,
+          })
+        }).catch(() => undefined)
       }
 
       return {

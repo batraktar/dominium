@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { buildPropertyDocumentTitle } from '../../model/propertyDetailModel.js'
 import { getLikedPropertyIds, getPropertyBySlug } from '../../services/propertyApi.js'
+import { trackJourneyEvent } from '../../../../shared/analytics/journey.js'
 
 export default function usePropertyDetailLoadEffects({
   slug = '',
@@ -35,6 +36,7 @@ export default function usePropertyDetailLoadEffects({
         setMobileImageIndex(0)
         setModalImageIndex(0)
         document.title = buildPropertyDocumentTitle(result)
+        trackJourneyEvent('property_view', { propertyId: result.id })
       } catch (error) {
         if (cancelled || error?.name === 'AbortError') return
 

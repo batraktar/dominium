@@ -517,3 +517,49 @@ class ArticleEvent(models.Model):
                 name="unique_article_journey_event",
             )
         ]
+
+
+class JourneySession(models.Model):
+    session_id = models.CharField(max_length=64, unique=True)
+    first_path = models.CharField(max_length=500, blank=True)
+    referrer_host = models.CharField(max_length=255, blank=True)
+    utm_source = models.CharField(max_length=100, blank=True)
+    utm_medium = models.CharField(max_length=100, blank=True)
+    utm_campaign = models.CharField(max_length=150, blank=True)
+    utm_content = models.CharField(max_length=150, blank=True)
+    utm_term = models.CharField(max_length=150, blank=True)
+    first_seen_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    last_seen_at = models.DateTimeField(auto_now=True, db_index=True)
+
+    class Meta:
+        ordering = ["-last_seen_at"]
+
+
+class JourneyEvent(models.Model):
+    EVENT_TYPES = [
+        ("page_view", "Перегляд сторінки"),
+        ("search", "Пошук"),
+        ("property_view", "Перегляд об'єкта"),
+        ("article_view", "Перегляд статті"),
+        ("internal_click", "Внутрішній перехід"),
+        ("favorite", "Обране"),
+        ("contact_click", "Контакт"),
+        ("consultation", "Заявка"),
+    ]
+
+    event_id = models.UUIDField(unique=True, editable=False)
+    session = models.ForeignKey(JourneySession, related_name="events", on_delete=models.CASCADE)
+    event_type = models.CharField(max_length=32, choices=EVENT_TYPES, db_index=True)
+    path = models.CharField(max_length=500)
+    target_path = models.CharField(max_length=500, blank=True)
+    property = models.ForeignKey(Property, null=True, blank=True, on_delete=models.SET_NULL)
+    article = models.ForeignKey(Article, null=True, blank=True, on_delete=models.SET_NULL)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["session", "created_at"], name="house_journ_session_6b13e1_idx"),
+            models.Index(fields=["event_type", "created_at"], name="house_journ_event_t_77babb_idx"),
+        ]

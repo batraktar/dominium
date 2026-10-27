@@ -406,6 +406,7 @@ function SettingsTab() {
     { id: 'general', label: 'Статус', icon: 'ri-dashboard-line' },
     { id: 'crm', label: 'CRM', icon: 'ri-cloud-line' },
     { id: 'google', label: 'Google', icon: 'ri-google-line' },
+    { id: 'business-profile', label: 'Google Business', icon: 'ri-store-2-line' },
     { id: 'telegram', label: 'Telegram', icon: 'ri-telegram-line' },
     { id: 'templates', label: 'Шаблони', icon: 'ri-chat-settings-line', count: templates.length },
     { id: 'logs', label: 'Історія', icon: 'ri-history-line', count: logs.length },
@@ -502,6 +503,25 @@ function SettingsTab() {
                 <strong>{logs.length} записів</strong>
                 <p>{lastLog?.time || 'Останніх подій немає'}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'business-profile' && (
+        <div className="settings-section">
+          <div className="settings-section__header">
+            <div>
+              <h3>Google Business Profile</h3>
+              <p>Майбутнє керування профілем компанії та локальною статистикою.</p>
+            </div>
+            <span className="admin-badge admin-badge--neutral">Заплановано</span>
+          </div>
+          <div className="settings-section__body">
+            <div className="admin-empty-state">
+              <i className="ri-store-2-line" aria-hidden="true"></i>
+              <p>Підключення ще не активне</p>
+              <span>Це безпечна заглушка: вона не просить ключів, не викликає Google API і не змінює профіль компанії.</span>
             </div>
           </div>
         </div>

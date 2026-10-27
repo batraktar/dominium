@@ -57,6 +57,7 @@ export default function usePropertyDetailPageViewModel({
         onBasemapChange: mapController.setBasemap,
       },
       contactSidebarProps: {
+        propertyId: controller.page.property?.id,
         contactName: controller.contact.contactName,
         onContactNameChange: handleContactNameChange,
         contactPhone: controller.contact.contactPhone,
