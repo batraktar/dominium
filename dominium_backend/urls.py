@@ -64,7 +64,9 @@ urlpatterns = [
     path("api/articles/events/", article_views.article_event, name="article_event"),
     path("api/journey/events/", journey_views.journey_event, name="journey_event"),
     path("api/admin/journey/analytics/", journey_views.journey_analytics, name="journey_analytics"),
-    path("api/admin/properties/<int:property_id>/presentation/", journey_views.property_presentation, name="property_presentation"),
+    path("presentation/<slug:slug>/", journey_views.property_presentation, name="property_presentation"),
+    path("presentation/<slug:slug>/download/", journey_views.property_presentation_pdf, name="property_presentation_pdf"),
+    path("api/admin/properties/<int:property_id>/presentation/", journey_views.legacy_property_presentation, name="legacy_property_presentation"),
     path(
         "api/articles/<slug:slug>/",
         article_views.article_detail_api,

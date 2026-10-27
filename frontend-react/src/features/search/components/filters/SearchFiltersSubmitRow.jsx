@@ -5,7 +5,8 @@ function SearchFiltersSubmitRow() {
         type="submit"
         className="w-full md:w-auto bg-deepOcean hover:bg-deepOcean/90 text-white font-fixel pr-8 py-4 px-6 rounded-[9px] whitespace-nowrap border border-creamBeige/70 shadow-lg shadow-deepOcean/20"
       >
-        Пошук
+        <i className="ri-search-line mr-2"></i>
+        Показати об’єкти
       </button>
     </div>
   )

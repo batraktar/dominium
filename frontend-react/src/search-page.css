@@ -134,15 +134,134 @@
 
 /* Search controls use explicit colors because the production utility build may
    not emit every custom palette opacity variant used by dynamic React markup. */
-#main-search-form .filter-range,
-#main-search-form > .container > .grid > div {
-  color: #fff;
+#main-search-form {
+  background: linear-gradient(180deg, #f5f7f6 0%, #e8efed 100%);
+  border-bottom: 1px solid rgba(19, 62, 68, 0.12);
+}
+
+.search-filters-panel {
+  color: #133e44;
+}
+
+.search-filters-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.search-filters-heading h2 {
+  margin: 2px 0 0;
+  color: #133e44;
+  font: 700 24px/1.2 FixelText, sans-serif;
+}
+
+.search-filters-heading > p {
+  max-width: 440px;
+  margin: 0;
+  color: #587174;
+  font-size: 13px;
+}
+
+.search-filters-eyebrow {
+  margin: 0;
+  color: #718c89;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.search-filter-card {
+  padding: 16px;
+  color: #133e44;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(19, 62, 68, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(19, 62, 68, 0.06);
+}
+
+.search-filter-label {
+  color: #133e44;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.search-filter-label span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-filter-label i {
+  color: #758f8e;
+  font-size: 17px;
+}
+
+.filter-reset {
+  color: #718285;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.filter-reset:hover {
+  color: #133e44;
+}
+
+.search-filter-control {
+  min-height: 44px;
+  color: #133e44;
+  background: #f6f8f7;
+  border: 1px solid #d7e1df;
+  border-radius: 9px;
+}
+
+.search-filter-number {
+  padding: 7px 10px;
+  color: #133e44;
+  background: #f6f8f7;
+  border: 1px solid #d7e1df;
+  border-radius: 9px;
+}
+
+.search-filter-number > span {
+  display: block;
+  color: #718285;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.search-filter-summary {
+  display: flex;
+  justify-content: space-between;
+  color: #718285;
+  font: 500 10px/1.3 FixelText, sans-serif;
+}
+
+.search-filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 #main-search-form input[type="number"],
 #location-filter {
   color: #133e44;
   background: rgba(255, 255, 255, 0.97);
+}
+
+@media (max-width: 767px) {
+  .search-filters-heading,
+  .search-filter-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-filters-heading > p {
+    max-width: none;
+  }
 }
 
 #property-sort-wrapper,

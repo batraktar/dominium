@@ -45,5 +45,5 @@ export const apiEndpoints = {
   adminSearchConsole: '/api/admin/search-console/',
   journeyEvents: '/api/journey/events/',
   adminJourneyAnalytics: '/api/admin/journey/analytics/',
-  propertyPresentation: (propertyId) => `/api/admin/properties/${encodeURIComponent(propertyId)}/presentation/`,
+  propertyPresentation: (propertySlug) => `/presentation/${encodeURIComponent(propertySlug)}/`,
 }

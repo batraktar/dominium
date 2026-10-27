@@ -57,12 +57,13 @@ class JourneyApiTests(TestCase):
         self.assertIn("journeys", response.json())
 
     def test_presentation_is_staff_only_and_private(self):
-        url = reverse("property_presentation", args=[self.property.id])
+        url = reverse("property_presentation", args=[self.property.slug])
         self.assertEqual(self.client.get(url).status_code, 403)
         self.client.force_login(self.staff)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Зберегти як PDF")
+        self.assertContains(response, "Завантажити PDF")
+        self.assertContains(response, "Друкувати")
         self.assertNotContains(response, 'onclick="')
         self.assertContains(response, 'nonce="')
         self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")

@@ -1,4 +1,6 @@
 import json
+import html
+import re
 import uuid
 from collections import defaultdict
 from urllib.parse import urlparse
@@ -6,13 +8,14 @@ from urllib.parse import urlparse
 from django.core.cache import cache
 from django.db.models import Count
 from django.db.models.functions import TruncDate
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from house.models import Article, JourneyEvent, JourneySession, Property
 from dominium_backend.views.common import get_client_ip
+from dominium_backend.services.property_presentation import build_property_presentation_pdf
 
 
 EVENT_TYPES = {choice[0] for choice in JourneyEvent.EVENT_TYPES}
@@ -216,15 +219,53 @@ def journey_analytics(request):
     })
 
 
+def _presentation_property(slug):
+    return get_object_or_404(
+        Property.objects.prefetch_related("images", "features").select_related("property_type", "deal_type"),
+        slug=slug,
+    )
+
+
+def _presentation_description(value):
+    value = re.sub(r"(?i)<\s*br\s*/?\s*>", "\n", str(value or ""))
+    value = re.sub(r"(?i)</\s*(p|div|li|h[1-6])\s*>", "\n", value)
+    value = re.sub(r"<[^>]+>", "", value)
+    return "\n".join(line.strip() for line in html.unescape(value).splitlines() if line.strip())
+
+
 @require_GET
-def property_presentation(request, property_id):
+def property_presentation(request, slug):
     if not request.user.is_authenticated or not request.user.is_staff:
         return JsonResponse({"error": "forbidden"}, status=403)
-    property_obj = get_object_or_404(
-        Property.objects.prefetch_related("images", "features").select_related("property_type", "deal_type"),
-        pk=property_id,
-    )
-    response = render(request, "admin/property_presentation.html", {"property": property_obj})
+    property_obj = _presentation_property(slug)
+    response = render(request, "admin/property_presentation.html", {
+        "property": property_obj,
+        "description_text": _presentation_description(property_obj.description),
+    })
     response["X-Robots-Tag"] = "noindex, nofollow"
     response["Cache-Control"] = "private, no-store"
     return response
+
+
+@require_GET
+def property_presentation_pdf(request, slug):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    property_obj = _presentation_property(slug)
+    pdf = build_property_presentation_pdf(
+        property_obj,
+        description=_presentation_description(property_obj.description),
+    )
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="dominium-{property_obj.slug}.pdf"'
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@require_GET
+def legacy_property_presentation(request, property_id):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    property_obj = get_object_or_404(Property, pk=property_id)
+    return redirect("property_presentation", slug=property_obj.slug)

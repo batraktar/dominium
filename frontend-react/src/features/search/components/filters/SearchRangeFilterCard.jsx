@@ -12,14 +12,14 @@ function SearchRangeFilterCard({
 }) {
   return (
     <div
-      className="filter-range bg-coolSage/90 rounded-[12px] px-5 py-4 text-white shadow-sm min-h-[118px]"
+      className="filter-range search-filter-card min-h-[118px]"
       data-filter-key={filterKey}
     >
-      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-creamBeige/80 font-semibold mb-3">
-        <span>{label}</span>
+      <div className="search-filter-label flex items-center justify-between mb-3">
+        <span><i className={filterKey === 'price' ? 'ri-money-dollar-circle-line' : filterKey === 'area' ? 'ri-ruler-2-line' : 'ri-door-open-line'}></i>{label}</span>
         <button
           type="button"
-          className="filter-reset text-creamBeige/70 hover:text-white transition"
+          className="filter-reset"
           onClick={onReset}
         >
           Очистити
@@ -28,16 +28,16 @@ function SearchRangeFilterCard({
 
       <div className="flex flex-col gap-3 h-full justify-between">
         <div className="grid grid-cols-2 gap-2 text-sm font-fixel">
-          <label className="rounded-md bg-white/95 px-2 py-1 text-deepOcean">
-            <span className="block text-[10px] text-deepOcean/60">Від</span>
+          <label className="search-filter-number">
+            <span>Від</span>
             <input aria-label={`${label}: від`} type="number" min={rangeConfig.min} max={range.max - rangeConfig.step} step={rangeConfig.step} value={range.min} onChange={onMinInput} className="w-full bg-transparent font-semibold outline-none" />
           </label>
-          <label className="rounded-md bg-white/95 px-2 py-1 text-deepOcean">
-            <span className="block text-[10px] text-deepOcean/60">До</span>
+          <label className="search-filter-number">
+            <span>До</span>
             <input aria-label={`${label}: до`} type="number" min={range.min + rangeConfig.step} max={rangeConfig.max} step={rangeConfig.step} value={range.max} onChange={onMaxInput} className="w-full bg-transparent font-semibold outline-none" />
           </label>
         </div>
-        <div className="flex items-center justify-between text-[11px] font-fixel text-creamBeige/85"><span>{minLabel}</span><span>{maxLabel}</span></div>
+        <div className="search-filter-summary"><span>{minLabel}</span><span>{maxLabel}</span></div>
         <div className="relative h-10">
           <input
             type="range"

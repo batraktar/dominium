@@ -8,12 +8,12 @@ function SearchPropertyTypeFilterCard({
   onResetPropertyTypes,
 }) {
   return (
-    <div className="bg-coolSage/90 rounded-[12px] px-5 py-4 text-white shadow-sm min-h-[118px] flex flex-col justify-between">
-      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-creamBeige/80 font-semibold mb-3">
-        <span>Тип нерухомості</span>
+    <div className="search-filter-card min-h-[118px] flex flex-col justify-between">
+      <div className="search-filter-label flex items-center justify-between mb-3">
+        <span><i className="ri-home-4-line"></i>Що шукаємо?</span>
         <button
           type="button"
-          className="text-creamBeige/70 hover:text-white transition text-[11px]"
+          className="filter-reset"
           onClick={onResetPropertyTypes}
         >
           Очистити
@@ -24,7 +24,7 @@ function SearchPropertyTypeFilterCard({
         <button
           id="property-type-btn"
           type="button"
-          className="dropdown-trigger w-full justify-between"
+          className="search-filter-control dropdown-trigger w-full justify-between"
           onClick={(event) => {
             event.stopPropagation()
             onToggleDropdown?.('property_type')

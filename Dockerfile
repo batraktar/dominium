@@ -23,6 +23,7 @@ RUN apt-get update \
         build-essential \
         libpq-dev \
         default-libmysqlclient-dev \
+        fonts-dejavu-core \
         pkg-config \
         curl \
     && rm -rf /var/lib/apt/lists/*

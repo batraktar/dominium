@@ -15,7 +15,7 @@ function PropertyMainInfoSection({
 }) {
   return (
     <div className="lg:col-span-2">
-      {userIsStaff ? <PropertyStaffActions propertyId={property.id} /> : null}
+      {userIsStaff ? <PropertyStaffActions propertyId={property.id} propertySlug={property.slug} /> : null}
 
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm mb-4 sm:mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6">

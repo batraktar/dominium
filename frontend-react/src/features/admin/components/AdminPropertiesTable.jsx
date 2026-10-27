@@ -176,7 +176,7 @@ function PropertyRow({
             <i className="ri-external-link-line"></i>
           </a>
           <a
-            href={apiEndpoints.propertyPresentation(property.id)}
+            href={apiEndpoints.propertyPresentation(property.slug)}
             target="_blank"
             rel="noopener noreferrer"
             className="admin-icon-button"
