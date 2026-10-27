@@ -10,9 +10,6 @@ function SearchFiltersForm({
   onLocationChange,
   csrfToken = '',
   onSubmit,
-  openDropdown,
-  onToggleDropdown,
-  propertyTypeSummary,
   propertyTypes = [],
   selectedPropertyTypes = [],
   onTogglePropertyType,
@@ -66,9 +63,6 @@ function SearchFiltersForm({
             <SearchLocationSelect value={location} onChange={onLocationChange} />
           </div>
           <SearchPropertyTypeFilterCard
-            openDropdown={openDropdown}
-            onToggleDropdown={onToggleDropdown}
-            propertyTypeSummary={propertyTypeSummary}
             propertyTypes={propertyTypes}
             selectedPropertyTypes={selectedPropertyTypes}
             onTogglePropertyType={onTogglePropertyType}

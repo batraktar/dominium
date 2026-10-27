@@ -8,6 +8,7 @@ import {
   commitRangeInput,
   parseRangeInputDraft,
 } from '../src/features/search/model/rangeInputModel.js'
+import { findChangedPropertyTypes } from '../src/features/search/model/propertyTypeSelectModel.js'
 
 test('search supports expensive properties without silently applying a 250k ceiling', () => {
   assert.equal(PRICE_RANGE_CONFIG.max, 2000000)
@@ -41,4 +42,10 @@ test('range input commits blank minimum as zero and clamps custom values only on
   assert.equal(commitRangeInput('', { fallback: 0, min: 0, max: 100 }), 0)
   assert.equal(commitRangeInput('375', { fallback: 0, min: 0, max: 5000 }), 375)
   assert.equal(commitRangeInput('9000', { fallback: 0, min: 0, max: 5000 }), 5000)
+})
+
+test('property type select reports additions, removals and a full clear', () => {
+  assert.deepEqual(findChangedPropertyTypes(['house'], ['house', 'flat']), ['flat'])
+  assert.deepEqual(findChangedPropertyTypes(['house', 'flat'], ['flat']), ['house'])
+  assert.deepEqual(findChangedPropertyTypes(['house', 'flat'], []), ['house', 'flat'])
 })

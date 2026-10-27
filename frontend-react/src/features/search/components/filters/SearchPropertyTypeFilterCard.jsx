@@ -1,12 +1,23 @@
+import { ConfigProvider, Select } from 'antd'
+
+import { findChangedPropertyTypes } from '../../model/propertyTypeSelectModel.js'
+
 function SearchPropertyTypeFilterCard({
-  openDropdown,
-  onToggleDropdown,
-  propertyTypeSummary,
   propertyTypes = [],
   selectedPropertyTypes = [],
   onTogglePropertyType,
   onResetPropertyTypes,
 }) {
+  const options = propertyTypes.map((propertyType) => ({
+    label: propertyType.name,
+    value: propertyType.slug,
+  }))
+
+  const handleChange = (nextValues) => {
+    findChangedPropertyTypes(selectedPropertyTypes, nextValues)
+      .forEach((slug) => onTogglePropertyType?.(slug))
+  }
+
   return (
     <div className="search-filter-card min-h-[118px] flex flex-col justify-between">
       <div className="search-filter-label flex items-center justify-between mb-3">
@@ -20,46 +31,39 @@ function SearchPropertyTypeFilterCard({
         </button>
       </div>
 
-      <div className="relative" data-react-dropdown>
-        <button
-          id="property-type-btn"
-          type="button"
-          className="search-filter-control dropdown-trigger w-full justify-between"
-          onClick={(event) => {
-            event.stopPropagation()
-            onToggleDropdown?.('property_type')
-          }}
-        >
-          <span data-property-type-summary>{propertyTypeSummary}</span>
-          <i className="ri-arrow-down-s-line"></i>
-        </button>
-        <div
-          id="property-type-options"
-          className={`dropdown-menu full-width ${openDropdown === 'property_type' ? '' : 'hidden'}`}
-        >
-          <div className="p-2">
-            {propertyTypes.map((propertyType) => (
-              <label
-                key={propertyType.id}
-                className="flex font-fixel text-black items-center cursor-pointer p-3 hover:bg-gray-50 rounded"
-              >
-                <div className="custom-checkbox">
-                  <input
-                    type="checkbox"
-                    name="property_type"
-                    value={propertyType.slug}
-                    className="property-type-option"
-                    checked={selectedPropertyTypes.includes(propertyType.slug)}
-                    onChange={() => onTogglePropertyType?.(propertyType.slug)}
-                  />
-                  <span className="px-1 checkmark"></span>
-                </div>
-                <span>{propertyType.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: '#133e44',
+            colorText: '#133e44',
+            colorBorder: '#d7e1df',
+            borderRadius: 9,
+            controlHeight: 44,
+            fontFamily: 'FixelText, sans-serif',
+          },
+        }}
+      >
+        <Select
+          id="property-type-filter"
+          aria-label="Тип нерухомості"
+          className="search-property-type-select"
+          mode="multiple"
+          value={selectedPropertyTypes}
+          options={options}
+          placeholder="Оберіть тип нерухомості"
+          showSearch
+          allowClear
+          maxTagCount="responsive"
+          optionFilterProp="label"
+          filterOption={(input, option) =>
+            String(option?.label || '').toLocaleLowerCase('uk-UA').includes(input.toLocaleLowerCase('uk-UA'))
+          }
+          onChange={handleChange}
+          notFoundContent="Тип нерухомості не знайдено"
+          popupMatchSelectWidth
+          maxTagPlaceholder={(omittedValues) => `+${omittedValues.length}`}
+        />
+      </ConfigProvider>
     </div>
   )
 }
