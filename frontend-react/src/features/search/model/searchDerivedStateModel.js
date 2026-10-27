@@ -9,7 +9,8 @@ import { formatNumber } from '../utils/searchPageUtils.js'
 export function buildPropertyTypeMap(propertyTypes = []) {
   const map = new Map()
   propertyTypes.forEach((item) => {
-    map.set(item.slug, item.name)
+    map.set(String(item.id), item.name)
+    if (item.slug) map.set(item.slug, item.name)
   })
   return map
 }

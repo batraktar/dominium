@@ -18,6 +18,7 @@ export default function useSearchEffects({
   page = 1,
   requestRef,
   setPropertyTypes,
+  setSelectedPropertyTypes,
   setLikedIds,
   setOpenDropdown,
   setOpenShareMenuId,
@@ -30,6 +31,7 @@ export default function useSearchEffects({
   setPage,
 }) {
   useSearchLoadPropertyTypesEffect({
+    setSelectedPropertyTypes,
     setPropertyTypes,
   })
 

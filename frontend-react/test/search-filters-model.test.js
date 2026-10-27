@@ -8,7 +8,10 @@ import {
   commitRangeInput,
   parseRangeInputDraft,
 } from '../src/features/search/model/rangeInputModel.js'
-import { findChangedPropertyTypes } from '../src/features/search/model/propertyTypeSelectModel.js'
+import {
+  findChangedPropertyTypes,
+  normalizeSelectedPropertyTypes,
+} from '../src/features/search/model/propertyTypeSelectModel.js'
 
 test('search supports expensive properties without silently applying a 250k ceiling', () => {
   assert.equal(PRICE_RANGE_CONFIG.max, 2000000)
@@ -48,4 +51,15 @@ test('property type select reports additions, removals and a full clear', () => 
   assert.deepEqual(findChangedPropertyTypes(['house'], ['house', 'flat']), ['flat'])
   assert.deepEqual(findChangedPropertyTypes(['house', 'flat'], ['flat']), ['house'])
   assert.deepEqual(findChangedPropertyTypes(['house', 'flat'], []), ['house', 'flat'])
+})
+
+test('property type select uses stable IDs and upgrades legacy slug URLs', () => {
+  const propertyTypes = [
+    { id: 2059, name: 'Квартира', slug: '' },
+    { id: 2061, name: 'Будинок', slug: 'house' },
+  ]
+
+  assert.deepEqual(normalizeSelectedPropertyTypes(['2059'], propertyTypes), ['2059'])
+  assert.deepEqual(normalizeSelectedPropertyTypes(['house'], propertyTypes), ['2061'])
+  assert.deepEqual(normalizeSelectedPropertyTypes(['', 'missing'], propertyTypes), [])
 })

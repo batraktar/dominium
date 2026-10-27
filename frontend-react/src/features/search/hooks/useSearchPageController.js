@@ -45,6 +45,7 @@ export default function useSearchPageController({ userIsAuthenticated = false })
     page: filterState.page,
     requestRef,
     setPropertyTypes: resultsDataState.setPropertyTypes,
+    setSelectedPropertyTypes: filterState.setSelectedPropertyTypes,
     setLikedIds: uiState.setLikedIds,
     setOpenDropdown: uiState.setOpenDropdown,
     setOpenShareMenuId: uiState.setOpenShareMenuId,

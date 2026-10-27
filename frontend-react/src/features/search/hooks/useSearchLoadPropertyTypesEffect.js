@@ -1,8 +1,12 @@
 import { useEffect } from 'react'
 import apiClient from '../../../shared/api/client.js'
 import { apiEndpoints } from '../../../shared/api/endpoints.js'
+import { normalizeSelectedPropertyTypes } from '../model/propertyTypeSelectModel.js'
 
-export default function useSearchLoadPropertyTypesEffect({ setPropertyTypes }) {
+export default function useSearchLoadPropertyTypesEffect({
+  setSelectedPropertyTypes,
+  setPropertyTypes,
+}) {
   useEffect(() => {
     let cancelled = false
 
@@ -13,6 +17,13 @@ export default function useSearchLoadPropertyTypesEffect({ setPropertyTypes }) {
 
         const options = Array.isArray(payload?.results) ? payload.results : []
         setPropertyTypes(options)
+        setSelectedPropertyTypes((currentValues) => {
+          const normalized = normalizeSelectedPropertyTypes(currentValues, options)
+          return normalized.length === currentValues.length
+            && normalized.every((value, index) => value === currentValues[index])
+            ? currentValues
+            : normalized
+        })
       } catch {
         if (!cancelled) {
           setPropertyTypes([])
@@ -25,5 +36,5 @@ export default function useSearchLoadPropertyTypesEffect({ setPropertyTypes }) {
     return () => {
       cancelled = true
     }
-  }, [setPropertyTypes])
+  }, [setPropertyTypes, setSelectedPropertyTypes])
 }

@@ -10,7 +10,7 @@ function SearchPropertyTypeFilterCard({
 }) {
   const options = propertyTypes.map((propertyType) => ({
     label: propertyType.name,
-    value: propertyType.slug,
+    value: String(propertyType.id),
   }))
 
   const handleChange = (nextValues) => {
